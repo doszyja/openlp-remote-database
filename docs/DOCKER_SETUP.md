@@ -12,8 +12,8 @@ This guide explains how to set up and run the OpenLP Database Sync application u
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd openlp-database
+   git clone https://github.com/doszyja/openlp-remote-database.git
+   cd openlp-remote-database
    ```
 
 2. **Create environment files**

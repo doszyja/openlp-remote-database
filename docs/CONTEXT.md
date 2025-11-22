@@ -227,6 +227,12 @@ backend_sync (
 - `pnpm-workspace.yaml` - Monorepo workspace config
 - `package.json` (root) - Workspace scripts
 - `.env.example` - Environment variable templates
+- `.cursorrules` - Cursor AI context configuration
+- `.cursorignore` - Files to exclude from Cursor context
+
+### Repository
+- **GitHub**: https://github.com/doszyja/openlp-remote-database
+- **License**: MIT
 
 ### Documentation
 - `PROJECT_DESCRIPTION.md` - Original project requirements

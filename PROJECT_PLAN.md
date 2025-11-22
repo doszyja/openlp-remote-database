@@ -1,5 +1,7 @@
 # OpenLP Database Sync - Project Plan
 
+**Repository**: [https://github.com/doszyja/openlp-remote-database](https://github.com/doszyja/openlp-remote-database)
+
 ## Overview
 
 This project creates a web-based song management system for churches using OpenLP. The system consists of:

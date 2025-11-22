@@ -2,6 +2,8 @@
 
 A web-based song management system for churches using OpenLP projection software. This monorepo contains a NestJS backend, React frontend, and a sync tool for OpenLP integration.
 
+**Repository**: [https://github.com/doszyja/openlp-remote-database](https://github.com/doszyja/openlp-remote-database)
+
 ## 🎯 Project Overview
 
 This project enables collaborative song editing through a web application, with automatic synchronization to OpenLP's SQLite database. The backend PostgreSQL database serves as the single source of truth, and a CLI sync tool keeps OpenLP up to date.
@@ -35,8 +37,8 @@ openlp-database/
 
 2. **Clone and setup**:
    ```bash
-   git clone <repository-url>
-   cd openlp-database
+   git clone https://github.com/doszyja/openlp-remote-database.git
+   cd openlp-remote-database
    cp apps/api/.env.example apps/api/.env
    cp apps/web/.env.example apps/web/.env
    ```
@@ -68,8 +70,8 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
 2. **Installation**:
    ```bash
    # Clone repository
-   git clone <repository-url>
-   cd openlp-database
+   git clone https://github.com/doszyja/openlp-remote-database.git
+   cd openlp-remote-database
    
    # Install dependencies
    pnpm install
@@ -199,7 +201,9 @@ See [DETAILED_TODO.md](docs/DETAILED_TODO.md) for complete task list.
 
 ## 📝 License
 
-[Add license information]
+MIT License - See [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025 Dominik Szyja
 
 ## 🙏 Acknowledgments
 
