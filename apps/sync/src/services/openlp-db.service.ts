@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { SongResponseDto, Verse } from '@openlp/shared';
+import type { SongResponseDto } from '@openlp/shared';
 
 export interface OpenLPSong {
   id: number;
@@ -11,6 +11,7 @@ export interface OpenLPSong {
   ccli_number?: string;
   theme_name?: string;
   search_title?: string;
+  search_lyrics?: string;
   last_modified?: string;
 }
 
@@ -99,7 +100,17 @@ export class OpenLPDatabaseService {
     const transaction = this.db.transaction(() => {
       // Prepare song data for OpenLP format
       const lyrics = this.formatSongLyrics(song);
-      const searchTitle = song.title.toLowerCase().trim();
+      const searchTitle = (song as any).searchTitle || song.title.toLowerCase().trim();
+      // Generate search_lyrics from verses (lowercase for searching)
+      const searchLyrics = (song as any).searchLyrics || (typeof song.verses === 'string' 
+        ? song.verses.toLowerCase().trim() 
+        : '');
+      
+      // Map MongoDB fields to OpenLP fields
+      const alternateTitle = song.number || null;
+      const copyright = (song as any).copyright || null;
+      const comments = (song as any).comments || null;
+      const ccliNumber = (song as any).ccliNumber || song.number || null;
 
       if (openlpId) {
         // Update existing song
@@ -110,26 +121,26 @@ export class OpenLPDatabaseService {
             alternate_title = ?,
             lyrics = ?,
             search_title = ?,
+            search_lyrics = ?,
+            copyright = ?,
+            comments = ?,
+            ccli_number = ?,
             last_modified = datetime('now')
           WHERE id = ?
         `);
         updateStmt.run(
           song.title,
-          song.number || null,
+          alternateTitle,
           lyrics,
           searchTitle,
+          searchLyrics,
+          copyright,
+          comments,
+          ccliNumber,
           openlpId
         );
 
-        // Delete existing verses
-        const deleteVersesStmt = this.db.prepare(`
-          DELETE FROM verses WHERE song_id = ?
-        `);
-        deleteVersesStmt.run(openlpId);
-
-        // Insert new verses
-        this.insertVerses(openlpId, song.verses);
-
+        // Verses are now stored in lyrics field as XML, no need for separate verses table
         return openlpId;
       } else {
         // Insert new song
@@ -139,21 +150,27 @@ export class OpenLPDatabaseService {
             alternate_title,
             lyrics,
             search_title,
+            search_lyrics,
+            copyright,
+            comments,
+            ccli_number,
             last_modified
-          ) VALUES (?, ?, ?, ?, datetime('now'))
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         `);
         const result = insertStmt.run(
           song.title,
-          song.number || null,
+          alternateTitle,
           lyrics,
-          searchTitle
+          searchTitle,
+          searchLyrics,
+          copyright,
+          comments,
+          ccliNumber
         );
 
         const newSongId = Number(result.lastInsertRowid);
 
-        // Insert verses
-        this.insertVerses(newSongId, song.verses);
-
+        // Verses are now stored in lyrics field as XML, no need for separate verses table
         return newSongId;
       }
     });
@@ -161,58 +178,55 @@ export class OpenLPDatabaseService {
     return transaction();
   }
 
-  /**
-   * Insert verses for a song
-   */
-  private insertVerses(songId: number, verses: Verse[]): void {
-    const insertStmt = this.db.prepare(`
-      INSERT INTO verses (
-        song_id,
-        verse_order,
-        verse_type,
-        verse_text
-      ) VALUES (?, ?, ?, ?)
-    `);
-
-    for (const verse of verses) {
-      // Determine verse type from label or default to 'v' + order
-      let verseType = 'v';
-      if (verse.label) {
-        const labelLower = verse.label.toLowerCase();
-        if (labelLower.includes('chorus') || labelLower.includes('c')) {
-          verseType = 'c';
-        } else if (labelLower.includes('bridge') || labelLower.includes('b')) {
-          verseType = 'b';
-        } else {
-          verseType = `v${verse.order}`;
-        }
-      } else {
-        verseType = `v${verse.order}`;
-      }
-
-      insertStmt.run(songId, verse.order, verseType, verse.content);
-    }
-  }
 
   /**
    * Format song lyrics for OpenLP format
-   * OpenLP stores all verses in a single lyrics field with special formatting
+   * OpenLP stores all verses in a single lyrics field with XML formatting
+   * Format: <verse label="v1">text</verse>
+   * 
+   * Verses are now stored as a single string in MongoDB (matching OpenLP's format).
+   * We split by double newlines to get individual verses, then format as XML.
    */
   private formatSongLyrics(song: SongResponseDto): string {
     const parts: string[] = [];
 
-    // Add chorus if present
+    // Add main chorus if present (from song.chorus field)
     if (song.chorus) {
-      parts.push(`[C]\n${song.chorus}\n`);
+      parts.push(`<verse label="c">${this.escapeXml(song.chorus)}</verse>`);
     }
 
-    // Add verses
-    for (const verse of song.verses) {
-      const label = verse.label || `Verse ${verse.order}`;
-      parts.push(`[${label}]\n${verse.content}\n`);
+    // Parse verses string - split by double newlines to get individual verses
+    // If no double newlines, treat entire string as one verse
+    const versesString = song.verses || '';
+    if (versesString.trim()) {
+      // Split by double newlines (paragraph breaks)
+      const verseBlocks = versesString.split(/\n\n+/).filter(block => block.trim());
+      
+      if (verseBlocks.length > 0) {
+        // Each block becomes a verse (v1, v2, v3, etc.)
+        verseBlocks.forEach((block, index) => {
+          const verseNum = index + 1;
+          parts.push(`<verse label="v${verseNum}">${this.escapeXml(block.trim())}</verse>`);
+        });
+      } else {
+        // Single verse, no double newlines
+        parts.push(`<verse label="v1">${this.escapeXml(versesString.trim())}</verse>`);
+      }
     }
 
-    return parts.join('\n');
+    return parts.join('');
+  }
+
+  /**
+   * Escape XML special characters
+   */
+  private escapeXml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
   }
 
   /**

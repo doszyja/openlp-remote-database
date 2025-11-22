@@ -51,7 +51,16 @@
   - Local UI state: useState/useReducer
   - Global state: Context API (only if needed)
 - **Forms**: Use controlled components, validate before submit
+  - Use React Hook Form for form management
+  - Handle async data loading with useEffect and form.reset()
+  - Initialize defaultValues on mount, reset when async data arrives
 - **API Calls**: Centralize in service layer, use typed API client
+- **Verse Handling**:
+  - Verses are stored as a single string in the backend (XML or plain text)
+  - Use `verseParser.ts` utilities to parse verses for display
+  - Parse verses into individual editable boxes in forms
+  - Combine verses back to string format before saving
+  - Preserve verse_order from OpenLP when parsing/combining
 
 ### Sync Tool
 
@@ -59,6 +68,10 @@
 - **Error Recovery**: Log errors but continue processing other songs
 - **Dry Run**: Always support dry-run mode for testing
 - **Configuration**: Support both config file and environment variables
+- **Testing**: Use Vitest for unit tests (not Jest)
+  - Mock dependencies with `vi.mock()`
+  - Use `vi.fn()` for function mocks
+  - Use `describe`, `it`, `expect` from Vitest globals
 
 ## Testing Strategy
 
@@ -77,16 +90,25 @@
 ### Sync Tool
 
 - **Unit Tests**: Test mapping functions and sync logic
+  - Use Vitest as the testing framework
+  - Mock OpenLPDbService and ApiClientService
+  - Test error handling and edge cases
 - **Integration Tests**: Test with mock OpenLP DB and API
 
 ## Database Rules
 
-### Prisma
+### MongoDB (Mongoose)
 
-- **Migrations**: Always create migrations for schema changes
-- **Seeding**: Use Prisma seed for initial data
-- **Relations**: Use proper foreign keys, cascade deletes where appropriate
+- **Migrations**: Use Mongoose migrations for schema changes (if needed)
+- **Seeding**: Use seed scripts for initial data
+- **Relations**: Use proper references and populate for relations
 - **Indexes**: Add indexes for frequently queried fields (title, language, tags)
+- **Connection**: Use `DATABASE_URL` environment variable for connection string
+
+### Prisma (Legacy - Migrated to MongoDB)
+
+- **Note**: Project migrated from PostgreSQL/Prisma to MongoDB/Mongoose on 2025-01-22
+- Old Prisma rules kept for reference but no longer in use
 
 ### Data Integrity
 
@@ -235,6 +257,7 @@
 1. Write code following these rules
 2. Add tests for new features
 3. Update documentation as needed
+4. For local development: Use `docker-compose.dev.yml` to run MongoDB in Docker while running API/Web locally for hot-reloading
 
 ### Before Committing
 
@@ -242,6 +265,14 @@
 2. Run tests
 3. Check for console.logs or debug code
 4. Write clear commit message
+
+### Docker Development Setup
+
+- **MongoDB**: Run in Docker using `docker-compose.dev.yml`
+- **API**: Run locally with `pnpm dev` for hot-reloading
+- **Web**: Run locally with `pnpm dev` for hot-reloading
+- **Connection**: API connects to Dockerized MongoDB via `DATABASE_URL`
+- **Benefits**: Fast development iteration with hot-reloading while maintaining consistent database environment
 
 ### Code Review Checklist
 
@@ -268,7 +299,82 @@
 - Advanced search (full-text)
 - Song analytics (usage tracking)
 
+## Verse Parsing & Format Rules
+
+### Verse Storage Format
+
+- **Backend Storage**: Verses are stored as a single string field
+  - Can be XML format (from OpenLP): `<verse label="v1">content</verse>`
+  - Can be plain text format: verses separated by `\n\n`
+- **Frontend Display**: Verses are parsed into individual `ParsedVerse` objects
+  - Each verse has: `order`, `content`, `label`, `type`
+  - Types: `'verse' | 'chorus' | 'bridge' | 'pre-chorus' | 'tag'`
+
+### Verse Parsing Utilities
+
+- **Location**: `apps/web/src/utils/verseParser.ts`
+- **Functions**:
+  - `parseVerses()`: Auto-detect and parse XML or string format
+  - `parseVersesFromXml()`: Parse OpenLP XML format
+  - `parseVersesFromString()`: Parse plain text format
+  - `combineVersesToString()`: Combine parsed verses back to string (preserves order)
+  - `getVerseDisplayLabel()`: Get human-readable label for display
+  - `generateVerseOrderString()`: Generate order string (e.g., "v1 c1 v2")
+  - `parseVerseOrderString()`: Parse order string and update verse sequence
+
+### Verse Order Management
+
+- **OpenLP verse_order**: Preserved when parsing and combining verses
+- **Frontend Input**: Editable string format (e.g., "v1 c1 v2 c1 v3 c1 v4 c1")
+- **Mapping**: `v` = verse, `c` = chorus, `b` = bridge, `p` = pre-chorus, `t` = tag
+- **Storage**: Verse order is maintained through the `order` property in `ParsedVerse`
+
+### Form Handling
+
+- **Initial Load**: Parse verses from string/XML into individual form fields
+- **Editing**: Each verse displayed as separate editable box with type selector
+- **Submission**: Combine verses back to single string, sorted by `order` property
+- **Async Data**: Use `useEffect` with `form.reset()` when song data loads asynchronously
+
+## UI/UX Guidelines
+
+### Notification System
+
+- **Implementation**: Use `NotificationContext` for global notifications
+- **Usage**: Import `useNotification()` hook, call `showSuccess()` or `showError()`
+- **Position**: Top-center using Material UI Snackbar
+- **Duration**: 3 seconds auto-dismiss
+- **Styling**: Material UI Alert component with severity colors
+
+### Navigation
+
+- **Client-Side Routing**: Use React Router `Link` component for smooth navigation
+- **No Page Blinks**: Optimize React Query config (refetchOnMount: false, staleTime: 5min)
+- **Scroll Preservation**: Maintain scroll positions when navigating between pages
+- **Auto-Scroll**: Scroll to selected items in lists when navigating
+
+### Responsive Design
+
+- **Mobile-First**: Design for mobile, enhance for desktop
+- **Breakpoints**: Use Material UI breakpoints (xs, sm, md, lg, xl)
+- **Layout**: Stack elements vertically on mobile, horizontal on desktop
+- **Buttons**: Full-width on mobile, auto-width on desktop
+- **Hidden Elements**: Hide non-essential elements on mobile (e.g., search column, toggle switches)
+
+### React Query Configuration
+
+- **refetchOnMount**: false (prevent refetching when navigating to cached pages)
+- **staleTime**: 5 minutes (data considered fresh for 5 minutes)
+- **refetchOnWindowFocus**: false (prevent refetching on window focus)
+- **Result**: Smooth navigation without page blinks or unnecessary API calls
+
+### Search & Filtering
+
+- **Debouncing**: Debounce search inputs (300ms recommended)
+- **Pagination**: Use pagination for large result sets
+- **Default Limits**: Set reasonable default limits (e.g., 150 songs)
+
 ---
 
-**Last Updated**: 2025-01-XX
+**Last Updated**: 2025-01-22
 **Maintained By**: Development Team

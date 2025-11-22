@@ -9,14 +9,13 @@ import {
   InputAdornment,
   CircularProgress,
   Alert,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Chip,
-  Stack,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Paper,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon, MusicNote as MusicNoteIcon } from '@mui/icons-material';
 import { useSongs } from '../hooks/useSongs';
 import type { SongQueryDto } from '@openlp/shared';
 
@@ -25,7 +24,7 @@ export default function SongListPage() {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState<SongQueryDto>({
     page: 1,
-    limit: 20,
+    limit: 150, // Display up to 150 songs
   });
 
   const { data, isLoading, error } = useSongs(query);
@@ -58,73 +57,97 @@ export default function SongListPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
+    <Container maxWidth="md" sx={{ py: 2 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h5" component="h1">
           Songs
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate('/songs/new')}
+          size="small"
         >
           Add Song
         </Button>
       </Box>
 
-      <TextField
-        fullWidth
-        placeholder="Search songs..."
-        value={search}
-        onChange={(e) => handleSearch(e.target.value)}
-        sx={{ mb: 3 }}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
-      />
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <Typography variant="body2" sx={{ minWidth: 60 }}>
+          Search:
+        </Typography>
+        <TextField
+          fullWidth
+          placeholder="Search Entire Song..."
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <MusicNoteIcon fontSize="small" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <Button
+                  size="small"
+                  onClick={() => handleSearch(search)}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  Search
+                </Button>
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
 
       {data?.data.length === 0 ? (
         <Alert severity="info">No songs found. Create your first song!</Alert>
       ) : (
-        <Grid container spacing={2}>
-          {data?.data.map((song) => (
-            <Grid item xs={12} sm={6} md={4} key={song.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" component="h2" gutterBottom>
-                    {song.title}
-                  </Typography>
-                  {song.number && (
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      #{song.number}
-                    </Typography>
-                  )}
-                  <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 1 }}>
-                    <Chip label={song.language} size="small" />
-                    {song.tags.slice(0, 3).map((tag) => (
-                      <Chip key={tag.id} label={tag.name} size="small" variant="outlined" />
-                    ))}
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {song.verses.length} verse{song.verses.length !== 1 ? 's' : ''}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button size="small" onClick={() => navigate(`/songs/${song.id}`)}>
-                    View
-                  </Button>
-                  <Button size="small" onClick={() => navigate(`/songs/${song.id}/edit`)}>
-                    Edit
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Paper
+          variant="outlined"
+          sx={{
+            maxHeight: 'calc(100vh - 200px)',
+            overflow: 'auto',
+          }}
+        >
+          <List dense>
+            {data?.data.map((song) => {
+              // Format song title with author if available
+              const displayTitle = song.number
+                ? `${song.title} (${song.number})`
+                : song.title;
+              
+              return (
+                <ListItem
+                  key={song.id}
+                  disablePadding
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                >
+                  <ListItemButton onClick={() => navigate(`/songs/${song.id}`)}>
+                    <ListItemText
+                      primary={displayTitle}
+                      primaryTypographyProps={{
+                        variant: 'body1',
+                        sx: {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Paper>
       )}
     </Container>
   );

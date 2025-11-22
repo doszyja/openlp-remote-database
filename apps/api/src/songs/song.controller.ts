@@ -15,9 +15,11 @@ import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import type { UserResponseDto } from '../auth/dto/user-response.dto';
 
 @Controller('songs')
+@Public() // Make all song routes public for MVP
 export class SongController {
   constructor(private readonly songService: SongService) {}
 

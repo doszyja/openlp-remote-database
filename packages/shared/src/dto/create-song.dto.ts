@@ -6,12 +6,13 @@ export interface CreateSongDto {
   number?: string | null;
   language?: string;
   chorus?: string | null;
-  verses: CreateVerseDto[];
+  verses: string; // All verses as single string (frontend can split visually for editing)
   tags?: string[];
 }
 
 /**
- * DTO for creating a verse
+ * @deprecated Use string format for verses instead
+ * DTO for creating a verse (kept for backward compatibility)
  */
 export interface CreateVerseDto {
   order: number;

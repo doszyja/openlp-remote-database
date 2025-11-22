@@ -17,13 +17,6 @@ export class SongService {
   async create(createSongDto: CreateSongDto) {
     const { verses, tags, ...songData } = createSongDto;
 
-    // Ensure verses have order
-    const versesWithOrder = verses.map((verse, index) => ({
-      order: verse.order ?? index + 1,
-      content: verse.content,
-      label: verse.label || null,
-    }));
-
     // Create or get tags
     const tagIds: string[] = [];
     if (tags && tags.length > 0) {
@@ -36,19 +29,27 @@ export class SongService {
       }
     }
 
-    // Create song
+    // Generate search_title for OpenLP compatibility (lowercase title for searching)
+    const searchTitle = (songData.title || '').toLowerCase().trim();
+    
+    // Generate search_lyrics for OpenLP compatibility (lowercase verses for searching)
+    const searchLyrics = (verses || '').toLowerCase().trim();
+
+    // Create song - verses is now a single string field
     const song = await this.songModel.create({
       ...songData,
       language: songData.language || 'en',
-      verses: versesWithOrder,
+      verses: verses || '', // Store as single string
       tags: tagIds,
+      searchTitle, // Auto-generate from title
+      searchLyrics: songData.searchLyrics || searchLyrics, // Auto-generate from verses if not provided
     });
 
     return this.findOne(song._id.toString());
   }
 
   async findAll(query: QuerySongDto) {
-    const { page = 1, limit = 20, language, tags, search, sortBy = 'title', sortOrder = 'asc' } = query;
+    const { page = 1, limit = 150, language, tags, search, sortBy = 'title', sortOrder = 'asc' } = query;
     const skip = (page - 1) * limit;
 
     const filter: any = {
@@ -69,7 +70,7 @@ export class SongService {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { 'verses.content': { $regex: search, $options: 'i' } },
+        { verses: { $regex: search, $options: 'i' } }, // Search in verses string field
       ];
     }
 
@@ -95,11 +96,17 @@ export class SongService {
       number: song.number,
       language: song.language,
       chorus: song.chorus,
-      verses: song.verses.sort((a: any, b: any) => a.order - b.order),
+      verses: song.verses || '', // Verses is now a single string
       tags: song.tags.map((tag: any) => ({
         id: tag._id.toString(),
         name: tag.name,
       })),
+      // OpenLP compatibility fields
+      copyright: song.copyright,
+      comments: song.comments,
+      ccliNumber: song.ccliNumber,
+      searchTitle: song.searchTitle,
+      searchLyrics: song.searchLyrics,
       openlpMapping: song.openlpMapping,
       createdAt: song.createdAt,
       updatedAt: song.updatedAt,
@@ -134,11 +141,17 @@ export class SongService {
       number: song.number,
       language: song.language,
       chorus: song.chorus,
-      verses: song.verses.sort((a: any, b: any) => a.order - b.order),
+      verses: song.verses || '', // Verses is now a single string
       tags: song.tags.map((tag: any) => ({
         id: tag._id.toString(),
         name: tag.name,
       })),
+      // OpenLP compatibility fields
+      copyright: song.copyright,
+      comments: song.comments,
+      ccliNumber: song.ccliNumber,
+      searchTitle: song.searchTitle,
+      searchLyrics: song.searchLyrics,
       openlpMapping: song.openlpMapping,
       createdAt: (song as any).createdAt || new Date(),
       updatedAt: (song as any).updatedAt || new Date(),
@@ -156,14 +169,16 @@ export class SongService {
 
     const updateData: any = { ...songData };
 
-    // Handle verses
-    if (verses) {
-      const versesWithOrder = verses.map((verse, index) => ({
-        order: verse.order ?? index + 1,
-        content: verse.content,
-        label: verse.label || null,
-      }));
-      updateData.verses = versesWithOrder;
+    // Regenerate search_title if title changed (for OpenLP compatibility)
+    if (songData.title) {
+      updateData.searchTitle = songData.title.toLowerCase().trim();
+    }
+
+    // Handle verses - now a single string field
+    // Also regenerate search_lyrics when verses change
+    if (verses !== undefined) {
+      updateData.verses = verses;
+      updateData.searchLyrics = verses.toLowerCase().trim();
     }
 
     // Handle tags

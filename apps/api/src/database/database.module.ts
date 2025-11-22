@@ -6,7 +6,10 @@ import { User, UserSchema } from '../schemas/user.schema';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.DATABASE_URL || 'mongodb://localhost:27017/openlp_db'),
+    MongooseModule.forRoot(
+      process.env.DATABASE_URL || 
+      'mongodb://openlp:openlp_password@localhost:27017/openlp_db?authSource=admin'
+    ),
     MongooseModule.forFeature([
       { name: Song.name, schema: SongSchema },
       { name: Tag.name, schema: TagSchema },

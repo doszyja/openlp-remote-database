@@ -1,18 +1,4 @@
-import { IsString, IsOptional, IsArray, ValidateNested, IsNotEmpty, MinLength } from 'class-validator';
-import { Type } from 'class-transformer';
-
-export class CreateVerseDto {
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(1)
-  content: string;
-
-  @IsOptional()
-  @IsString()
-  label?: string | null;
-
-  order: number;
-}
+import { IsString, IsOptional, IsArray, IsNotEmpty, MinLength } from 'class-validator';
 
 export class CreateSongDto {
   @IsNotEmpty()
@@ -22,7 +8,7 @@ export class CreateSongDto {
 
   @IsOptional()
   @IsString()
-  number?: string | null;
+  number?: string | null; // Maps to OpenLP alternate_title or ccli_number
 
   @IsOptional()
   @IsString()
@@ -32,14 +18,31 @@ export class CreateSongDto {
   @IsString()
   chorus?: string | null;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateVerseDto)
-  verses: CreateVerseDto[];
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(1)
+  verses: string; // All verses as single string (frontend can split visually for editing)
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  tags?: string[]; // Maps to OpenLP theme_name
+
+  // OpenLP compatibility fields
+  @IsOptional()
+  @IsString()
+  copyright?: string; // OpenLP copyright field
+
+  @IsOptional()
+  @IsString()
+  comments?: string; // OpenLP comments field
+
+  @IsOptional()
+  @IsString()
+  ccliNumber?: string; // OpenLP ccli_number field
+
+  @IsOptional()
+  @IsString()
+  searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
 }
 

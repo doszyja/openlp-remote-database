@@ -532,67 +532,100 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 
 ### 3.7 Song Form Components
 
-- [ ] **Task 3.7.1**: Create VerseEditor component
+- [x] **Task 3.7.1**: Create VerseEditor component
   - Textarea for verse content
   - Label input (optional)
   - Order indicator
   - Delete button
   - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - Implemented in SongForm with individual verse editing boxes
 
-- [ ] **Task 3.7.2**: Create VerseList component
+- [x] **Task 3.7.2**: Create VerseList component
   - Display verses in order
   - Show labels
   - Edit mode toggle
   - Reorder buttons (up/down)
   - Estimated: 2 hours
+  - **Completed**: 2025-01-22 - Integrated into SongForm with move up/down buttons
 
-- [ ] **Task 3.7.3**: Create SongForm component
+- [x] **Task 3.7.3**: Create SongForm component
   - Form fields: title, number, language
   - Chorus textarea
   - Tags input (autocomplete or chips)
   - VerseList integration
   - Add/remove verse buttons
   - Estimated: 3 hours
+  - **Completed**: 2025-01-22 - Full implementation with verse parsing from XML, individual verse editing, verse type selection (verse/chorus/bridge/pre-chorus/tag), and verse order management. Removed "Chorus", "Tags", and "Number" fields per user request.
 
-- [ ] **Task 3.7.4**: Add form validation
+- [x] **Task 3.7.4**: Add form validation
   - Validate required fields
   - Validate verse content not empty
   - Show validation errors
   - Prevent submission if invalid
   - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - React Hook Form validation implemented with error messages
 
 ### 3.8 Song Detail Page
 
-- [ ] **Task 3.8.1**: Create SongDetailPage structure
+- [x] **Task 3.8.1**: Create SongDetailPage structure
   - Fetch song by ID
   - Display song details (read-only)
   - Edit button
   - Estimated: 1 hour
+  - **Completed**: 2025-01-22 - Implemented with verse parsing and display, shows verse order
 
-- [ ] **Task 3.8.2**: Implement edit mode
+- [x] **Task 3.8.2**: Implement edit mode
   - Toggle between view and edit
   - Use SongForm in edit mode
   - Save and cancel buttons
   - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - Edit page uses SongForm component, handles async data loading with useEffect
 
-- [ ] **Task 3.8.3**: Add delete functionality
+- [x] **Task 3.8.3**: Add delete functionality
   - Delete button with confirmation
   - Use useDeleteSong hook
   - Navigate to list on success
   - Estimated: 1 hour
+  - **Completed**: 2025-01-22 - Delete dialog with confirmation implemented
 
 ### 3.9 Song Create Page
 
-- [ ] **Task 3.9.1**: Create SongCreatePage
+- [x] **Task 3.9.1**: Create SongCreatePage
   - Use SongForm component
   - Initialize empty form
   - Handle form submission
   - Estimated: 1 hour
+  - **Completed**: 2025-01-22 - SongCreatePage implemented
 
-- [ ] **Task 3.9.2**: Add success handling
+- [x] **Task 3.9.2**: Add success handling
   - Show success message
   - Navigate to detail page on success
   - Estimated: 30 min
+  - **Completed**: 2025-01-22 - Navigation on success implemented
+
+### 3.12 Verse Parsing & Management
+
+- [x] **Task 3.12.1**: Create verse parser utility
+  - Parse XML format verses from OpenLP
+  - Parse plain string format verses
+  - Handle CDATA sections
+  - Extract verse labels and types
+  - Estimated: 2 hours
+  - **Completed**: 2025-01-22 - `verseParser.ts` utility created with `parseVersesFromXml`, `parseVersesFromString`, `parseVerses`, `combineVersesToString`, `getVerseDisplayLabel`, `generateVerseOrderString`, `parseVerseOrderString`
+
+- [x] **Task 3.12.2**: Implement verse order management
+  - Display verse order as editable string (e.g., "v1 c1 v2 c1")
+  - Parse verse order string to update verse sequence
+  - Preserve verse_order from OpenLP
+  - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - Verse order input field added to SongForm, supports editing order string
+
+- [x] **Task 3.12.3**: Fix async form data loading
+  - Handle async song data in forms
+  - Reset form when song data loads
+  - Prevent form errors with null/undefined data
+  - Estimated: 1 hour
+  - **Completed**: 2025-01-22 - Added useEffect hook to reset form when song data loads asynchronously
 
 ### 3.10 Mobile Optimization
 
@@ -762,35 +795,62 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 
 ### 4.6 Sync Service
 
-- [ ] **Task 4.6.1**: Create SyncService class
+- [x] **Task 4.6.1**: Create SyncService class
   - Inject OpenLPDbService and ApiClientService
   - Set up structure
   - Estimated: 30 min
+  - **Completed**: 2025-01-22 - SyncService implemented with sync logic
 
-- [ ] **Task 4.6.2**: Implement sync algorithm - fetch phase
+- [x] **Task 4.6.2**: Implement sync algorithm - fetch phase
   - Fetch all songs from backend
   - Fetch all songs from OpenLP
   - Extract UUID mappings
   - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - Implemented in SyncService
 
-- [ ] **Task 4.6.3**: Implement sync algorithm - reconciliation
+- [x] **Task 4.6.3**: Implement sync algorithm - reconciliation
   - Compare backend and OpenLP songs
   - Determine: insert, update, delete
   - Create change list
   - Estimated: 2 hours
+  - **Completed**: 2025-01-22 - Reconciliation logic implemented
 
-- [ ] **Task 4.6.4**: Implement sync algorithm - execution
+- [x] **Task 4.6.4**: Implement sync algorithm - execution
   - Execute inserts
   - Execute updates
   - Execute deletes (optional for MVP)
   - Handle errors per song
   - Estimated: 2.5 hours
+  - **Completed**: 2025-01-22 - Execution phase implemented
 
 - [ ] **Task 4.6.5**: Add dry-run mode
   - Skip actual database writes
   - Generate change report
   - Display summary
   - Estimated: 1.5 hours
+
+### 4.11 Unit Testing
+
+- [x] **Task 4.11.1**: Create unit tests for SyncService
+  - Test sync algorithm logic
+  - Mock OpenLPDbService and ApiClientService
+  - Test error handling
+  - Estimated: 2 hours
+  - **Completed**: 2025-01-22 - Comprehensive unit tests created with Vitest
+
+- [x] **Task 4.11.2**: Create unit tests for ApiClientService
+  - Test API calls and error handling
+  - Mock axios
+  - Test pagination handling
+  - Estimated: 1.5 hours
+  - **Completed**: 2025-01-22 - Unit tests created with Vitest, mocking axios
+
+- [x] **Task 4.11.3**: Migrate testing framework to Vitest
+  - Replace Jest with Vitest
+  - Update test configuration
+  - Update test syntax
+  - Estimated: 1 hour
+  - **Completed**: 2025-01-22 - Successfully migrated from Jest to Vitest, all tests passing
 
 ### 4.7 Logging
 
@@ -1036,7 +1096,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Expose port 80
   - Estimated: 1.5 hours
 
-- [ ] **Task 6.1.3**: Create docker-compose.yml for development
+- [x] **Task 6.1.3**: Create docker-compose.yml for development
   - PostgreSQL service with volume for data persistence
   - NestJS backend service with hot reload
   - React frontend service with hot reload
@@ -1044,6 +1104,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Network configuration
   - Volume mounts for code (development)
   - Estimated: 2 hours
+  - **Completed**: 2025-01-22 - Created `docker-compose.dev.yml` for development with MongoDB in Docker, API and Web running locally for hot-reloading
 
 - [ ] **Task 6.1.4**: Create docker-compose.prod.yml for production
   - PostgreSQL service with named volume
@@ -1147,5 +1208,50 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 
 ---
 
-**Last Updated**: 2025-01-XX
-**Next Review**: After Epic 1 completion
+**Last Updated**: 2025-01-22
+**Next Review**: After Epic 3 completion
+
+## Recent Accomplishments (2025-01-22)
+
+### Frontend Verse Management
+- ✅ Implemented comprehensive verse parsing from XML format (OpenLP) and plain string format
+- ✅ Created `verseParser.ts` utility with functions for parsing, combining, and managing verses
+- ✅ Added individual verse editing boxes in SongForm (add, delete, reorder, change type)
+- ✅ Implemented verse order management with editable string input (e.g., "v1 c1 v2 c1")
+- ✅ Fixed async form data loading with useEffect hook to reset form when song data loads
+- ✅ Removed unnecessary fields from SongForm (Chorus, Tags, Number) per user request
+- ✅ Updated SongDetailPage to properly display parsed verses with order information
+- ✅ Added support for repeating verses in verse order string
+
+### Notification System
+- ✅ Created global NotificationContext with Material UI Snackbar
+- ✅ Integrated success/error notifications across all pages
+- ✅ Top-center positioning with 3-second auto-dismiss
+- ✅ Used in SongCreatePage, SongEditPage, and SongDetailPage
+
+### UI/UX Improvements
+- ✅ Implemented responsive design for mobile devices
+- ✅ Added fullscreen/normal view toggle for SongDetailPage
+- ✅ Created left-hand search column with song list (hidden on mobile)
+- ✅ Implemented debounced search (300ms delay)
+- ✅ Auto-scroll to selected song in search list
+- ✅ Current song highlighted (bold) in search list
+- ✅ Optimized React Query to prevent page blinks during navigation
+- ✅ Used React Router Link for smooth client-side navigation
+- ✅ Fixed mobile page overflow issues
+- ✅ Responsive button layouts (stack on mobile, row on desktop)
+
+### Testing Infrastructure
+- ✅ Migrated sync package from Jest to Vitest
+- ✅ Created comprehensive unit tests for SyncService
+- ✅ Created comprehensive unit tests for ApiClientService
+- ✅ All tests passing with Vitest
+
+### Development Environment
+- ✅ Set up Docker Compose for development (MongoDB in Docker, API/Web locally)
+- ✅ Configured hot-reloading for local development
+- ✅ Updated environment variable examples for Docker setup
+
+### API Updates
+- ✅ Increased default song list limit from 20 to 150
+- ✅ Updated query DTOs with new default limit

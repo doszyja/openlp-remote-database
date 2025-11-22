@@ -2,18 +2,22 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Typography, Alert } from '@mui/material';
 import { useCreateSong } from '../hooks/useCreateSong';
 import SongForm from '../components/SongForm';
+import { useNotification } from '../contexts/NotificationContext';
 import type { CreateSongDto, UpdateSongDto } from '@openlp/shared';
 
 export default function SongCreatePage() {
   const navigate = useNavigate();
   const createSong = useCreateSong();
+  const { showSuccess, showError } = useNotification();
 
   const handleSubmit = async (data: CreateSongDto | UpdateSongDto) => {
     try {
       const result = await createSong.mutateAsync(data as CreateSongDto);
+      showSuccess('Song created successfully!');
       navigate(`/songs/${result.id}`);
     } catch (error) {
-      // Error is handled by React Query
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create song. Please try again.';
+      showError(errorMessage);
       console.error('Failed to create song:', error);
     }
   };

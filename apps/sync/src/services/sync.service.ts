@@ -85,16 +85,9 @@ export class SyncService {
     // For now, we'll try to find by title or create new
     const openlpIdNumber = undefined;
 
-    // Sort verses by order
-    const sortedVerses = [...song.verses].sort((a, b) => a.order - b.order);
-
-    // Convert SongResponseDto to format expected by OpenLP service
-    const songForOpenLP = {
-      ...song,
-      verses: sortedVerses,
-    };
-
-    const newOpenlpId = this.openlpDb.upsertSong(songForOpenLP, openlpIdNumber);
+    // Verses is now a single string field, no need to sort
+    // The OpenLP service will handle formatting it to XML
+    const newOpenlpId = this.openlpDb.upsertSong(song, openlpIdNumber);
 
       if (options.verbose) {
         if (openlpIdNumber) {
