@@ -7,75 +7,78 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 1: Monorepo & Tooling Setup
 
 ### 1.1 Initialize Monorepo Foundation
-- [ ] **Task 1.1.1**: Create root `package.json` with workspace configuration
+
+- [x] **Task 1.1.1**: Create root `package.json` with workspace configuration
   - Add pnpm workspace scripts
   - Define root-level dependencies (TypeScript, ESLint, Prettier)
   - Add scripts: `dev:web`, `dev:api`, `dev:sync`, `build:all`, `test:all`
   - Estimated: 30 min
 
-- [ ] **Task 1.1.2**: Create `pnpm-workspace.yaml`
+- [x] **Task 1.1.2**: Create `pnpm-workspace.yaml`
   - Define workspace packages: `apps/*`, `packages/*`
   - Configure workspace protocol
   - Estimated: 15 min
 
-- [ ] **Task 1.1.3**: Set up root TypeScript configuration
+- [x] **Task 1.1.3**: Set up root TypeScript configuration
   - Create `tsconfig.json` with base config
   - Configure path aliases if needed
   - Set strict mode
   - Estimated: 20 min
 
-- [ ] **Task 1.1.4**: Create root `.gitignore`
+- [x] **Task 1.1.4**: Create root `.gitignore`
   - Ignore node_modules, build outputs, .env files
   - Add IDE-specific ignores
   - Estimated: 10 min
 
 ### 1.2 Shared Types Package
-- [ ] **Task 1.2.1**: Initialize `packages/shared` package
+
+- [x] **Task 1.2.1**: Initialize `packages/shared` package
   - Create `package.json` with name `@openlp/shared`
   - Set up TypeScript build configuration
   - Add build script
   - Estimated: 30 min
 
-- [ ] **Task 1.2.2**: Define base song types and interfaces
+- [x] **Task 1.2.2**: Define base song types and interfaces
   - Create `src/types/song.ts` with `Song`, `Verse`, `Tag` interfaces
   - Match backend Prisma schema structure
   - Export types
   - Estimated: 45 min
 
-- [ ] **Task 1.2.3**: Create DTO types for API communication
+- [x] **Task 1.2.3**: Create DTO types for API communication
   - Create `src/dto/create-song.dto.ts`
   - Create `src/dto/update-song.dto.ts`
   - Create `src/dto/song-response.dto.ts`
   - Create `src/dto/paginated-response.dto.ts`
   - Estimated: 1 hour
 
-- [ ] **Task 1.2.4**: Set up package exports and barrel files
+- [x] **Task 1.2.4**: Set up package exports and barrel files
   - Create `src/index.ts` to export all types
   - Configure package.json exports field
   - Test import from other packages
   - Estimated: 30 min
 
 ### 1.3 Development Tooling
-- [ ] **Task 1.3.1**: Configure ESLint for monorepo
+
+- [x] **Task 1.3.1**: Configure ESLint for monorepo
   - Install ESLint and plugins
   - Create root `.eslintrc.js`
   - Configure for TypeScript, React, NestJS
   - Add workspace-specific overrides
   - Estimated: 1 hour
 
-- [ ] **Task 1.3.2**: Configure Prettier
+- [x] **Task 1.3.2**: Configure Prettier
   - Create `.prettierrc` and `.prettierignore`
   - Set up format scripts
   - Configure VS Code settings (optional)
   - Estimated: 30 min
 
-- [ ] **Task 1.3.3**: Set up VS Code workspace settings (optional)
+- [x] **Task 1.3.3**: Set up VS Code workspace settings (optional)
   - Create `.vscode/settings.json`
   - Configure recommended extensions
   - Set up debug configurations
   - Estimated: 30 min
 
-- [ ] **Task 1.3.4**: Create environment variable templates
+- [x] **Task 1.3.4**: Create environment variable templates
   - Create `.env.example` for each app
   - Document required variables
   - Add to `.gitignore`
@@ -86,6 +89,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 2: Backend API & Database
 
 ### 2.1 NestJS Project Setup
+
 - [ ] **Task 2.1.1**: Initialize NestJS application in `apps/api`
   - Use NestJS CLI to create project
   - Configure TypeScript
@@ -106,6 +110,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 2.2 Database Setup with Prisma
+
 - [ ] **Task 2.2.1**: Install and configure Prisma
   - Install Prisma dependencies
   - Initialize Prisma: `npx prisma init`
@@ -140,6 +145,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 2.3 Song Module - Core Structure
+
 - [ ] **Task 2.3.1**: Create SongModule
   - Create `src/songs/song.module.ts`
   - Import PrismaModule
@@ -159,6 +165,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 2.4 DTOs and Validation
+
 - [ ] **Task 2.4.1**: Install validation dependencies
   - Install `class-validator` and `class-transformer`
   - Configure ValidationPipe globally
@@ -186,6 +193,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 45 min
 
 ### 2.5 Song Service - CRUD Operations
+
 - [ ] **Task 2.5.1**: Implement `create()` method
   - Validate input
   - Create song with verses and tags
@@ -226,6 +234,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 2.6 Song Controller - REST Endpoints
+
 - [ ] **Task 2.6.1**: Implement GET /songs endpoint
   - Use QueryDto for filters
   - Call service.findAll()
@@ -262,6 +271,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 45 min
 
 ### 2.7 Error Handling
+
 - [ ] **Task 2.7.1**: Create global exception filter
   - Create `src/common/filters/http-exception.filter.ts`
   - Format error responses consistently
@@ -279,6 +289,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 2.8 CORS and API Configuration
+
 - [ ] **Task 2.8.1**: Configure CORS
   - Set up CORS in main.ts
   - Allow frontend origin
@@ -291,6 +302,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 20 min
 
 ### 2.9 Swagger/OpenAPI Documentation
+
 - [ ] **Task 2.9.1**: Install and configure Swagger
   - Install `@nestjs/swagger`
   - Configure in main.ts
@@ -303,6 +315,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 2.10 OpenLP Import Script
+
 - [ ] **Task 2.10.1**: Create import script structure
   - Create `scripts/import-openlp.ts`
   - Set up script runner
@@ -333,6 +346,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 2.11 Database Seeding
+
 - [ ] **Task 2.11.1**: Create seed script
   - Create `prisma/seed.ts`
   - Add sample songs with verses
@@ -349,6 +363,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 3: Frontend Application
 
 ### 3.1 React + Vite Setup
+
 - [ ] **Task 3.1.1**: Initialize Vite + React project in `apps/web`
   - Use Vite template: `npm create vite@latest`
   - Configure TypeScript
@@ -382,6 +397,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 20 min
 
 ### 3.2 Routing Setup
+
 - [ ] **Task 3.2.1**: Install and configure React Router
   - Install react-router-dom
   - Create router configuration
@@ -402,6 +418,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 3.3 API Client Service
+
 - [ ] **Task 3.3.1**: Create API client base
   - Create `src/services/api.ts`
   - Set up base URL from env
@@ -424,6 +441,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 3.4 Custom Hooks
+
 - [ ] **Task 3.4.1**: Set up React Query/SWR
   - Install and configure
   - Create query client/provider
@@ -458,6 +476,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 45 min
 
 ### 3.5 UI Components - Core
+
 - [ ] **Task 3.5.1**: Set up Material UI components
   - Use MUI Button, TextField, TextareaAutosize, CircularProgress, Alert
   - Create wrapper components if needed for consistency
@@ -479,6 +498,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 3.6 Song List Components
+
 - [ ] **Task 3.6.1**: Create SearchBar component
   - Text input for search
   - Debounce input (300ms)
@@ -511,6 +531,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 3.7 Song Form Components
+
 - [ ] **Task 3.7.1**: Create VerseEditor component
   - Textarea for verse content
   - Label input (optional)
@@ -541,6 +562,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 3.8 Song Detail Page
+
 - [ ] **Task 3.8.1**: Create SongDetailPage structure
   - Fetch song by ID
   - Display song details (read-only)
@@ -560,6 +582,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 3.9 Song Create Page
+
 - [ ] **Task 3.9.1**: Create SongCreatePage
   - Use SongForm component
   - Initialize empty form
@@ -572,6 +595,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 3.10 Mobile Optimization
+
 - [ ] **Task 3.10.1**: Optimize layout for mobile with MUI
   - Use MUI Grid and Box for responsive layouts
   - Configure MUI breakpoints for mobile
@@ -591,6 +615,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 3.11 Error Handling & UX
+
 - [ ] **Task 3.11.1**: Add error boundaries
   - Create ErrorBoundary component
   - Wrap routes
@@ -612,6 +637,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 4: OpenLP Sync Tool
 
 ### 4.1 CLI Project Setup
+
 - [ ] **Task 4.1.1**: Initialize Node.js CLI project in `apps/sync`
   - Create package.json
   - Set up TypeScript
@@ -631,6 +657,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 4.2 Configuration System
+
 - [ ] **Task 4.2.1**: Define configuration interface
   - Create `src/config/config.interface.ts`
   - Define: openlpDbPath, apiUrl, apiKey, etc.
@@ -648,6 +675,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 4.3 OpenLP Database Service
+
 - [ ] **Task 4.3.1**: Create OpenLPDbService class
   - Connect to SQLite database
   - Handle connection errors
@@ -682,6 +710,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 4.4 API Client Service
+
 - [ ] **Task 4.4.1**: Create ApiClientService class
   - Set up HTTP client (axios)
   - Configure base URL
@@ -706,6 +735,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 4.5 Mapping Utilities
+
 - [ ] **Task 4.5.1**: Inspect OpenLP schema
   - Connect to OpenLP DB
   - Document table structure
@@ -731,6 +761,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 4.6 Sync Service
+
 - [ ] **Task 4.6.1**: Create SyncService class
   - Inject OpenLPDbService and ApiClientService
   - Set up structure
@@ -762,6 +793,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 4.7 Logging
+
 - [ ] **Task 4.7.1**: Set up Winston logger
   - Configure log levels
   - Set up file logging
@@ -775,6 +807,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 4.8 CLI Interface
+
 - [ ] **Task 4.8.1**: Set up commander.js
   - Define commands: `sync`, `import`
   - Add options: `--config`, `--dry-run`, `--verbose`
@@ -798,6 +831,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 4.9 Error Handling & Reporting
+
 - [ ] **Task 4.9.1**: Implement error handling
   - Catch and log errors
   - Continue processing on individual errors
@@ -817,6 +851,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 4.10 Windows Integration
+
 - [ ] **Task 4.10.1**: Create batch script launcher
   - Create `sync.bat` for double-click execution
   - Configure paths
@@ -832,6 +867,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 5: Auth & Permissions (Phase 2)
 
 ### 5.1 Discord OAuth Setup
+
 - [ ] **Task 5.1.1**: Create Discord OAuth application
   - Go to Discord Developer Portal
   - Create new application
@@ -854,6 +890,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 5.2 Backend Auth Implementation
+
 - [ ] **Task 5.2.1**: Create User model in Prisma
   - Add User table: id, discordId (unique), username, avatar, discordRoles, createdAt, updatedAt
   - Create migration
@@ -912,6 +949,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 30 min
 
 ### 5.3 Frontend Auth Implementation
+
 - [ ] **Task 5.3.1**: Create auth context/provider
   - AuthProvider component
   - Store user state and token
@@ -957,6 +995,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 5.4 Error Handling & Edge Cases
+
 - [ ] **Task 5.4.1**: Handle Discord API errors
   - Rate limiting
   - API downtime
@@ -979,6 +1018,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 ## EPIC 6: Deployment & Environment
 
 ### 6.1 Docker Setup
+
 - [ ] **Task 6.1.1**: Create Dockerfile for NestJS backend
   - Multi-stage build (dependencies → build → production)
   - Use Node.js Alpine image for smaller size
@@ -1027,6 +1067,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1.5 hours
 
 ### 6.2 Backend Deployment
+
 - [ ] **Task 6.2.1**: Create production Dockerfile
   - Multi-stage build
   - Optimize image size
@@ -1050,6 +1091,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 6.3 Frontend Deployment
+
 - [ ] **Task 6.3.1**: Optimize production build
   - Configure Vite for production
   - Optimize bundle size
@@ -1061,6 +1103,7 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Estimated: 1 hour
 
 ### 6.4 Documentation
+
 - [ ] **Task 6.3.1**: Write main README
   - Project overview
   - Setup instructions
@@ -1091,12 +1134,14 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 **Estimated Total Time**: ~470-570 hours (12-14 weeks for one developer)
 
 **MVP Scope (Phase 1)**:
+
 - Epic 1: Complete
 - Epic 2: Complete (core CRUD)
 - Epic 3: Complete (core features)
 - Epic 4: Complete (one-way sync)
 
 **Phase 2**:
+
 - Epic 5: Auth & Permissions
 - Epic 6: Production Deployment
 
@@ -1104,4 +1149,3 @@ This document contains a comprehensive, granular task list organized by epic. Ea
 
 **Last Updated**: 2025-01-XX
 **Next Review**: After Epic 1 completion
-

@@ -11,12 +11,14 @@ This guide explains how to set up and run the OpenLP Database Sync application u
 ## Quick Start (Development)
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/doszyja/openlp-remote-database.git
    cd openlp-remote-database
    ```
 
 2. **Create environment files**
+
    ```bash
    # Copy example env files
    cp apps/api/.env.example apps/api/.env
@@ -24,8 +26,9 @@ This guide explains how to set up and run the OpenLP Database Sync application u
    ```
 
 3. **Configure environment variables**
-   
+
    Edit `apps/api/.env`:
+
    ```env
    DATABASE_URL=postgresql://openlp:openlp_password@postgres:5432/openlp_db
    PORT=3000
@@ -33,16 +36,19 @@ This guide explains how to set up and run the OpenLP Database Sync application u
    ```
 
    Edit `apps/web/.env`:
+
    ```env
    VITE_API_URL=http://localhost:3000/api
    ```
 
 4. **Start services**
+
    ```bash
    docker-compose up -d
    ```
 
 5. **Run database migrations**
+
    ```bash
    docker-compose exec api pnpm prisma migrate dev
    ```
@@ -55,16 +61,19 @@ This guide explains how to set up and run the OpenLP Database Sync application u
 ## Development Workflow
 
 ### Start Services
+
 ```bash
 docker-compose up
 ```
 
 ### Start in Background
+
 ```bash
 docker-compose up -d
 ```
 
 ### View Logs
+
 ```bash
 # All services
 docker-compose logs -f
@@ -76,16 +85,19 @@ docker-compose logs -f postgres
 ```
 
 ### Stop Services
+
 ```bash
 docker-compose down
 ```
 
 ### Stop and Remove Volumes
+
 ```bash
 docker-compose down -v
 ```
 
 ### Rebuild Services
+
 ```bash
 # Rebuild all
 docker-compose build
@@ -96,6 +108,7 @@ docker-compose build web
 ```
 
 ### Execute Commands in Containers
+
 ```bash
 # Run Prisma migrations
 docker-compose exec api pnpm prisma migrate dev
@@ -166,18 +179,21 @@ docker-compose -f docker-compose.prod.yml logs -f
 ## Docker Compose Services
 
 ### PostgreSQL
+
 - **Image**: `postgres:16-alpine`
 - **Port**: `5432` (mapped to host)
 - **Volume**: `postgres_data` (persistent data)
 - **Health Check**: Checks if database is ready
 
 ### NestJS API
+
 - **Build**: Multi-stage Dockerfile
 - **Port**: `3000` (mapped to host)
 - **Hot Reload**: Enabled in development via volume mounts
 - **Health Check**: `/health` endpoint
 
 ### React Frontend
+
 - **Build**: Multi-stage Dockerfile with nginx
 - **Port**: `80` (production) or `5173` (development)
 - **Serves**: Static files via nginx
@@ -200,16 +216,19 @@ docker-compose -f docker-compose.prod.yml logs -f
 ## Volume Mounts
 
 ### Development
+
 - Source code mounted for hot reload
 - `node_modules` excluded via anonymous volumes
 
 ### Production
+
 - No source code mounts
 - Only built artifacts in containers
 
 ## Networking
 
 All services are on the same Docker network (`openlp-network`), allowing them to communicate using service names:
+
 - `postgres` - Database hostname
 - `api` - Backend API hostname
 - `web` - Frontend hostname
@@ -217,22 +236,26 @@ All services are on the same Docker network (`openlp-network`), allowing them to
 ## Database Management
 
 ### Run Migrations
+
 ```bash
 docker-compose exec api pnpm prisma migrate dev
 ```
 
 ### Prisma Studio
+
 ```bash
 docker-compose exec api pnpm prisma studio
 # Access at http://localhost:5555
 ```
 
 ### Backup Database
+
 ```bash
 docker-compose exec postgres pg_dump -U openlp openlp_db > backup.sql
 ```
 
 ### Restore Database
+
 ```bash
 docker-compose exec -T postgres psql -U openlp openlp_db < backup.sql
 ```
@@ -240,6 +263,7 @@ docker-compose exec -T postgres psql -U openlp openlp_db < backup.sql
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 # Check what's using the port
 netstat -ano | findstr :3000  # Windows
@@ -251,6 +275,7 @@ ports:
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Check if database is healthy
 docker-compose ps postgres
@@ -263,6 +288,7 @@ docker-compose exec api node -e "console.log(process.env.DATABASE_URL)"
 ```
 
 ### Build Failures
+
 ```bash
 # Clean build
 docker-compose build --no-cache
@@ -272,6 +298,7 @@ docker-compose build api 2>&1 | tee build.log
 ```
 
 ### Permission Issues (Linux)
+
 ```bash
 # Fix ownership
 sudo chown -R $USER:$USER .
@@ -281,6 +308,7 @@ sudo docker-compose up
 ```
 
 ### Container Won't Start
+
 ```bash
 # Check logs
 docker-compose logs <service-name>
@@ -295,6 +323,7 @@ docker inspect <container-name>
 ## Environment Variables
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL=postgresql://user:password@postgres:5432/dbname
 PORT=3000
@@ -305,12 +334,15 @@ JWT_SECRET=your_secret
 ```
 
 ### Frontend (.env)
+
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
 
 ### Docker Compose
+
 Environment variables can be set in:
+
 1. `.env` file in project root
 2. `docker-compose.yml` environment section
 3. System environment variables
@@ -318,6 +350,7 @@ Environment variables can be set in:
 ## Security Considerations
 
 ### Production Checklist
+
 - [ ] Use strong passwords for database
 - [ ] Set secure JWT secret
 - [ ] Don't expose database port publicly
@@ -329,7 +362,9 @@ Environment variables can be set in:
 - [ ] Regular backups
 
 ### Secrets Management
+
 For production, consider using:
+
 - Docker secrets
 - Environment variable files with restricted permissions
 - External secret management (AWS Secrets Manager, etc.)
@@ -337,6 +372,7 @@ For production, consider using:
 ## Performance Optimization
 
 ### Build Cache
+
 ```bash
 # Use build cache
 docker-compose build --parallel
@@ -346,6 +382,7 @@ docker builder prune
 ```
 
 ### Image Size
+
 - Using Alpine Linux images reduces size
 - Multi-stage builds exclude dev dependencies
 - .dockerignore files exclude unnecessary files
@@ -353,12 +390,15 @@ docker builder prune
 ## Monitoring
 
 ### Health Checks
+
 All services have health checks configured:
+
 - PostgreSQL: `pg_isready`
 - API: HTTP `/health` endpoint
 - Frontend: HTTP root check
 
 ### View Health Status
+
 ```bash
 docker-compose ps
 ```
@@ -403,4 +443,3 @@ docker system prune -a
 ---
 
 **Last Updated**: 2025-01-XX
-

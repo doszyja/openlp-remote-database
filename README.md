@@ -36,6 +36,7 @@ openlp-database/
 1. **Prerequisites**: Docker and Docker Compose installed
 
 2. **Clone and setup**:
+
    ```bash
    git clone https://github.com/doszyja/openlp-remote-database.git
    cd openlp-remote-database
@@ -44,11 +45,13 @@ openlp-database/
    ```
 
 3. **Start services**:
+
    ```bash
    docker-compose up -d
    ```
 
 4. **Run migrations**:
+
    ```bash
    docker-compose exec api pnpm prisma migrate dev
    ```
@@ -68,11 +71,12 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
    - OpenLP SQLite database file (for sync tool)
 
 2. **Installation**:
+
    ```bash
    # Clone repository
    git clone https://github.com/doszyja/openlp-remote-database.git
    cd openlp-remote-database
-   
+
    # Install dependencies
    pnpm install
    ```
@@ -82,6 +86,7 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
    - Configure database URLs and API endpoints
 
 4. **Set up database**:
+
    ```bash
    cd apps/api
    pnpm prisma migrate dev
@@ -98,7 +103,8 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
 ## 🤖 Cursor AI Configuration
 
 This project includes `.cursorrules` to help Cursor AI maintain proper context:
-- All markdown files (*.md) are automatically included in context
+
+- All markdown files (\*.md) are automatically included in context
 - Project plan and TODO list are prioritized for task tracking
 - Architecture and rules are always referenced
 
@@ -141,6 +147,7 @@ pnpm test:web     # Test frontend
 ### Individual App Scripts
 
 Each app has its own scripts in its `package.json`. See individual READMEs:
+
 - `apps/api/README.md`
 - `apps/web/README.md`
 - `apps/sync/README.md`
@@ -148,12 +155,14 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 ## 🏗️ Architecture
 
 ### Backend (NestJS)
+
 - **Framework**: NestJS with TypeScript
 - **Database**: PostgreSQL with Prisma ORM
 - **API**: REST endpoints with Swagger documentation
 - **Validation**: class-validator
 
 ### Frontend (React)
+
 - **Framework**: React 18 with Vite
 - **Routing**: React Router v6
 - **State**: React Query for server state
@@ -161,6 +170,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 - **Forms**: React Hook Form
 
 ### Sync Tool (Node CLI)
+
 - **Runtime**: Node.js with TypeScript
 - **SQLite**: better-sqlite3
 - **HTTP**: axios for API calls
@@ -178,6 +188,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 ## 📋 Current Status
 
 **Phase 1 (MVP)**: In Progress
+
 - [x] Project planning and documentation
 - [ ] Monorepo setup
 - [ ] Backend API
@@ -185,6 +196,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 - [ ] Sync tool
 
 **Phase 2**: Planned
+
 - Authentication and authorization
 - Advanced features
 - Production deployment
@@ -212,4 +224,3 @@ Built for churches using OpenLP projection software.
 ---
 
 **Last Updated**: 2025-01-XX
-

@@ -37,6 +37,7 @@ openlp-database/
 ## Technology Stack
 
 ### Backend (`apps/api`)
+
 - **Framework**: NestJS (latest stable)
 - **Language**: TypeScript
 - **ORM**: Prisma
@@ -45,6 +46,7 @@ openlp-database/
 - **API Docs**: Swagger/OpenAPI
 
 ### Frontend (`apps/web`)
+
 - **Framework**: React 18
 - **Build Tool**: Vite
 - **Language**: TypeScript
@@ -55,6 +57,7 @@ openlp-database/
 - **Form Handling**: React Hook Form with Material UI components
 
 ### Sync Tool (`apps/sync`)
+
 - **Runtime**: Node.js
 - **Language**: TypeScript
 - **SQLite**: better-sqlite3
@@ -63,6 +66,7 @@ openlp-database/
 - **Config**: JSON or YAML
 
 ### Shared (`packages/shared`)
+
 - **TypeScript**: Shared types, DTOs, interfaces
 - **Build**: tsc or tsup
 
@@ -80,7 +84,7 @@ model Song {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime? // Soft delete
-  
+
   verses    Verse[]
   tags      Tag[]
   openlpMapping OpenLPMapping?
@@ -93,7 +97,7 @@ model Verse {
   order   Int
   content String
   label   String? // "Verse 1", "Bridge", etc.
-  
+
   @@index([songId, order])
 }
 
@@ -139,12 +143,14 @@ CREATE TABLE song_verses (
 ## API Design
 
 ### Base URL
+
 - Development: `http://localhost:3000/api`
 - Production: `https://api.yourdomain.com/api`
 
 ### Endpoints
 
 #### Songs
+
 - `GET /songs` - List songs (paginated, filtered)
 - `GET /songs/:id` - Get single song
 - `POST /songs` - Create song
@@ -153,12 +159,14 @@ CREATE TABLE song_verses (
 - `GET /songs/search?q=...` - Search songs
 
 #### Tags (Future)
+
 - `GET /tags` - List all tags
 - `POST /tags` - Create tag
 
 ### Request/Response Examples
 
 #### Create Song
+
 ```http
 POST /api/songs
 Content-Type: application/json
@@ -180,11 +188,13 @@ Content-Type: application/json
 ```
 
 #### List Songs
+
 ```http
 GET /api/songs?page=1&limit=20&language=en&tags=worship
 ```
 
 Response:
+
 ```json
 {
   "data": [
@@ -246,17 +256,20 @@ Response:
 ### ID Mapping Strategy
 
 **Option 1: Store in Comments (Recommended for MVP)**
+
 - Store backend UUID in OpenLP `songs.comments` field as JSON
 - Pros: No schema changes to OpenLP
 - Cons: Comments field might be used for other purposes
 
 **Option 2: Custom Mapping Table**
+
 - Create `backend_sync` table in OpenLP DB
 - Store `openlp_id` → `backend_uuid` mapping
 - Pros: Clean separation
 - Cons: Requires schema modification
 
 **Option 3: Use OpenLP ID as Reference**
+
 - Store OpenLP ID in backend `OpenLPMapping.openlpId`
 - Pros: Simple
 - Cons: If OpenLP ID changes, mapping breaks
@@ -266,12 +279,14 @@ Response:
 ## Security Architecture
 
 ### Authentication (Phase 2)
+
 - **Discord OAuth 2.0**: Users authenticate via Discord
 - **JWT-based sessions**: Backend issues JWT tokens after Discord auth
 - **Token storage**: httpOnly cookie (recommended) or localStorage
 - **Refresh mechanism**: Refresh JWT or re-authenticate with Discord
 
 ### Discord OAuth Flow
+
 1. User clicks "Login with Discord"
 2. Redirect to Discord OAuth authorization
 3. User authorizes application
@@ -284,6 +299,7 @@ Response:
 10. Frontend stores token and redirects to app
 
 ### Authorization
+
 - **Role-based access control (RBAC)**: Based on Discord server roles
 - **Discord role verification**: Check user's role in Discord server
 - **Database roles**: Store Discord roles in database for caching
@@ -291,6 +307,7 @@ Response:
 - **Role requirements**: Specific Discord role ID required for access
 
 ### API Security
+
 - CORS configuration
 - Rate limiting (future)
 - Input validation and sanitization
@@ -300,18 +317,21 @@ Response:
 ## Deployment Architecture
 
 ### Development
+
 - Backend: `localhost:3000`
 - Frontend: `localhost:5173` (Vite default)
 - Database: Local PostgreSQL or SQLite
 - Sync Tool: Run locally
 
 ### Production (Recommended)
+
 - **Docker Compose**: All services (backend, frontend, database) in Docker containers
 - **Alternative**: Backend on VPS, Frontend on static hosting (Vercel, Netlify)
 - **Database**: PostgreSQL in Docker container or managed service (AWS RDS, Supabase, etc.)
 - **Sync Tool**: Installed on church Windows PC (not containerized)
 
 ### Docker Setup
+
 - **Development**: `docker-compose.yml` with hot reload and volume mounts
 - **Production**: `docker-compose.prod.yml` with optimized builds
 - **Services**: PostgreSQL, NestJS API, React Frontend (nginx)
@@ -321,6 +341,7 @@ Response:
 ### Environment Variables
 
 #### Backend
+
 ```
 DATABASE_URL=postgresql://...
 PORT=3000
@@ -335,11 +356,13 @@ DISCORD_REQUIRED_ROLE_ID=... (Phase 2 - Required role ID)
 ```
 
 #### Frontend
+
 ```
 VITE_API_URL=https://api.yourdomain.com/api
 ```
 
 #### Sync Tool
+
 ```
 OPENLP_DB_PATH=C:\Program Files\OpenLP\songs.sqlite
 API_URL=https://api.yourdomain.com/api
@@ -349,18 +372,21 @@ API_KEY=... (if auth implemented)
 ## Performance Considerations
 
 ### Backend
+
 - Database indexes on frequently queried fields
 - Pagination for all list endpoints
 - Consider caching for tag list, language list
 - Connection pooling for database
 
 ### Frontend
+
 - Code splitting by route
 - Lazy load components
 - Debounce search inputs
 - Cache API responses (React Query)
 
 ### Sync Tool
+
 - Batch operations where possible
 - Process songs in chunks
 - Log progress for long-running syncs
@@ -368,18 +394,21 @@ API_KEY=... (if auth implemented)
 ## Error Handling Strategy
 
 ### Backend
+
 - Global exception filter
 - Consistent error response format
 - Logging with context (request ID, user ID)
 - Error codes for different error types
 
 ### Frontend
+
 - Error boundaries for component errors
 - API error handling with user-friendly messages
 - Retry logic for network errors
 - Offline detection (future)
 
 ### Sync Tool
+
 - Continue processing on individual song errors
 - Log all errors with context
 - Generate error summary report
@@ -388,12 +417,14 @@ API_KEY=... (if auth implemented)
 ## Future Enhancements
 
 ### Phase 2
+
 - Authentication and authorization
 - Multi-tenancy (multiple churches)
 - Version history for songs
 - Advanced search (full-text)
 
 ### Phase 3
+
 - Real-time sync (WebSocket)
 - Offline support (PWA)
 - Mobile apps (React Native)
@@ -402,4 +433,3 @@ API_KEY=... (if auth implemented)
 ---
 
 **Last Updated**: 2025-01-XX
-

@@ -11,12 +11,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use pnpm workspaces in a monorepo structure.
 
 **Rationale**:
+
 - Single repository for easier development and versioning
 - Shared types package reduces duplication
 - pnpm is faster and more efficient than npm/yarn
 - Workspace protocol simplifies internal dependencies
 
 **Consequences**:
+
 - ✅ Easier code sharing
 - ✅ Single source of truth for versions
 - ✅ Simplified development workflow
@@ -34,12 +36,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use Prisma as the ORM.
 
 **Rationale**:
+
 - Excellent TypeScript support with type safety
 - Great developer experience (migrations, Prisma Studio)
 - Modern and actively maintained
 - Better than TypeORM for our use case
 
 **Consequences**:
+
 - ✅ Type-safe database queries
 - ✅ Automatic migrations
 - ✅ Prisma Studio for database inspection
@@ -57,12 +61,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use PostgreSQL for production, SQLite for local development.
 
 **Rationale**:
+
 - Production-ready and battle-tested
 - Better concurrent access than SQLite
 - Supports complex queries and indexes
 - SQLite sufficient for local development
 
 **Consequences**:
+
 - ✅ Production-ready scalability
 - ✅ Better performance for concurrent users
 - ⚠️ Requires PostgreSQL setup in production
@@ -79,12 +85,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Implement one-way sync from backend to OpenLP for MVP.
 
 **Rationale**:
+
 - Backend is the source of truth
 - Prevents conflicts and complexity
 - Simpler to implement and test
 - OpenLP is read-only during services anyway
 
 **Consequences**:
+
 - ✅ Simpler implementation
 - ✅ No conflict resolution needed
 - ✅ Clear data flow
@@ -102,12 +110,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Store backend UUID in OpenLP's `comments` field as JSON metadata.
 
 **Rationale**:
+
 - No schema changes required to OpenLP
 - Simple to implement
 - Comments field is available and typically unused
 - Can migrate to mapping table later if needed
 
 **Consequences**:
+
 - ✅ No OpenLP schema modifications
 - ✅ Simple implementation
 - ⚠️ Comments field might be used for other purposes (check first)
@@ -126,12 +136,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use React Query (TanStack Query) for server state management.
 
 **Rationale**:
+
 - Excellent caching and synchronization
 - Built-in loading and error states
 - Automatic refetching and invalidation
 - Better than manual useState/useEffect
 
 **Consequences**:
+
 - ✅ Less boilerplate code
 - ✅ Better UX with caching
 - ✅ Automatic background updates
@@ -151,6 +163,7 @@ This document records important architectural decisions made during the project.
 **Decision**: Use Material UI (MUI) for styling and components.
 
 **Rationale**:
+
 - Comprehensive component library
 - Built-in mobile responsiveness
 - Consistent Material Design system
@@ -160,6 +173,7 @@ This document records important architectural decisions made during the project.
 - Active community and maintenance
 
 **Consequences**:
+
 - ✅ Fast development with pre-built components
 - ✅ Consistent Material Design look and feel
 - ✅ Mobile-responsive out of the box
@@ -169,6 +183,7 @@ This document records important architectural decisions made during the project.
 - ⚠️ Less flexibility than utility-first CSS for custom designs
 
 **Alternatives Considered**:
+
 - Tailwind CSS: Rejected - Material UI provides more ready-to-use components
 - CSS Modules: Rejected - More manual work, no component library
 - Styled Components: Rejected - Material UI has better component ecosystem
@@ -184,12 +199,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Skip authentication for MVP, add in Phase 2.
 
 **Rationale**:
+
 - Faster time to market
 - Church environment may not need strict auth initially
 - Can add shared password or simple auth later
 - Focus on core functionality first
 
 **Consequences**:
+
 - ✅ Faster development
 - ✅ Simpler initial setup
 - ⚠️ No access control (acceptable for MVP)
@@ -206,6 +223,7 @@ This document records important architectural decisions made during the project.
 **Decision**: Use Discord OAuth 2.0 for authentication with role-based access control.
 
 **Rationale**:
+
 - Leverages existing Discord community/server
 - No need to manage user accounts and passwords
 - Discord roles provide natural access control
@@ -214,6 +232,7 @@ This document records important architectural decisions made during the project.
 - Discord API provides user info (username, avatar)
 
 **Consequences**:
+
 - ✅ No password management needed
 - ✅ Easy user onboarding (just Discord login)
 - ✅ Role-based access via Discord server roles
@@ -224,6 +243,7 @@ This document records important architectural decisions made during the project.
 - ⚠️ Need to handle Discord API rate limits
 
 **Implementation Details**:
+
 - Use `passport-discord` for NestJS
 - Verify user has specific Discord server role
 - Store Discord user ID in database
@@ -231,6 +251,7 @@ This document records important architectural decisions made during the project.
 - Refresh tokens if needed (Discord tokens expire)
 
 **Alternatives Considered**:
+
 - Email/password auth: Rejected - requires user management
 - Google OAuth: Rejected - Discord is preferred for this use case
 - Simple shared password: Rejected - not secure enough
@@ -246,12 +267,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use REST API, GraphQL as future consideration.
 
 **Rationale**:
+
 - Simpler to implement
 - Better tooling and documentation (Swagger)
 - Easier for sync tool to consume
 - GraphQL can be added later if needed
 
 **Consequences**:
+
 - ✅ Simpler implementation
 - ✅ Better documentation with Swagger
 - ✅ Easier for sync tool
@@ -269,11 +292,13 @@ This document records important architectural decisions made during the project.
 **Decision**: Use soft deletes (add `deletedAt` field) instead of hard deletes.
 
 **Rationale**:
+
 - Allows recovery of accidentally deleted songs
 - Better audit trail
 - Can sync deletions to OpenLP or mark as deleted
 
 **Consequences**:
+
 - ✅ Data recovery possible
 - ✅ Better audit trail
 - ⚠️ Need to filter deleted songs in queries
@@ -292,12 +317,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use Vite instead of Create React App or Webpack.
 
 **Rationale**:
+
 - Much faster development server
 - Modern tooling
 - Better TypeScript support
 - Smaller bundle sizes
 
 **Consequences**:
+
 - ✅ Fast development experience
 - ✅ Modern tooling
 - ✅ Better performance
@@ -314,12 +341,14 @@ This document records important architectural decisions made during the project.
 **Decision**: Use better-sqlite3 instead of sqlite3.
 
 **Rationale**:
+
 - Synchronous API (simpler for CLI tool)
 - Better performance
 - No native compilation issues
 - Actively maintained
 
 **Consequences**:
+
 - ✅ Simpler synchronous API
 - ✅ Better performance
 - ✅ Fewer installation issues
@@ -341,14 +370,17 @@ When making a new architectural decision, add an ADR using this template:
 **Decision**: [State the decision]
 
 **Rationale**:
+
 - [Reason 1]
 - [Reason 2]
 
 **Consequences**:
+
 - ✅ [Positive consequence]
 - ⚠️ [Negative consequence or trade-off]
 
 **Alternatives Considered**:
+
 - [Alternative 1]: [Why rejected]
 - [Alternative 2]: [Why rejected]
 ```
@@ -356,4 +388,3 @@ When making a new architectural decision, add an ADR using this template:
 ---
 
 **Last Updated**: 2025-01-XX
-

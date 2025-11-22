@@ -136,11 +136,13 @@ JWT_EXPIRES_IN=7d
 ### Role Verification Methods
 
 **Method 1: Using OAuth Token (Recommended)**
+
 - Use the OAuth access token to call Discord API
 - Endpoint: `GET /users/@me/guilds/{guild_id}/member`
 - Check if user has the required role in the response
 
 **Method 2: Using Bot (Alternative)**
+
 - Bot can check member roles directly
 - Requires bot to be in the server
 - More reliable but requires bot setup
@@ -187,20 +189,24 @@ model User {
 ## Troubleshooting
 
 ### "Invalid redirect URI"
+
 - Check that callback URL in Discord app matches exactly
 - Check environment variable `DISCORD_CALLBACK_URL`
 
 ### "Missing permissions"
+
 - Ensure bot has "Server Members Intent" enabled
 - Ensure bot is in the Discord server
 - Check bot permissions
 
 ### "User not authorized"
+
 - Verify user is in the Discord server
 - Verify user has the required role
 - Check role ID is correct in environment variables
 
 ### "Rate limited"
+
 - Discord API has rate limits
 - Implement caching for role checks
 - Use exponential backoff for retries
@@ -228,4 +234,3 @@ model User {
 ---
 
 **Last Updated**: 2025-01-XX
-
