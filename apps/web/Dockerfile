@@ -5,12 +5,13 @@ FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-COPY apps/web/package.json ./apps/web/
-
 # Install pnpm
 RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -20,12 +21,17 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/apps/web/node_modules ./apps/web/node_modules
+# Install pnpm
+RUN npm install -g pnpm
 
-# Copy workspace files
-COPY pnpm-workspace.yaml package.json ./
+# Copy workspace configuration
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY tsconfig.json ./tsconfig.json
+
+# Copy dependencies from previous stage (pnpm hoists to root)
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy source code
 COPY apps/web ./apps/web
 COPY packages ./packages
 
@@ -33,9 +39,11 @@ COPY packages ./packages
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-# Build the application
-RUN npm install -g pnpm
-RUN pnpm build --filter=web
+# Build shared package first, then web
+RUN pnpm --filter @openlp/shared build
+# Install vite if needed, then build web
+RUN pnpm add -D -w vite @vitejs/plugin-react || true
+RUN pnpm --filter web build
 
 # Stage 3: Production (nginx)
 FROM nginx:alpine AS production

@@ -5,12 +5,13 @@ FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-COPY apps/api/package.json ./apps/api/
-
 # Install pnpm
 RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -20,18 +21,25 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
+# Install pnpm
+RUN npm install -g pnpm
 
-# Copy workspace files
-COPY pnpm-workspace.yaml package.json ./
+# Copy workspace configuration
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY tsconfig.json ./tsconfig.json
+
+# Copy dependencies from previous stage (pnpm hoists to root)
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy source code
 COPY apps/api ./apps/api
 COPY packages ./packages
 
-# Build the application
-RUN npm install -g pnpm
-RUN pnpm build --filter=api
+# Build shared package first, then API  
+RUN pnpm --filter @openlp/shared build
+# Install @nestjs/cli if not present, then build
+RUN pnpm add -D -w @nestjs/cli || true
+RUN pnpm --filter api build
 
 # Stage 3: Production
 FROM node:22-alpine AS production
@@ -41,8 +49,8 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 

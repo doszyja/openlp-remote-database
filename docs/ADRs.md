@@ -29,7 +29,7 @@ This document records important architectural decisions made during the project.
 
 ## ADR-002: Prisma as ORM
 
-**Status**: Accepted  
+**Status**: Deprecated (Replaced by ADR-014)  
 **Date**: 2025-01-XX  
 **Context**: Need an ORM for TypeScript/NestJS backend with PostgreSQL.
 
@@ -50,11 +50,13 @@ This document records important architectural decisions made during the project.
 - ⚠️ Learning curve if team unfamiliar
 - ⚠️ Less flexible than raw SQL for complex queries
 
+**Note**: This decision was superseded by ADR-014 (MongoDB/Mongoose migration).
+
 ---
 
 ## ADR-003: PostgreSQL for Production Database
 
-**Status**: Accepted  
+**Status**: Deprecated (Replaced by ADR-014)  
 **Date**: 2025-01-XX  
 **Context**: Need a production-ready relational database for the backend.
 
@@ -73,6 +75,48 @@ This document records important architectural decisions made during the project.
 - ✅ Better performance for concurrent users
 - ⚠️ Requires PostgreSQL setup in production
 - ⚠️ Different DBs for dev/prod (mitigated by Prisma)
+
+**Note**: This decision was superseded by ADR-014 (MongoDB/Mongoose migration).
+
+---
+
+## ADR-014: MongoDB with Mongoose ODM
+
+**Status**: Accepted  
+**Date**: 2025-01-22  
+**Context**: Need to migrate from PostgreSQL/Prisma to MongoDB/Mongoose.
+
+**Decision**: Use MongoDB as the database with Mongoose ODM for NestJS.
+
+**Rationale**:
+
+- Better fit for document-based data (songs with embedded verses)
+- Simpler schema for nested structures (verses, tags)
+- No need for complex joins
+- Mongoose provides excellent TypeScript support
+- Native MongoDB support in NestJS via @nestjs/mongoose
+- Flexible schema evolution
+- Good performance for read-heavy workloads
+
+**Consequences**:
+
+- ✅ Simpler data model (embedded verses, no joins)
+- ✅ Better performance for document-based queries
+- ✅ Flexible schema for future changes
+- ✅ Native NestJS integration
+- ⚠️ NoSQL paradigm (different from relational)
+- ⚠️ No automatic migrations (MongoDB is schema-less)
+- ⚠️ Different query patterns than SQL
+
+**Migration Details**:
+- Replaced Prisma schemas with Mongoose schemas
+- Updated all services to use Mongoose models
+- Changed Docker configuration from PostgreSQL to MongoDB
+- Updated environment variables (DATABASE_URL format)
+
+**Alternatives Considered**:
+- Keep PostgreSQL/Prisma: Rejected - MongoDB better fits document structure
+- Use raw MongoDB driver: Rejected - Mongoose provides better TypeScript support
 
 ---
 
@@ -387,4 +431,4 @@ When making a new architectural decision, add an ADR using this template:
 
 ---
 
-**Last Updated**: 2025-01-XX
+**Last Updated**: 2025-01-22

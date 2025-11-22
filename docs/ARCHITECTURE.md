@@ -4,8 +4,8 @@
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
-│   React Web     │────────▶│   NestJS API     │────────▶│   PostgreSQL    │
-│   (Frontend)    │  HTTP   │   (Backend)      │  Prisma │   (Database)    │
+│   React Web     │────────▶│   NestJS API     │────────▶│    MongoDB      │
+│   (Frontend)    │  HTTP   │   (Backend)      │ Mongoose│   (Database)    │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
                                       ▲
                                       │ HTTP REST API
@@ -40,8 +40,8 @@ openlp-database/
 
 - **Framework**: NestJS (latest stable)
 - **Language**: TypeScript
-- **ORM**: Prisma
-- **Database**: PostgreSQL (production), SQLite (development)
+- **ODM**: Mongoose
+- **Database**: MongoDB
 - **Validation**: class-validator, class-transformer
 - **API Docs**: Swagger/OpenAPI
 
@@ -72,48 +72,64 @@ openlp-database/
 
 ## Data Models
 
-### Song Model (Backend)
+### Song Model (Backend - Mongoose Schema)
 
 ```typescript
-model Song {
-  id        String   @id @default(uuid())
-  title     String
-  number    String?  // Hymnbook number
-  language  String   @default("en")
-  chorus    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? // Soft delete
+@Schema({ timestamps: true })
+export class Song {
+  @Prop({ required: true, index: true })
+  title: string;
 
-  verses    Verse[]
-  tags      Tag[]
-  openlpMapping OpenLPMapping?
+  @Prop()
+  number?: string;
+
+  @Prop({ default: 'en', index: true })
+  language: string;
+
+  @Prop()
+  chorus?: string;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+
+  @Prop({ type: [{ type: Object }] })
+  verses: Verse[];
+
+  @Prop({ type: [{ type: String, ref: 'Tag' }] })
+  tags: string[];
+
+  @Prop({ type: Object, default: null })
+  openlpMapping?: OpenLPMapping | null;
 }
 
-model Verse {
-  id      String @id @default(uuid())
-  songId  String
-  song    Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
-  order   Int
-  content String
-  label   String? // "Verse 1", "Bridge", etc.
+@Schema({ _id: false })
+export class Verse {
+  @Prop({ required: true })
+  order: number;
 
-  @@index([songId, order])
+  @Prop({ required: true })
+  content: string;
+
+  @Prop()
+  label?: string;
 }
 
-model Tag {
-  id    String @id @default(uuid())
-  name  String @unique
-  songs Song[]
+@Schema({ _id: false })
+export class OpenLPMapping {
+  @Prop()
+  openlpId?: number;
+
+  @Prop({ type: Date })
+  lastSyncedAt?: Date;
+
+  @Prop({ type: Object })
+  syncMetadata?: Record<string, any>;
 }
 
-model OpenLPMapping {
-  id          String   @id @default(uuid())
-  songId      String   @unique
-  song        Song     @relation(fields: [songId], references: [id])
-  openlpId    Int?     // OpenLP's internal ID
-  lastSyncedAt DateTime?
-  syncMetadata Json?   // Additional sync info
+@Schema({ timestamps: true })
+export class Tag {
+  @Prop({ required: true, unique: true, index: true })
+  name: string;
 }
 ```
 
@@ -311,7 +327,7 @@ Response:
 - CORS configuration
 - Rate limiting (future)
 - Input validation and sanitization
-- SQL injection prevention (Prisma handles this)
+- SQL injection prevention (Mongoose handles this)
 - JWT token validation on protected routes
 
 ## Deployment Architecture
@@ -327,14 +343,14 @@ Response:
 
 - **Docker Compose**: All services (backend, frontend, database) in Docker containers
 - **Alternative**: Backend on VPS, Frontend on static hosting (Vercel, Netlify)
-- **Database**: PostgreSQL in Docker container or managed service (AWS RDS, Supabase, etc.)
+- **Database**: MongoDB in Docker container or managed service (MongoDB Atlas, etc.)
 - **Sync Tool**: Installed on church Windows PC (not containerized)
 
 ### Docker Setup
 
 - **Development**: `docker-compose.yml` with hot reload and volume mounts
 - **Production**: `docker-compose.prod.yml` with optimized builds
-- **Services**: PostgreSQL, NestJS API, React Frontend (nginx)
+- **Services**: MongoDB, NestJS API, React Frontend (nginx)
 - **Networking**: Internal Docker network for service communication
 - **Volumes**: Persistent database storage
 
@@ -343,7 +359,7 @@ Response:
 #### Backend
 
 ```
-DATABASE_URL=postgresql://...
+DATABASE_URL=mongodb://localhost:27017/openlp_db
 PORT=3000
 NODE_ENV=production
 JWT_SECRET=... (Phase 2)
@@ -432,4 +448,4 @@ API_KEY=... (if auth implemented)
 
 ---
 
-**Last Updated**: 2025-01-XX
+**Last Updated**: 2025-01-22

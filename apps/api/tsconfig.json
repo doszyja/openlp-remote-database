@@ -12,6 +12,8 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,

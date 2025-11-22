@@ -34,7 +34,7 @@ When providing assistance, always:
 
 ### Technology Stack
 - **Monorepo**: pnpm workspaces
-- **Backend**: NestJS with TypeScript, Prisma ORM, PostgreSQL
+- **Backend**: NestJS with TypeScript, Mongoose ODM, MongoDB
 - **Frontend**: React 18 + Vite + TypeScript, Material UI (MUI)
 - **Sync Tool**: Node.js CLI with TypeScript
 - **Containerization**: Docker with Docker Compose
@@ -55,7 +55,7 @@ openlp-database/
 ```
 
 ### Key Principles
-- Backend PostgreSQL database is the single source of truth
+- Backend MongoDB database is the single source of truth
 - One-way sync: Backend → OpenLP SQLite
 - Mobile-friendly frontend for phone editing
 - Discord OAuth for authentication (Phase 2)
@@ -78,7 +78,7 @@ openlp-database/
 
 ### Code Standards
 - Follow TypeScript strict mode
-- Use Prisma for all database access
+- Use Mongoose for all database access
 - Use Material UI components in frontend
 - Follow naming conventions in `docs/PROJECT_RULES.md`
 - Write tests for new features
@@ -88,11 +88,12 @@ openlp-database/
 
 ### Always Consider
 - This is a monorepo - respect workspace boundaries
-- Backend uses Prisma, not raw SQL
+- Backend uses Mongoose, not raw MongoDB queries
 - Frontend uses Material UI, not custom CSS
 - Docker setup uses Node.js 22
 - Discord OAuth is Phase 2 feature
 - MVP focuses on core CRUD and one-way sync
+- Database is MongoDB (migrated from PostgreSQL on 2025-01-22)
 
 ### When Making Decisions
 - Check `docs/ADRs.md` for existing decisions
@@ -122,6 +123,19 @@ openlp-database/
 
 ---
 
-**Last Updated**: 2025-01-XX
+**Last Updated**: 2025-01-22
 **Purpose**: Ensure Cursor AI maintains proper context about the OpenLP Database Sync project
+
+## Markdown Files Always in Context
+
+All markdown files (*.md) in the repository are automatically included in context. This includes:
+- All files in the `docs/` directory
+- Root-level markdown files (README.md, PROJECT_PLAN.md, etc.)
+- Any markdown files in subdirectories
+
+The `.cursorrules` file itself ensures that when you work on this project, all documentation is automatically considered, maintaining proper context about:
+- Project architecture and decisions
+- Current progress and TODO status
+- Coding standards and guidelines
+- Technology stack and setup instructions
 

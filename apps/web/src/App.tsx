@@ -1,13 +1,17 @@
 import { Routes, Route } from 'react-router-dom';
-import { Container } from '@mui/material';
+import SongListPage from './pages/SongListPage';
+import SongCreatePage from './pages/SongCreatePage';
+import SongEditPage from './pages/SongEditPage';
+import SongDetailPage from './pages/SongDetailPage';
 
 function App() {
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Routes>
-        <Route path="/" element={<div>OpenLP Song Manager - Coming Soon</div>} />
-      </Routes>
-    </Container>
+    <Routes>
+      <Route path="/" element={<SongListPage />} />
+      <Route path="/songs/new" element={<SongCreatePage />} />
+      <Route path="/songs/:id" element={<SongDetailPage />} />
+      <Route path="/songs/:id/edit" element={<SongEditPage />} />
+    </Routes>
   );
 }
 
