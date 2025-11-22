@@ -1,5 +1,6 @@
 import { Controller, Get, Req, Res, UseGuards, Post } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -31,11 +32,17 @@ export class AuthController {
   // }
 
   @Get('me')
+  // Security: Stricter rate limiting for auth endpoints to prevent brute force
+  // Using 'strict' throttler: 100 requests per 15 minutes
+  @Throttle({ strict: { limit: 100, ttl: 900000 } })
   async getProfile(@CurrentUser() user: UserResponseDto): Promise<UserResponseDto> {
     return user;
   }
 
   @Post('logout')
+  // Security: Stricter rate limiting for auth endpoints
+  // Using 'strict' throttler: 100 requests per 15 minutes
+  @Throttle({ strict: { limit: 100, ttl: 900000 } })
   async logout() {
     // JWT is stateless, so logout is handled client-side
     // In the future, could implement token blacklisting

@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SongService } from './song.service';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
@@ -35,6 +36,8 @@ export class SongController {
   }
 
   @Get('search')
+  // Security: Stricter rate limiting for search endpoints to prevent abuse
+  @Throttle({ search: { limit: 600, ttl: 60000 } }) // 600 requests per minute
   search(@Query('q') search: string, @Query() query: QuerySongDto) {
     return this.songService.findAll({ ...query, search });
   }

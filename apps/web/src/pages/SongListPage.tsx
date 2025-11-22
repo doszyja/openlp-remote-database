@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -22,54 +22,97 @@ import type { SongQueryDto } from '@openlp/shared';
 export default function SongListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState<SongQueryDto>({
-    page: 1,
-    limit: 150, // Display up to 150 songs
-  });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [allSongs, setAllSongs] = useState<any[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1);
+    setAllSongs([]);
+    setHasMore(true);
+  }, [debouncedSearch]);
+
+  // Memoize query object to prevent unnecessary re-renders
+  const query = useMemo<SongQueryDto>(() => {
+    const q: SongQueryDto = {
+      page,
+      limit: 200,
+    };
+    if (debouncedSearch) {
+      q.search = debouncedSearch;
+    }
+    return q;
+  }, [page, debouncedSearch]);
 
   const { data, isLoading, error } = useSongs(query);
 
+  // Update allSongs when new data arrives
+  useEffect(() => {
+    if (data?.data) {
+      if (page === 1) {
+        setAllSongs(data.data);
+      } else {
+        setAllSongs((prev) => [...prev, ...data.data]);
+      }
+      setHasMore(data.data.length === 200 && data.data.length > 0);
+    }
+  }, [data, page]);
+
   const handleSearch = (value: string) => {
     setSearch(value);
-    setQuery((prev) => ({
-      ...prev,
-      search: value || undefined,
-      page: 1,
-    }));
   };
 
-  if (isLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">Failed to load songs. Please try again.</Alert>
-      </Container>
-    );
-  }
+  const handleLoadMore = () => {
+    setPage((prev) => prev + 1);
+  };
 
   return (
-    <Container maxWidth="md" sx={{ py: 2 }}>
+    <Container maxWidth="md" sx={{ py: 2, position: 'relative' }}>
+      {/* Loading overlay for initial load */}
+      {isLoading && page === 1 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            zIndex: 1000,
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" component="h1">
           Songs
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/songs/new')}
-          size="small"
-        >
-          Add Song
-        </Button>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/songs/new')}
+            size="small"
+          >
+            Add Song
+          </Button>
+        </Box>
       </Box>
 
       <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -88,24 +131,21 @@ export default function SongListPage() {
                 <MusicNoteIcon fontSize="small" />
               </InputAdornment>
             ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button
-                  size="small"
-                  onClick={() => handleSearch(search)}
-                  sx={{ minWidth: 'auto', px: 1 }}
-                >
-                  Search
-                </Button>
-              </InputAdornment>
-            ),
           }}
         />
       </Box>
 
-      {data?.data.length === 0 ? (
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load songs. Please try again.
+        </Alert>
+      )}
+
+      {allSongs.length === 0 && !isLoading && (
         <Alert severity="info">No songs found. Create your first song!</Alert>
-      ) : (
+      )}
+
+      {allSongs.length > 0 && (
         <Paper
           variant="outlined"
           sx={{
@@ -114,7 +154,7 @@ export default function SongListPage() {
           }}
         >
           <List dense>
-            {data?.data.map((song) => {
+            {allSongs.map((song) => {
               // Format song title with author if available
               const displayTitle = song.number
                 ? `${song.title} (${song.number})`
@@ -147,6 +187,20 @@ export default function SongListPage() {
               );
             })}
           </List>
+          
+          {/* Load More button */}
+          {hasMore && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                startIcon={isLoading && page > 1 ? <CircularProgress size={16} /> : null}
+              >
+                {isLoading && page > 1 ? 'Loading...' : 'Load More'}
+              </Button>
+            </Box>
+          )}
         </Paper>
       )}
     </Container>

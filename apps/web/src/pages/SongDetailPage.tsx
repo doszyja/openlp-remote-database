@@ -1,4 +1,4 @@
-import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -16,7 +16,6 @@ import {
   DialogActions,
   Switch,
   FormControlLabel,
-  Grid,
   TextField,
   InputAdornment,
   List,
@@ -25,7 +24,7 @@ import {
   ListItemText,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon, MusicNote as MusicNoteIcon, Fullscreen as FullscreenIcon, ViewColumn as ViewColumnIcon } from '@mui/icons-material';
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { useSong, useDeleteSong, useSongs } from '../hooks';
 import { useNotification } from '../contexts/NotificationContext';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
@@ -34,7 +33,6 @@ import type { SongQueryDto } from '@openlp/shared';
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const { data: song, isLoading, error } = useSong(id!);
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
@@ -44,9 +42,15 @@ export default function SongDetailPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState<SongQueryDto>({
     page: 1,
-    limit: 150,
+    limit: 200,
   });
-  const hasScrolledRef = useRef(false);
+  const [allSearchSongs, setAllSearchSongs] = useState<any[]>([]);
+  const [hasMoreSearch, setHasMoreSearch] = useState(true);
+
+  // Scroll to top when id changes
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   // Debounce search input
   useEffect(() => {
@@ -64,10 +68,24 @@ export default function SongDetailPage() {
       search: debouncedSearch || undefined,
       page: 1,
     }));
+    setAllSearchSongs([]);
+    setHasMoreSearch(true);
   }, [debouncedSearch]);
 
   // Always fetch search results, even without a search query
-  const { data: searchResults } = useSongs(debouncedSearch ? { ...searchQuery, search: debouncedSearch } : { ...searchQuery });
+  const searchResults = useSongs(debouncedSearch ? { ...searchQuery, search: debouncedSearch } : { ...searchQuery });
+
+  // Update allSearchSongs when new search data arrives
+  useEffect(() => {
+    if (searchResults.data?.data) {
+      if ((searchQuery.page || 1) === 1) {
+        setAllSearchSongs(searchResults.data.data);
+      } else {
+        setAllSearchSongs((prev) => [...prev, ...searchResults.data.data]);
+      }
+      setHasMoreSearch(searchResults.data.data.length === (searchQuery.limit || 200) && searchResults.data.data.length > 0);
+    }
+  }, [searchResults.data, searchQuery.page, searchQuery.limit]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -89,6 +107,13 @@ export default function SongDetailPage() {
     setSearch(value);
   };
 
+  const handleLoadMoreSearch = () => {
+    setSearchQuery((prev) => ({
+      ...prev,
+      page: (prev.page || 1) + 1,
+    }));
+  };
+
   // Handle scroll position when navigating to a song
   const handleSongClick = () => {
     // Save scroll position before navigation (Link will handle navigation)
@@ -99,11 +124,11 @@ export default function SongDetailPage() {
     }
   };
 
-  // Scroll to selected song when id changes (but list stays mounted)
+  // Scroll to selected song in the list container when id changes
   useLayoutEffect(() => {
-    if (!id || !searchResults?.data) return;
+    if (!id || !allSearchSongs.length) return;
 
-    const songInResults = searchResults.data.some(song => song.id === id);
+    const songInResults = allSearchSongs.some(song => song.id === id);
     if (!songInResults) return;
 
     // Small delay to ensure DOM is updated
@@ -112,16 +137,23 @@ export default function SongDetailPage() {
       if (!listContainer) return;
 
       const selectedItem = listContainer.querySelector(`[data-song-id="${id}"]`) as HTMLElement;
-      if (selectedItem) {
-        // Use scrollIntoView for reliable positioning
-        selectedItem.scrollIntoView({ 
-          behavior: 'instant', 
-          block: 'center',
-          inline: 'nearest'
-        });
+      if (selectedItem && listContainer) {
+        // Calculate scroll position within the container, not the window
+        const containerRect = listContainer.getBoundingClientRect();
+        const itemRect = selectedItem.getBoundingClientRect();
+        const scrollTop = listContainer.scrollTop;
+        const itemOffsetTop = itemRect.top - containerRect.top + scrollTop;
+        const containerHeight = listContainer.clientHeight;
+        const itemHeight = itemRect.height;
+        
+        // Center the item in the container
+        const targetScrollTop = itemOffsetTop - (containerHeight / 2) + (itemHeight / 2);
+        
+        // Scroll only the container, not the window
+        listContainer.scrollTop = targetScrollTop;
       }
     });
-  }, [id, searchResults]);
+  }, [id, allSearchSongs]);
 
   // Render song content separately - this will update when id changes, but layout stays stable
   const renderSongContent = () => {
@@ -152,7 +184,7 @@ export default function SongDetailPage() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/songs')}
         >
           Back to List
         </Button>
@@ -169,7 +201,7 @@ export default function SongDetailPage() {
               <Box display="flex" alignItems="center" gap={0.5}>
                 {isFullscreen ? <FullscreenIcon fontSize="small" /> : <ViewColumnIcon fontSize="small" />}
                 <Typography variant="body2">
-                  {isFullscreen ? 'Fullscreen' : 'Normal View'}
+                  {isFullscreen ? 'Full Width' : 'Normal View'}
                 </Typography>
               </Box>
             }
@@ -179,7 +211,7 @@ export default function SongDetailPage() {
             variant="contained"
             startIcon={<EditIcon />}
             onClick={() => navigate(`/songs/${id}/edit`)}
-            fullWidth={{ xs: true, sm: false }}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Edit
           </Button>
@@ -188,7 +220,16 @@ export default function SongDetailPage() {
             color="error"
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteDialogOpen(true)}
-            fullWidth={{ xs: true, sm: false }}
+            sx={{ 
+              width: { xs: '100%', sm: 'auto' },
+              borderColor: 'error.main',
+              color: 'error.main',
+              '&:hover': {
+                borderColor: 'error.dark',
+                backgroundColor: 'error.light',
+                color: 'error.dark',
+              },
+            }}
           >
             Delete
           </Button>
@@ -261,7 +302,27 @@ export default function SongDetailPage() {
   const songContent = renderSongContent();
 
   const searchColumn = (
-    <Paper sx={{ p: 1.5, display: 'flex', flexDirection: 'column', width: '280px' }}>
+    <Paper sx={{ p: 1.5, display: 'flex', flexDirection: 'column', width: '280px', position: 'relative' }}>
+      {/* Loading overlay for search */}
+      {searchResults.isLoading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            zIndex: 1000,
+            borderRadius: 1,
+          }}
+        >
+          <CircularProgress size={24} />
+        </Box>
+      )}
       <Typography variant="h6" gutterBottom sx={{ mb: 1, fontSize: '1rem' }}>
         Search Songs
       </Typography>
@@ -280,13 +341,21 @@ export default function SongDetailPage() {
           ),
         }}
       />
-      <Box 
+      <Box
         id="search-songs-list"
+        onWheel={(e) => {
+          // Prevent scroll from propagating to window when scrolling inside the list
+          e.stopPropagation();
+        }}
+        onScroll={(e) => {
+          // Prevent scroll from propagating to window
+          e.stopPropagation();
+        }}
         sx={{ flex: 1, overflowY: 'auto', minHeight: 0, maxHeight: 'calc(100vh - 200px)', '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#888', borderRadius: '4px' }, '&::-webkit-scrollbar-thumb:hover': { background: '#555' } }}
       >
-        {searchResults?.data && searchResults.data.length > 0 && (
+        {allSearchSongs.length > 0 && (
           <List dense sx={{ py: 0 }}>
-            {searchResults.data.map((resultSong) => (
+            {allSearchSongs.map((resultSong) => (
               <ListItem 
                 key={resultSong.id} 
                 disablePadding 
@@ -325,7 +394,21 @@ export default function SongDetailPage() {
             ))}
           </List>
         )}
-        {search && searchResults?.data && searchResults.data.length === 0 && (
+        {allSearchSongs.length > 0 && hasMoreSearch && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5, px: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleLoadMoreSearch}
+              disabled={searchResults.isLoading}
+              startIcon={searchResults.isLoading && (searchQuery.page || 1) > 1 ? <CircularProgress size={16} /> : null}
+              sx={{ width: '100%' }}
+            >
+              {searchResults.isLoading && (searchQuery.page || 1) > 1 ? 'Loading...' : 'Load More'}
+            </Button>
+          </Box>
+        )}
+        {search && allSearchSongs.length === 0 && !searchResults.isLoading && (
           <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
             No songs found.
           </Alert>
@@ -338,7 +421,9 @@ export default function SongDetailPage() {
     <Container maxWidth={false} sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
       {isFullscreen ? (
         <Box maxWidth={{ xs: '100%', sm: '900px' }} mx="auto" px={{ xs: 1, sm: 0 }}>
-          {songContent}
+          <Box key={id}>
+            {songContent}
+          </Box>
         </Box>
       ) : (
         <Box 
@@ -350,13 +435,31 @@ export default function SongDetailPage() {
           mx="auto"
           width="100%"
         >
-          <Box sx={{ width: { xs: '100%', md: '280px' }, display: { xs: 'none', md: 'block' }, flexShrink: 0 }}>
-            <Box sx={{ position: 'sticky', top: 20 }}>
+          <Box
+            sx={{
+              width: { xs: 0, md: isFullscreen ? 0 : '280px' },
+              minWidth: { xs: 0, md: isFullscreen ? 0 : '280px' },
+              maxWidth: { xs: 0, md: isFullscreen ? 0 : '280px' },
+              overflow: 'hidden',
+              flexShrink: 0,
+              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: { xs: 'none', md: 'block' },
+            }}
+          >
+            <Box sx={{ width: '280px', position: 'sticky', top: 20 }}>
               {searchColumn}
             </Box>
           </Box>
-          <Box sx={{ width: { xs: '100%', md: '900px' }, flexShrink: 0 }} key={id}>
-            {songContent}
+          <Box 
+            sx={{ 
+              width: { xs: '100%', md: isFullscreen ? '100%' : '900px' }, 
+              flexShrink: 0,
+              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Box key={id}>
+              {songContent}
+            </Box>
           </Box>
         </Box>
       )}
