@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: openlp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openlp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openlp_password}
+      POSTGRES_DB: ${POSTGRES_DB:-openlp_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openlp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openlp-network
+
+  # NestJS Backend API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: openlp-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openlp}:${POSTGRES_PASSWORD:-openlp_password}@postgres:5432/${POSTGRES_DB:-openlp_db}
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+      # Add other environment variables as needed
+    volumes:
+      # Mount source code for hot reload in development
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      - /app/apps/api/node_modules
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openlp-network
+    command: pnpm dev --filter=api
+
+  # React Frontend
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
+    container_name: openlp-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
+    volumes:
+      # Mount source code for hot reload in development
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - /app/apps/web/node_modules
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - openlp-network
+    # For development, override with Vite dev server
+    # Uncomment the following and comment out the build section for dev:
+    # command: pnpm dev --filter=web --host
+
+networks:
+  openlp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+

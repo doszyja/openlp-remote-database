@@ -1,0 +1,125 @@
+# Cursor AI Rules for OpenLP Database Sync Project
+
+## Context Management
+
+### Always Include in Context
+- **All markdown files (*.md)** in the repository should be automatically considered as context
+- Prioritize these files for context:
+  1. `PROJECT_PLAN.md` - High-level project plan with epics
+  2. `docs/DETAILED_TODO.md` - Granular task breakdown (CRITICAL for tracking progress)
+  3. `docs/PROJECT_RULES.md` - Coding standards and guidelines
+  4. `docs/ARCHITECTURE.md` - System architecture and design decisions
+  5. `docs/CONTEXT.md` - Project context and background information
+  6. `docs/ADRs.md` - Architecture Decision Records
+  7. `PROJECT_DESCRIPTION.md` - Original project requirements
+  8. `README.md` - Project overview and setup
+
+### Documentation Files to Always Reference
+- `docs/MATERIAL_UI_GUIDE.md` - Material UI implementation patterns
+- `docs/DISCORD_AUTH_SETUP.md` - Discord OAuth setup instructions
+- `docs/DOCKER_SETUP.md` - Docker and Docker Compose guide
+
+### Context Priority Order
+When providing assistance, always:
+1. **First check** `docs/DETAILED_TODO.md` to understand current task status
+2. **Reference** `PROJECT_PLAN.md` for epic-level understanding
+3. **Follow** `docs/PROJECT_RULES.md` for coding standards
+4. **Consult** `docs/ARCHITECTURE.md` for system design
+5. **Review** `docs/ADRs.md` for architectural decisions
+6. **Check** `docs/CONTEXT.md` for project background
+
+## Project Context
+
+### Technology Stack
+- **Monorepo**: pnpm workspaces
+- **Backend**: NestJS with TypeScript, Prisma ORM, PostgreSQL
+- **Frontend**: React 18 + Vite + TypeScript, Material UI (MUI)
+- **Sync Tool**: Node.js CLI with TypeScript
+- **Containerization**: Docker with Docker Compose
+- **Node.js**: Version 22
+- **Authentication**: Discord OAuth (Phase 2)
+
+### Project Structure
+```
+openlp-database/
+├── apps/
+│   ├── api/          # NestJS backend
+│   ├── web/           # React frontend
+│   └── sync/          # OpenLP sync CLI tool
+├── packages/
+│   └── shared/        # Shared TypeScript types
+├── docs/              # All documentation
+└── docker-compose.yml # Docker setup
+```
+
+### Key Principles
+- Backend PostgreSQL database is the single source of truth
+- One-way sync: Backend → OpenLP SQLite
+- Mobile-friendly frontend for phone editing
+- Discord OAuth for authentication (Phase 2)
+- Material UI for frontend components
+- Docker for deployment
+
+## Task Management
+
+### When Starting Work
+1. Check `docs/DETAILED_TODO.md` for current task status
+2. Identify which epic and task you're working on
+3. Review related documentation before coding
+4. Follow project rules and architecture decisions
+
+### When Completing Tasks
+1. Update `docs/DETAILED_TODO.md` to mark tasks as complete
+2. Update relevant documentation if architecture changes
+3. Add ADR if making significant architectural decisions
+4. Keep context files synchronized
+
+### Code Standards
+- Follow TypeScript strict mode
+- Use Prisma for all database access
+- Use Material UI components in frontend
+- Follow naming conventions in `docs/PROJECT_RULES.md`
+- Write tests for new features
+- Update documentation as needed
+
+## Important Reminders
+
+### Always Consider
+- This is a monorepo - respect workspace boundaries
+- Backend uses Prisma, not raw SQL
+- Frontend uses Material UI, not custom CSS
+- Docker setup uses Node.js 22
+- Discord OAuth is Phase 2 feature
+- MVP focuses on core CRUD and one-way sync
+
+### When Making Decisions
+- Check `docs/ADRs.md` for existing decisions
+- Document new decisions in ADRs
+- Consider impact on all three apps (api, web, sync)
+- Maintain consistency across the monorepo
+
+### Context Maintenance
+- Keep all markdown files up to date
+- Update TODO list as tasks progress
+- Document architectural changes
+- Maintain clear project context
+
+## File Patterns to Include
+- `*.md` - All markdown documentation
+- `PROJECT_*.md` - Project planning files
+- `docs/**/*.md` - All documentation files
+- `README.md` - Project overview
+- `.cursorrules` - This file
+
+## Exclude from Context
+- `node_modules/` - Dependencies
+- `dist/` - Build outputs
+- `.git/` - Git internals
+- `*.log` - Log files
+- Temporary files
+
+---
+
+**Last Updated**: 2025-01-XX
+**Purpose**: Ensure Cursor AI maintains proper context about the OpenLP Database Sync project
+
