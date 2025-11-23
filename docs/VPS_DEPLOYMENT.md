@@ -175,9 +175,9 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
-    # Frontend (React app)
+    # Frontend (React app) - proxy to Docker container on port 8080
     location / {
-        proxy_pass http://localhost:80;
+        proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -237,9 +237,9 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
-    # Frontend (React app)
+    # Frontend (React app) - proxy to Docker container on port 8080
     location / {
-        proxy_pass http://localhost:80;
+        proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -629,6 +629,38 @@ mongosh "mongodb://localhost:27017/openlp_db"
 # Check MongoDB logs
 sudo journalctl -u mongod -f  # or docker-compose logs mongodb
 ```
+
+### Port 80 already in use
+
+If you see: `failed to bind host port for 0.0.0.0:80: address already in use`
+
+**Solution:**
+
+```bash
+# Check what's using port 80
+sudo lsof -i :80
+# or
+sudo netstat -tlnp | grep :80
+
+# If Nginx is using port 80 (which is correct), the Docker container should use a different port
+# The docker-compose.prod.yml is already configured to use port 8080 for the web container
+# Make sure your Nginx config proxies to port 8080 (see Step 5 in deployment guide)
+
+# Stop any conflicting services (if needed)
+sudo systemctl stop apache2  # if Apache is running
+# or
+sudo systemctl stop nginx    # only if you want to use Docker's port 80 directly (not recommended)
+
+# Restart Docker containers
+cd /opt/openlp-database
+docker-compose down
+docker-compose up -d
+```
+
+**Note**: The recommended setup is:
+- Nginx listens on port 80 (for external access)
+- Docker web container listens on port 8080 (internal)
+- Nginx proxies requests from port 80 to port 8080
 
 ### SSL certificate issues
 
