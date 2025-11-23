@@ -12,7 +12,6 @@ export default function PresentationPage() {
   const theme = useTheme();
   const { data: song, isLoading, error } = useSong(id!);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [fontSizes, setFontSizes] = useState({ titleSize: 48, contentSize: 75 });
   const [dynamicContentSize, setDynamicContentSize] = useState(32);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -167,7 +166,6 @@ export default function PresentationPage() {
           } else if ((containerRef.current as any).msRequestFullscreen) {
             await (containerRef.current as any).msRequestFullscreen();
           }
-          setIsFullscreen(true);
         }
       } catch (err) {
         console.error('Error entering fullscreen:', err);
@@ -183,7 +181,6 @@ export default function PresentationPage() {
         (document as any).mozFullScreenElement ||
         (document as any).msFullscreenElement
       );
-      setIsFullscreen(isCurrentlyFullscreen);
       
       if (!isCurrentlyFullscreen) {
         // Exit presentation mode if fullscreen is exited
