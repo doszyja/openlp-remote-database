@@ -73,8 +73,16 @@ export class AuthService {
       return null;
     }
 
-    // Check if user has the required role
-    const hasRequiredRole = memberInfo.roles.includes(requiredRoleId);
+    // Check if user has any of the required roles for edit permission
+    // Support multiple role IDs (comma-separated or space-separated)
+    const allowedRoleIds = requiredRoleId
+      .split(/[,\s]+/)
+      .map(id => id.trim())
+      .filter(id => id.length > 0);
+    
+    const hasRequiredRole = allowedRoleIds.some(roleId => memberInfo.roles.includes(roleId));
+    console.log(`[validateDiscordUser] Allowed role IDs: ${allowedRoleIds.join(', ')}`);
+    console.log(`[validateDiscordUser] User roles: ${memberInfo.roles.join(', ')}`);
     console.log(`[validateDiscordUser] User has required role: ${hasRequiredRole}`);
     
     // Allow login for all guild members, but set hasEditPermission based on role
@@ -306,9 +314,13 @@ export class AuthService {
       return null;
     }
 
-    // Check if user has the required role for edit permission
+    // Check if user has any of the required roles for edit permission
+    // Support multiple role IDs (comma-separated or space-separated)
     const requiredRoleId = process.env.DISCORD_REQUIRED_ROLE_ID;
-    const hasEditPermission = requiredRoleId && user.discordRoles?.includes(requiredRoleId) || false;
+    const allowedRoleIds = requiredRoleId
+      ? requiredRoleId.split(/[,\s]+/).map(id => id.trim()).filter(id => id.length > 0)
+      : [];
+    const hasEditPermission = allowedRoleIds.some(roleId => user.discordRoles?.includes(roleId)) || false;
 
     return {
       id: user._id.toString(),
