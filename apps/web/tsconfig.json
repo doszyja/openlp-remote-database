@@ -5,6 +5,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "types": ["vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -28,7 +29,7 @@
       "@openlp/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src", "src/vite-env.d.ts"],
+  "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx", "src/vite-env.d.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/__tests__/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
