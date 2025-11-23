@@ -10,7 +10,7 @@ export function useDebouncedAction<T extends (...args: any[]) => Promise<any>>(
   action: T,
   delay: number = 500
 ): [T, boolean] {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPendingRef = useRef(false);
 
   const debouncedAction = useCallback(
