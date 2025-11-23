@@ -9,12 +9,14 @@ interface User {
   discriminator?: string | null;
   avatar?: string | null;
   discordRoles?: string[] | null;
+  hasEditPermission?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  hasEditPermission: boolean;
   isLoading: boolean;
   login: (token: string) => Promise<void>;
   logout: () => void;
@@ -125,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         token,
         isAuthenticated: !!user && !!token,
+        hasEditPermission: user?.hasEditPermission ?? false,
         isLoading,
         login,
         logout,

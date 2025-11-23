@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { hasEditPermission, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!hasEditPermission) {
     return (
       <Box
         sx={{
@@ -36,10 +36,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       >
         <Alert severity="info" sx={{ maxWidth: 600 }}>
           <Typography variant="h6" gutterBottom>
-            Wymagane Uwierzytelnienie
+            Wymagane Uprawnienia
           </Typography>
           <Typography variant="body2">
-            Zaloguj się przez Ustawienia, aby uzyskać dostęp do tej strony. Kliknij ikonę ustawień w prawym górnym rogu, aby zalogować się przez Discord.
+            Nie masz uprawnień do edycji pieśni. Skontaktuj się z administratorem, aby uzyskać odpowiednią rolę na serwerze Discord.
           </Typography>
         </Alert>
       </Box>

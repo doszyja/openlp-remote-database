@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, History as HistoryIcon } from '@mui/icons-material';
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
+import { useSongs } from '../hooks/useSongs';
 import { useState, useRef } from 'react';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
@@ -14,6 +15,10 @@ export default function Navbar() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
+  
+  // Check if API is working by trying to fetch songs
+  const { error: apiError } = useSongs({ page: 1, limit: 1 });
+  const isApiError = !!apiError;
 
   const handleDiscordLogin = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -189,6 +194,7 @@ export default function Navbar() {
               <Button
                 variant="contained"
                 onClick={handleDiscordLogin}
+                disabled={isApiError}
                 size="small"
               >
                 Zaloguj

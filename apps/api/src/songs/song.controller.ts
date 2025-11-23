@@ -21,6 +21,7 @@ import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { EditPermissionGuard } from '../auth/guards/edit-permission.guard';
 import { ZipExportThrottlerGuard } from './guards/zip-export-throttler.guard';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditLogAction } from '../schemas/audit-log.schema';
@@ -35,7 +36,8 @@ export class SongController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  // Protected: Only authenticated users can create songs
+  @UseGuards(EditPermissionGuard)
+  // Protected: Only authenticated users with edit permission can create songs
   create(@Body() createSongDto: CreateSongDto) {
     return this.songService.create(createSongDto);
   }
@@ -61,7 +63,8 @@ export class SongController {
   }
 
   @Patch(':id')
-  // Protected: Only authenticated users can update songs
+  @UseGuards(EditPermissionGuard)
+  // Protected: Only authenticated users with edit permission can update songs
   update(
     @Param('id') id: string,
     @Body() updateSongDto: UpdateSongDto,
@@ -83,7 +86,8 @@ export class SongController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // Protected: Only authenticated users can delete songs
+  @UseGuards(EditPermissionGuard)
+  // Protected: Only authenticated users with edit permission can delete songs
   remove(
     @Param('id') id: string,
     @CurrentUser() user: UserResponseDto,
@@ -102,8 +106,8 @@ export class SongController {
   }
 
   @Get('export/zip')
-  // Protected: Only authenticated users can export songs
-  @UseGuards(ZipExportThrottlerGuard)
+  // Protected: Only authenticated users with edit permission can export songs
+  @UseGuards(EditPermissionGuard, ZipExportThrottlerGuard)
   @Throttle({ 'zip-export': { limit: 10, ttl: 60000 } }) // 10 requests per minute per user
   async exportAllToZip(
     @CurrentUser() user: UserResponseDto,

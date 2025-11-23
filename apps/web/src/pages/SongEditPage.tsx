@@ -9,7 +9,7 @@ import type { UpdateSongDto } from '@openlp/shared';
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: song, isLoading, error } = useSong(id!);
+  const { data: song, isLoading, isFetching, error } = useSong(id!);
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
 
@@ -27,12 +27,27 @@ export default function SongEditPage() {
     }
   };
 
-  if (isLoading) {
+  // Show loading only if we don't have data and it's actually fetching
+  if (!song && isFetching) {
     return (
-      <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 } }}>
-        <Box display="flex" justifyContent="center" py={2}>
-          <CircularProgress />
-        </Box>
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: (theme) => 
+            theme.palette.mode === 'dark' 
+              ? 'rgba(26, 35, 50, 0.95)' 
+              : 'rgba(255, 255, 255, 0.95)',
+          zIndex: 9999,
+        }}
+      >
+        <CircularProgress size={60} />
       </Box>
     );
   }
@@ -69,6 +84,15 @@ export default function SongEditPage() {
             onClick={() => navigate(`/songs/${id}`)}
             disabled={updateSong.isPending}
             size="small"
+            variant="outlined"
+            sx={{
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+              color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+              '&:hover': {
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+              },
+            }}
           >
             Anuluj
           </Button>

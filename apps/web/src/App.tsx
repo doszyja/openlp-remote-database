@@ -11,6 +11,7 @@ import SongDetailPage from './pages/SongDetailPage';
 import AuditLogPage from './pages/AuditLogPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AboutPage from './pages/AboutPage';
+import HelpPage from './pages/HelpPage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/songs" element={<SongListPage />} />
               <Route path="/songs/new" element={<ProtectedRoute><SongCreatePage /></ProtectedRoute>} />
               <Route path="/songs/:id" element={<SongDetailPage />} />

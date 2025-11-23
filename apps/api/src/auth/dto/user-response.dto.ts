@@ -5,6 +5,7 @@ export interface UserResponseDto {
   discriminator?: string | null;
   avatar?: string | null;
   discordRoles?: string[] | null;
+  hasEditPermission?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -155,16 +155,27 @@
 ### Backend
 
 - **Input Validation**: Always validate and sanitize inputs
-- **SQL Injection**: Use Prisma (parameterized queries)
+- **SQL Injection**: Use Mongoose (parameterized queries)
 - **CORS**: Configure CORS properly for production
-- **Rate Limiting**: Add rate limiting for API endpoints (future)
+- **Rate Limiting**: Add rate limiting for API endpoints (using ThrottlerModule)
 - **Secrets**: Never commit secrets, use environment variables
+- **Authentication**: Use JWT tokens for authentication
+- **Authorization**: Use role-based access control (RBAC) with Discord roles
+  - All Discord guild members can log in
+  - Only users with required role (`DISCORD_REQUIRED_ROLE_ID`) can edit/delete/export
+  - Use `EditPermissionGuard` to protect edit/delete endpoints
+  - Check `hasEditPermission` flag in user object
 
 ### Frontend
 
 - **XSS Prevention**: Sanitize user inputs, use React's built-in escaping
 - **API Keys**: Never expose API keys in frontend code
-- **Sensitive Data**: Don't store sensitive data in localStorage
+- **Sensitive Data**: Don't store sensitive data in localStorage (only store JWT token)
+- **Authentication**: Use `AuthContext` for authentication state
+- **Authorization**: Check `hasEditPermission` flag before showing edit/delete buttons
+  - Use `hasEditPermission` from `useAuth()` hook
+  - Hide edit/delete actions for users without permission
+  - Show appropriate error messages for unauthorized actions
 
 ## Performance Guidelines
 
@@ -368,13 +379,49 @@
 - **refetchOnWindowFocus**: false (prevent refetching on window focus)
 - **Result**: Smooth navigation without page blinks or unnecessary API calls
 
+### Loading State Management
+
+- **Debounced Loading**: Use debounced loading state for fast API responses (200ms delay)
+  - Prevents visual blinking when navigating between items quickly
+  - Only show loading spinner if request takes longer than debounce delay
+  - Example: `SongDetailPage` uses `showLoading` state with 200ms debounce
+- **Initial Load Messages**: Only show "no data" messages after API response is received
+  - Check `data && data.length === 0` in addition to `!isLoading`
+  - Prevents premature "no data" messages during initial load
+
 ### Search & Filtering
 
 - **Debouncing**: Debounce search inputs (300ms recommended)
 - **Pagination**: Use pagination for large result sets
 - **Default Limits**: Set reasonable default limits (e.g., 150 songs)
 
+## Authentication & Authorization Rules
+
+### Discord OAuth Flow
+
+1. **User Login**: User clicks login → Redirected to Discord OAuth
+2. **Backend Validation**: 
+   - Check if user is in Discord guild (server)
+   - If in guild: Allow login, set `hasEditPermission` based on role presence
+   - If not in guild: Reject login with error message
+3. **JWT Token**: Includes `hasEditPermission` flag in payload
+4. **Frontend Check**: Use `hasEditPermission` from `useAuth()` hook
+5. **Backend Guard**: Use `EditPermissionGuard` for protected endpoints
+
+### Permission Levels
+
+- **Anonymous Users**: Can view songs, search, browse
+- **Guild Members (without role)**: Can log in, see avatar/menu, but cannot edit/delete/export
+- **Guild Members (with role)**: Full access to all features
+
+### Implementation Guidelines
+
+- **Backend**: Always use `EditPermissionGuard` for POST, PATCH, DELETE, and export endpoints
+- **Frontend**: Always check `hasEditPermission` before showing edit/delete buttons
+- **Error Messages**: Show user-friendly messages in Polish for unauthorized actions
+- **User Experience**: All logged-in users should see their avatar and menu, regardless of permissions
+
 ---
 
-**Last Updated**: 2025-01-22
+**Last Updated**: 2025-01-23
 **Maintained By**: Development Team

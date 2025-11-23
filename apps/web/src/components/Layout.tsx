@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -11,6 +11,26 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const [isErrorState, setIsErrorState] = useState(false);
+
+  // Check if body has error-state class
+  useEffect(() => {
+    const checkErrorState = () => {
+      setIsErrorState(document.body.classList.contains('error-state'));
+    };
+
+    // Check initially
+    checkErrorState();
+
+    // Watch for changes
+    const observer = new MutationObserver(checkErrorState);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <Box
@@ -44,7 +64,7 @@ export default function Layout({ children }: LayoutProps) {
           }}
         />
       )}
-      {!isHomePage && <Navbar />}
+      {!isHomePage && !isErrorState && <Navbar />}
       <Box
         component="main"
         sx={{
@@ -53,11 +73,22 @@ export default function Layout({ children }: LayoutProps) {
           flexDirection: 'column',
           position: 'relative',
           zIndex: 1,
+          minHeight: 0, // Allow flexbox to shrink
         }}
       >
         {children}
       </Box>
-      {isHomePage && <Footer />}
+      {isHomePage && (
+        <Box
+          sx={{
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <Footer />
+        </Box>
+      )}
     </Box>
   );
 }

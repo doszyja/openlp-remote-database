@@ -17,6 +17,7 @@ import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-materia
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useSongs } from '../hooks/useSongs';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -26,6 +27,10 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const { mode, toggleMode } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Check if API is working by trying to fetch songs
+  const { error: apiError } = useSongs({ page: 1, limit: 1 });
+  const isApiError = !!apiError;
 
   const handleDiscordLogin = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -79,6 +84,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
               <Button
                 variant="contained"
                 onClick={handleDiscordLogin}
+                disabled={isApiError}
                 fullWidth
                 sx={{ mt: 1 }}
               >

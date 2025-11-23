@@ -34,8 +34,10 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
         accessToken,
       );
 
+      // Allow login for all guild members (even without required role)
+      // hasEditPermission will be false if they don't have the role
       if (!user) {
-        throw new Error('User not authorized - missing role or not in server');
+        throw new Error('User not authorized - not in server');
       }
 
       return { ...user, accessToken };

@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { DiscordAuthGuard } from './guards/discord-auth.guard';
 import type { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('auth')
@@ -13,7 +14,7 @@ export class AuthController {
 
   @Public()
   @Get('discord')
-  @UseGuards(AuthGuard('discord'))
+  @UseGuards(DiscordAuthGuard)
   async discordAuth() {
     // Initiates Discord OAuth flow
     // This endpoint redirects to Discord's OAuth page
@@ -21,7 +22,7 @@ export class AuthController {
 
   @Public()
   @Get('discord/callback')
-  @UseGuards(AuthGuard('discord'))
+  @UseGuards(DiscordAuthGuard)
   async discordCallback(@Req() req: Request, @Res() res: Response) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -54,8 +55,8 @@ export class AuthController {
           errorMessage = 'Authentication code expired or already used. Please try logging in again.';
         } else if (error.message.includes('rate limited')) {
           errorMessage = 'Discord API is temporarily unavailable. Please try again in a few moments.';
-        } else if (error.message.includes('not authorized')) {
-          errorMessage = 'You are not authorized to access this application. Please contact an administrator.';
+        } else if (error.message.includes('not authorized') || error.message.includes('missing role')) {
+          errorMessage = 'missing_role';
         } else if (error.message.includes('Discord API error')) {
           errorMessage = 'Discord API error. Please try again later.';
         } else {

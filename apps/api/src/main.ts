@@ -38,8 +38,31 @@ async function bootstrap() {
   );
 
   // CORS configuration
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : ['http://localhost:5173', 'http://localhost:3000'];
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // For development, allow localhost origins
+      if (process.env.NODE_ENV === 'development') {
+        if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+          return callback(null, true);
+        }
+      }
+      
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     // Security: Restrict allowed methods and headers
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],

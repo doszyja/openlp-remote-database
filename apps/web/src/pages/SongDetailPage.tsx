@@ -33,8 +33,8 @@ import type { SongQueryDto } from '@openlp/shared';
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { data: song, isLoading, error } = useSong(id!);
+  const { isAuthenticated, hasEditPermission } = useAuth();
+  const { data: song, isLoading, isFetching, error } = useSong(id!);
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -47,6 +47,32 @@ export default function SongDetailPage() {
   });
   const [allSearchSongs, setAllSearchSongs] = useState<any[]>([]);
   const [hasMoreSearch, setHasMoreSearch] = useState(true);
+  const [showLoading, setShowLoading] = useState(false);
+
+  // Debounce loading state to prevent blinking
+  // Only show loading if we don't have data (initial load) and it's actually fetching
+  useEffect(() => {
+    // Show loading only if:
+    // 1. We don't have data (initial load or error recovery)
+    // 2. It's actually fetching
+    // 3. After debounce delay (to prevent blinking on fast responses)
+    const shouldShowLoading = !song && isFetching;
+    
+    if (shouldShowLoading) {
+      const timer = setTimeout(() => {
+        // Double-check that we still don't have data and are still fetching
+        if (!song && isFetching) {
+          setShowLoading(true);
+        }
+      }, 200); // Show loading only after 200ms
+      return () => {
+        clearTimeout(timer);
+        setShowLoading(false);
+      };
+    } else {
+      setShowLoading(false);
+    }
+  }, [song, isFetching]);
 
   // Scroll to top when id changes
   useLayoutEffect(() => {
@@ -158,10 +184,26 @@ export default function SongDetailPage() {
 
   // Render song content separately - this will update when id changes, but layout stays stable
   const renderSongContent = () => {
-    if (isLoading) {
+    if (showLoading) {
       return (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress />
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: (theme) => 
+              theme.palette.mode === 'dark' 
+                ? 'rgba(26, 35, 50, 0.95)' 
+                : 'rgba(255, 255, 255, 0.95)',
+            zIndex: 9999,
+          }}
+        >
+          <CircularProgress size={60} />
         </Box>
       );
     }
@@ -170,8 +212,16 @@ export default function SongDetailPage() {
       return <Alert severity="error">Nie udało się załadować pieśni. Spróbuj ponownie.</Alert>;
     }
 
-    if (!song) {
+    // Don't show "not found" message if we're still fetching or loading
+    // This prevents the message from blinking when switching between songs
+    if (!song && !isFetching && !isLoading) {
       return <Alert severity="info">Nie znaleziono pieśni.</Alert>;
+    }
+
+    // If we don't have song but are still loading/fetching, show nothing (or keep previous content)
+    // The loading spinner will be shown by showLoading state
+    if (!song) {
+      return null;
     }
 
     // Debug: Log verses to console
@@ -218,7 +268,7 @@ export default function SongDetailPage() {
             }
             sx={{ display: { xs: 'none', sm: 'flex' }, m: 0 }}
           />
-          {isAuthenticated && (
+          {hasEditPermission && (
             <>
               <Button
                 variant="contained"
@@ -576,7 +626,20 @@ export default function SongDetailPage() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Anuluj</Button>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+              color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+              '&:hover': {
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+              },
+            }}
+          >
+            Anuluj
+          </Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={deleteSong.isPending}>
             {deleteSong.isPending ? 'Usuwanie...' : 'Usuń'}
           </Button>

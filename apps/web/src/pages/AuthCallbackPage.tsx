@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Container, Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -9,14 +9,30 @@ export default function AuthCallbackPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showError } = useNotification();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
     if (error) {
-      showError(`Uwierzytelnienie nie powiodło się: ${decodeURIComponent(error)}`);
-      navigate('/songs');
+      const decodedError = decodeURIComponent(error);
+      let message = '';
+      
+      // Handle specific error types with Polish messages
+      if (decodedError === 'missing_role' || decodedError.includes('missing role') || decodedError.includes('not authorized')) {
+        message = 'Nie masz uprawnień do tego, aby zalogować się do tej strony i móc edytować oraz usuwać pieśni. Skontaktuj się z administratorem, aby uzyskać dostęp.';
+      } else {
+        message = `Uwierzytelnienie nie powiodło się: ${decodedError}`;
+      }
+      
+      setErrorMessage(message);
+      showError(message);
+      
+      // Redirect after showing error for a bit
+      setTimeout(() => {
+        navigate('/songs');
+      }, 5000); // 5 seconds to read the error
       return;
     }
 
@@ -27,24 +43,97 @@ export default function AuthCallbackPage() {
         })
         .catch((err) => {
           console.error('Login error:', err);
-          showError('Nie udało się zakończyć logowania. Spróbuj ponownie.');
-          navigate('/songs');
+          const message = 'Nie udało się zakończyć logowania. Spróbuj ponownie.';
+          setErrorMessage(message);
+          showError(message);
+          setTimeout(() => {
+            navigate('/songs');
+          }, 5000);
         });
     } else {
-      showError('Nie otrzymano tokenu uwierzytelnienia.');
-      navigate('/songs');
+      const message = 'Nie otrzymano tokenu uwierzytelnienia.';
+      setErrorMessage(message);
+      showError(message);
+      setTimeout(() => {
+        navigate('/songs');
+      }, 5000);
     }
   }, [searchParams, navigate, login, showError]);
 
-  return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
-        <CircularProgress />
-        <Typography variant="body1" color="text.secondary">
-          Kończenie uwierzytelniania...
-        </Typography>
+  // Show error message if there's an error
+  if (errorMessage) {
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 3,
+          backgroundColor: (theme) => 
+            theme.palette.mode === 'dark' 
+              ? 'rgba(26, 35, 50, 0.98)' 
+              : 'rgba(255, 255, 255, 0.98)',
+          zIndex: 9999,
+          px: 3,
+        }}
+      >
+        <Alert 
+          severity="error" 
+          sx={{ 
+            maxWidth: 600,
+            width: '100%',
+            py: 2,
+            '& .MuiAlert-message': {
+              fontSize: '1rem',
+            },
+          }}
+        >
+          {errorMessage}
+        </Alert>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/songs')}
+          sx={{
+            mt: 2,
+          }}
+        >
+          Powrót do strony głównej
+        </Button>
       </Box>
-    </Container>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 3,
+        backgroundColor: (theme) => 
+          theme.palette.mode === 'dark' 
+            ? 'rgba(26, 35, 50, 0.95)' 
+            : 'rgba(255, 255, 255, 0.95)',
+        zIndex: 9999,
+      }}
+    >
+      <CircularProgress size={60} />
+      <Typography variant="body1" color="text.secondary">
+        Kończenie uwierzytelniania...
+      </Typography>
+    </Box>
   );
 }
 

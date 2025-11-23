@@ -10,25 +10,27 @@ import {
 import {
   LibraryMusic as LibraryMusicIcon,
   Add as AddIcon,
+  Help as HelpIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasEditPermission } = useAuth();
 
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         background: (theme) =>
           theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1A2332 0%, #1E2A3A 50%, #1F2D3F 100%)'
-            : 'linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 50%, #d4e1f0 100%)',
+            ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
+            : 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 30%, #f0f2f5 60%, #e8ecf1 100%)',
         position: 'relative',
         overflow: 'hidden',
+        minHeight: 0, // Allow flexbox to shrink
       }}
     >
       {/* Decorative elements */}
@@ -39,15 +41,15 @@ export default function HomePage() {
           left: 0,
           right: 0,
           bottom: 0,
-          opacity: 0.03,
-          backgroundImage: 'radial-gradient(circle at 20% 50%, currentColor 0%, transparent 50%), radial-gradient(circle at 80% 80%, currentColor 0%, transparent 50%)',
+          opacity: (theme) => theme.palette.mode === 'dark' ? 0.02 : 0.015,
+          backgroundImage: 'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)',
           pointerEvents: 'none',
         }}
       />
 
       <Box
         sx={{
-          flexGrow: 1,
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: { xs: 'flex-start', sm: 'center', md: 'center' },
@@ -57,6 +59,8 @@ export default function HomePage() {
           pb: { xs: 6, sm: 8, md: 10 },
           position: 'relative',
           zIndex: 1,
+          minHeight: 0, // Allow flexbox to shrink
+          overflow: 'auto', // Allow scrolling if content is too large
         }}
       >
         {/* Main heading */}
@@ -198,7 +202,7 @@ export default function HomePage() {
             </Button>
           </Paper>
 
-          {user && (
+          {hasEditPermission && (
             <Paper
               elevation={0}
               sx={{
@@ -270,6 +274,84 @@ export default function HomePage() {
               </Button>
             </Paper>
           )}
+
+          {/* Help card */}
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              p: { xs: 3, sm: 4 },
+              borderRadius: 3,
+              bgcolor: 'background.paper',
+              boxShadow: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  : '0 8px 32px rgba(0, 0, 0, 0.1)',
+              border: (theme) =>
+                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? '0 12px 40px rgba(0, 0, 0, 0.4)'
+                    : '0 12px 40px rgba(0, 0, 0, 0.15)',
+              },
+            }}
+          >
+            <Box display="flex" alignItems="flex-start" gap={3} mb={3}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <HelpIcon sx={{ fontSize: 28 }} />
+              </Box>
+              <Box flex={1}>
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{
+                    fontWeight: 500,
+                    mb: 1,
+                    fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                  }}
+                >
+                  Instrukcja Użytkownika
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                  Dowiedz się, jak korzystać z aplikacji - przeglądanie, wyszukiwanie, edycja i eksport pieśni
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              variant="outlined"
+              size="large"
+              fullWidth
+              onClick={() => navigate('/help')}
+              sx={{
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 500,
+                textTransform: 'none',
+                borderRadius: 2,
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+                '&:hover': {
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+                },
+              }}
+            >
+              Zobacz Instrukcję
+            </Button>
+          </Paper>
         </Stack>
       </Box>
     </Box>

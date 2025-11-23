@@ -569,7 +569,19 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
         {!hideButtons && (
           <Box display="flex" gap={2} justifyContent="flex-end">
             {onCancel && (
-              <Button onClick={onCancel} disabled={isLoading}>
+              <Button 
+                onClick={onCancel} 
+                disabled={isLoading}
+                variant="outlined"
+                sx={{
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                  color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+                  '&:hover': {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+                  },
+                }}
+              >
                 Anuluj
               </Button>
             )}

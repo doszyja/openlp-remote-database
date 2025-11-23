@@ -77,13 +77,9 @@ export class AuthService {
     const hasRequiredRole = memberInfo.roles.includes(requiredRoleId);
     console.log(`[validateDiscordUser] User has required role: ${hasRequiredRole}`);
     
-    if (!hasRequiredRole) {
-      // User doesn't have the required role
-      console.warn(`[validateDiscordUser] User ${profile.id} does not have required role ${requiredRoleId}`);
-      console.warn(`[validateDiscordUser] User roles:`, memberInfo.roles);
-      console.warn(`[validateDiscordUser] Required role: ${requiredRoleId}`);
-      return null;
-    }
+    // Allow login for all guild members, but set hasEditPermission based on role
+    // User is in the server, so allow login even without the required role
+    console.log(`[validateDiscordUser] User ${profile.id} is in the server. hasEditPermission: ${hasRequiredRole}`);
 
     // Create or update user in database
     const user = await this.userModel.findOneAndUpdate(
@@ -104,6 +100,7 @@ export class AuthService {
       discriminator: user.discriminator || null,
       avatar: user.avatar || null,
       discordRoles: user.discordRoles || null,
+      hasEditPermission: hasRequiredRole,
       createdAt: (user as any).createdAt || new Date(),
       updatedAt: (user as any).updatedAt || new Date(),
     };
@@ -281,6 +278,7 @@ export class AuthService {
       sub: user.id,
       discordId: user.discordId,
       username: user.username,
+      hasEditPermission: user.hasEditPermission || false,
     };
 
     // Log audit trail
@@ -308,6 +306,10 @@ export class AuthService {
       return null;
     }
 
+    // Check if user has the required role for edit permission
+    const requiredRoleId = process.env.DISCORD_REQUIRED_ROLE_ID;
+    const hasEditPermission = requiredRoleId && user.discordRoles?.includes(requiredRoleId) || false;
+
     return {
       id: user._id.toString(),
       discordId: user.discordId,
@@ -315,6 +317,7 @@ export class AuthService {
       discriminator: user.discriminator || null,
       avatar: user.avatar || null,
       discordRoles: user.discordRoles || null,
+      hasEditPermission,
       createdAt: (user as any).createdAt || new Date(),
       updatedAt: (user as any).updatedAt || new Date(),
     };
