@@ -22,7 +22,7 @@ import {
   ListItemButton,
   ListItemText,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon, MusicNote as MusicNoteIcon, Fullscreen as FullscreenIcon, ViewColumn as ViewColumnIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon, MusicNote as MusicNoteIcon, Fullscreen as FullscreenIcon, ViewColumn as ViewColumnIcon, Slideshow as SlideshowIcon } from '@mui/icons-material';
 import { useState, useEffect, useLayoutEffect } from 'react';
 import { useSong, useDeleteSong, useSongs } from '../hooks';
 import { useNotification } from '../contexts/NotificationContext';
@@ -251,6 +251,22 @@ export default function SongDetailPage() {
           Wstecz
         </Button>
         <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" flexWrap="wrap" sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+          <Button
+            variant="outlined"
+            startIcon={<SlideshowIcon />}
+            onClick={() => navigate(`/songs/${id}/presentation`)}
+            size="small"
+            sx={{
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+              color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit',
+              '&:hover': {
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            Prezentacja
+          </Button>
           <FormControlLabel
             control={
               <Switch

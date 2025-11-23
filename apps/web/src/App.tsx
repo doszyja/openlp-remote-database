@@ -8,6 +8,7 @@ import SongListPage from './pages/SongListPage';
 import SongCreatePage from './pages/SongCreatePage';
 import SongEditPage from './pages/SongEditPage';
 import SongDetailPage from './pages/SongDetailPage';
+import PresentationPage from './pages/PresentationPage';
 import AuditLogPage from './pages/AuditLogPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AboutPage from './pages/AboutPage';
@@ -17,6 +18,7 @@ function App() {
   return (
     <Routes>
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/songs/:id/presentation" element={<PresentationPage />} />
       <Route
         path="/*"
         element={

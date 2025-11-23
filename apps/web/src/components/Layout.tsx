@@ -78,17 +78,15 @@ export default function Layout({ children }: LayoutProps) {
       >
         {children}
       </Box>
-      {isHomePage && (
-        <Box
-          sx={{
-            flexShrink: 0,
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          <Footer />
-        </Box>
-      )}
+      <Box
+        sx={{
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Footer />
+      </Box>
     </Box>
   );
 }
