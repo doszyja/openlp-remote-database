@@ -1,6 +1,5 @@
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -27,12 +26,14 @@ import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon, Mus
 import { useState, useEffect, useLayoutEffect } from 'react';
 import { useSong, useDeleteSong, useSongs } from '../hooks';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import type { SongQueryDto } from '@openlp/shared';
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { data: song, isLoading, error } = useSong(id!);
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
@@ -88,14 +89,14 @@ export default function SongDetailPage() {
   }, [searchResults.data, searchQuery.page, searchQuery.limit]);
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!id || deleteSong.isPending) return;
 
     try {
       await deleteSong.mutateAsync(id);
-      showSuccess('Song deleted successfully!');
+      showSuccess('Pieśń została usunięta pomyślnie!');
       navigate('/');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete song. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Nie udało się usunąć pieśni. Spróbuj ponownie.';
       showError(errorMessage);
       console.error('Failed to delete song:', error);
     } finally {
@@ -166,11 +167,11 @@ export default function SongDetailPage() {
     }
 
     if (error) {
-      return <Alert severity="error">Failed to load song. Please try again.</Alert>;
+      return <Alert severity="error">Nie udało się załadować pieśni. Spróbuj ponownie.</Alert>;
     }
 
     if (!song) {
-      return <Alert severity="info">Song not found.</Alert>;
+      return <Alert severity="info">Nie znaleziono pieśni.</Alert>;
     }
 
     // Debug: Log verses to console
@@ -181,14 +182,24 @@ export default function SongDetailPage() {
 
     return (
     <>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={{ xs: 2, md: 3 }} flexWrap="wrap" gap={1}>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate('/songs')}
+          size="small"
+          variant="outlined"
+          sx={{
+            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+            color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit',
+            '&:hover': {
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
         >
-          Back to List
+          Wstecz
         </Button>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" flexWrap="wrap">
           <FormControlLabel
             control={
               <Switch
@@ -200,94 +211,186 @@ export default function SongDetailPage() {
             label={
               <Box display="flex" alignItems="center" gap={0.5}>
                 {isFullscreen ? <FullscreenIcon fontSize="small" /> : <ViewColumnIcon fontSize="small" />}
-                <Typography variant="body2">
-                  {isFullscreen ? 'Full Width' : 'Normal View'}
+                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                  {isFullscreen ? 'Pełna szerokość' : 'Normalny widok'}
                 </Typography>
               </Box>
             }
-            sx={{ display: { xs: 'none', sm: 'flex' } }}
+            sx={{ display: { xs: 'none', sm: 'flex' }, m: 0 }}
           />
-          <Button
-            variant="contained"
-            startIcon={<EditIcon />}
-            onClick={() => navigate(`/songs/${id}/edit`)}
-            sx={{ width: { xs: '100%', sm: 'auto' } }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteDialogOpen(true)}
-            sx={{ 
-              width: { xs: '100%', sm: 'auto' },
-              borderColor: 'error.main',
-              color: 'error.main',
-              '&:hover': {
-                borderColor: 'error.dark',
-                backgroundColor: 'error.light',
-                color: 'error.dark',
-              },
-            }}
-          >
-            Delete
-          </Button>
+          {isAuthenticated && (
+            <>
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={() => navigate(`/songs/${id}/edit`)}
+                size="small"
+              >
+                Edytuj
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setDeleteDialogOpen(true)}
+                size="small"
+                sx={{
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.main : undefined,
+                  color: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
+                  '&:hover': {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : undefined,
+                  },
+                }}
+              >
+                Usuń
+              </Button>
+            </>
+          )}
         </Stack>
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h4" component="h1">
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: { xs: 2, sm: 2.5, md: 3 }, 
+          mb: { xs: 2, md: 3 },
+          bgcolor: 'background.paper',
+          boxShadow: (theme) =>
+            theme.palette.mode === 'dark'
+              ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+              : '0 4px 16px rgba(0, 0, 0, 0.08)',
+          border: (theme) =>
+            theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+        }}
+      >
+        <Typography 
+          variant="h4" 
+          component="h1"
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' },
+            fontWeight: 500,
+            mb: 0.5,
+            lineHeight: 1.3,
+          }}
+        >
           {song.title}
         </Typography>
 
-        {song.number && (
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            #{song.number}
-          </Typography>
-        )}
-
-        {song.tags.length > 0 && (
-          <Stack direction="row" spacing={1} sx={{ mt: 2, mb: 2 }}>
-            {song.tags.map((tag) => (
-              <Chip key={tag.id} label={tag.name} variant="outlined" />
-            ))}
-          </Stack>
-        )}
+        <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap" mt={1}>
+          {song.number && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              #{song.number}
+            </Typography>
+          )}
+          {song.tags.length > 0 && (
+            <Stack direction="row" spacing={0.5} flexWrap="wrap">
+              {song.tags.map((tag) => (
+                <Chip 
+                  key={tag.id} 
+                  label={tag.name} 
+                  variant="outlined" 
+                  size="small"
+                  sx={{ fontSize: '0.75rem', height: 24 }}
+                />
+              ))}
+            </Stack>
+          )}
+        </Box>
       </Paper>
 
       {song.chorus && (
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Chorus
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: { xs: 2, sm: 2.5 }, 
+            mb: 2,
+            bgcolor: 'background.paper',
+            boxShadow: (theme) =>
+              theme.palette.mode === 'dark'
+                ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                : '0 4px 16px rgba(0, 0, 0, 0.08)',
+            border: (theme) =>
+              theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+          }}
+        >
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              fontWeight: 600, 
+              mb: 1.5,
+              fontSize: '0.95rem',
+              color: 'text.secondary',
+            }}
+          >
+            Refren
           </Typography>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              whiteSpace: 'pre-line',
+              lineHeight: 1.8,
+              fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
+            }}
+          >
             {song.chorus}
           </Typography>
         </Paper>
       )}
 
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Verses ({parsedVerses.filter(v => v.content && v.content.trim()).length})
+      <Box>
+        <Typography 
+          variant="subtitle2" 
+          sx={{ 
+            mb: 1.5,
+            color: 'text.secondary',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+          }}
+        >
+          Zwrotki ({parsedVerses.filter(v => v.content && v.content.trim()).length})
         </Typography>
         {parsedVerses.filter(v => v.content && v.content.trim()).length === 0 ? (
-          <Alert severity="info">No verses found.</Alert>
+          <Alert severity="info" sx={{ py: 0.5 }}>Brak zwrotek.</Alert>
         ) : (
-          <Stack spacing={2} sx={{ mt: 2 }}>
+          <Stack spacing={1.5}>
             {parsedVerses
               .filter(v => v.content && v.content.trim())
               .map((verse, index) => (
-                <Paper key={`verse-${verse.order}-${index}`} variant="outlined" sx={{ p: 2 }}>
-                  <Box display="flex" alignItems="center" gap={2} mb={1}>
-                    <Typography variant="caption" color="text.secondary">
-                      Order: {verse.order}
-                    </Typography>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      {getVerseDisplayLabel(verse, index)}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                <Paper 
+                  key={`verse-${verse.order}-${index}`} 
+                  elevation={0}
+                  sx={{ 
+                    p: { xs: 1.5, sm: 2 },
+                    bgcolor: 'background.paper',
+                    boxShadow: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                    border: (theme) =>
+                      theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.05)',
+                  }}
+                >
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: 'text.secondary',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      display: 'block',
+                      mb: 1,
+                    }}
+                  >
+                    {getVerseDisplayLabel(verse, index)}
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      whiteSpace: 'pre-line',
+                      lineHeight: 1.8,
+                      fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
+                    }}
+                  >
                     {verse.content}
                   </Typography>
                 </Paper>
@@ -302,7 +405,7 @@ export default function SongDetailPage() {
   const songContent = renderSongContent();
 
   const searchColumn = (
-    <Paper sx={{ p: 1.5, display: 'flex', flexDirection: 'column', width: '280px', position: 'relative' }}>
+    <Paper sx={{ p: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}>
       {/* Loading overlay for search */}
       {searchResults.isLoading && (
         <Box
@@ -323,12 +426,12 @@ export default function SongDetailPage() {
           <CircularProgress size={24} />
         </Box>
       )}
-      <Typography variant="h6" gutterBottom sx={{ mb: 1, fontSize: '1rem' }}>
-        Search Songs
+      <Typography variant="h6" gutterBottom sx={{ mb: 1, fontSize: { xs: '0.95rem', md: '1rem' } }}>
+        Szukaj Pieśni
       </Typography>
       <TextField
         fullWidth
-        placeholder="Search Entire Song..."
+        placeholder="Szukaj pieśni..."
         value={search}
         onChange={(e) => handleSearch(e.target.value)}
         size="small"
@@ -351,7 +454,7 @@ export default function SongDetailPage() {
           // Prevent scroll from propagating to window
           e.stopPropagation();
         }}
-        sx={{ flex: 1, overflowY: 'auto', minHeight: 0, maxHeight: 'calc(100vh - 200px)', '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#888', borderRadius: '4px' }, '&::-webkit-scrollbar-thumb:hover': { background: '#555' } }}
+        sx={{ flex: 1, overflowY: 'auto', minHeight: 0, maxHeight: { xs: 'calc(100vh - 200px)', md: 'calc(100vh - 240px)' }, '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: '#f1f1f1' }, '&::-webkit-scrollbar-thumb': { background: '#888', borderRadius: '4px' }, '&::-webkit-scrollbar-thumb:hover': { background: '#555' } }}
       >
         {allSearchSongs.length > 0 && (
           <List dense sx={{ py: 0 }}>
@@ -410,7 +513,7 @@ export default function SongDetailPage() {
         )}
         {search && allSearchSongs.length === 0 && !searchResults.isLoading && (
           <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-            No songs found.
+            Nie znaleziono pieśni.
           </Alert>
         )}
       </Box>
@@ -418,9 +521,9 @@ export default function SongDetailPage() {
   );
 
   return (
-    <Container maxWidth={false} sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
+    <Box sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
       {isFullscreen ? (
-        <Box maxWidth={{ xs: '100%', sm: '900px' }} mx="auto" px={{ xs: 1, sm: 0 }}>
+        <Box maxWidth={{ xs: '100%', sm: '800px', md: '1000px', lg: '1200px' }} mx="auto">
           <Box key={id}>
             {songContent}
           </Box>
@@ -429,32 +532,33 @@ export default function SongDetailPage() {
         <Box 
           display="flex" 
           flexDirection={{ xs: 'column', md: 'row' }}
-          gap={2} 
+          gap={{ xs: 2, md: 3 }} 
           alignItems="flex-start" 
-          maxWidth="1200px" 
+          maxWidth={{ xs: '100%', sm: '1200px', lg: '1400px' }} 
           mx="auto"
           width="100%"
         >
           <Box
             sx={{
-              width: { xs: 0, md: isFullscreen ? 0 : '280px' },
-              minWidth: { xs: 0, md: isFullscreen ? 0 : '280px' },
-              maxWidth: { xs: 0, md: isFullscreen ? 0 : '280px' },
+              width: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              minWidth: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              maxWidth: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               display: { xs: 'none', md: 'block' },
             }}
           >
-            <Box sx={{ width: '280px', position: 'sticky', top: 20 }}>
+            <Box sx={{ width: { md: '300px', lg: '320px' }, position: 'sticky', top: 20 }}>
               {searchColumn}
             </Box>
           </Box>
           <Box 
             sx={{ 
-              width: { xs: '100%', md: isFullscreen ? '100%' : '900px' }, 
+              width: { xs: '100%', md: isFullscreen ? '100%' : 'calc(100% - 300px)', lg: isFullscreen ? '100%' : 'calc(100% - 320px)' }, 
+              maxWidth: { xs: '100%', md: isFullscreen ? '1000px' : '900px', lg: isFullscreen ? '1200px' : '1000px' },
               flexShrink: 0,
-              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             <Box key={id}>
@@ -465,20 +569,20 @@ export default function SongDetailPage() {
       )}
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Song?</DialogTitle>
+        <DialogTitle>Usuń Pieśń?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{song?.title || 'this song'}"? This action cannot be undone.
+            Czy na pewno chcesz usunąć "{song?.title || 'tę pieśń'}"? Tej operacji nie można cofnąć.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Anuluj</Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={deleteSong.isPending}>
-            {deleteSong.isPending ? 'Deleting...' : 'Delete'}
+            {deleteSong.isPending ? 'Usuwanie...' : 'Usuń'}
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 }
 

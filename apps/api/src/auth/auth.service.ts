@@ -4,6 +4,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import type { UserResponseDto } from './dto/user-response.dto';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import { AuditLogAction } from '../schemas/audit-log.schema';
 
 export interface DiscordProfile {
   id: string;
@@ -29,6 +31,7 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
+    private auditLogService: AuditLogService,
   ) {}
 
   async validateDiscordUser(profile: DiscordProfile, accessToken: string): Promise<UserResponseDto | null> {
@@ -40,18 +43,45 @@ export class AuthService {
       throw new Error('Discord configuration missing');
     }
 
-    // Fetch user's guild member info
-    const memberInfo = await this.getGuildMember(guildId, profile.id, accessToken);
+    console.log(`[validateDiscordUser] Validating user ${profile.id} (${profile.username})`);
+    console.log(`[validateDiscordUser] Guild ID: ${guildId}, Required Role ID: ${requiredRoleId}`);
+
+    // Fetch user's guild member info using bot token (has higher rate limits)
+    let memberInfo: DiscordGuildMember | null;
+    try {
+      memberInfo = await this.getGuildMember(guildId, profile.id);
+    } catch (error) {
+      console.error('[validateDiscordUser] Failed to fetch guild member:', error);
+      throw error;
+    }
+
+    console.log('[validateDiscordUser] Member info:', memberInfo ? {
+      userId: memberInfo.user?.id,
+      roles: memberInfo.roles,
+      rolesCount: memberInfo.roles?.length || 0,
+    } : 'null');
 
     if (!memberInfo) {
       // User is not in the server
+      console.warn(`[validateDiscordUser] User ${profile.id} is not in the server or bot cannot access member info`);
+      console.warn(`[validateDiscordUser] Troubleshooting:`);
+      console.warn(`  1. Verify the user is in the Discord server`);
+      console.warn(`  2. Verify the bot is in the server`);
+      console.warn(`  3. Verify Server Members Intent is enabled in Discord Developer Portal`);
+      console.warn(`  4. Verify the bot has "View Server Members" permission`);
+      console.warn(`  5. Verify DISCORD_GUILD_ID is correct`);
       return null;
     }
 
     // Check if user has the required role
     const hasRequiredRole = memberInfo.roles.includes(requiredRoleId);
+    console.log(`[validateDiscordUser] User has required role: ${hasRequiredRole}`);
+    
     if (!hasRequiredRole) {
       // User doesn't have the required role
+      console.warn(`[validateDiscordUser] User ${profile.id} does not have required role ${requiredRoleId}`);
+      console.warn(`[validateDiscordUser] User roles:`, memberInfo.roles);
+      console.warn(`[validateDiscordUser] Required role: ${requiredRoleId}`);
       return null;
     }
 
@@ -79,42 +109,191 @@ export class AuthService {
     };
   }
 
-  async getGuildMember(
-    guildId: string,
-    userId: string,
-    accessToken: string,
-  ): Promise<DiscordGuildMember | null> {
-    try {
-      const response = await fetch(
-        `https://discord.com/api/v10/users/@me/guilds/${guildId}/member`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      );
+  async verifyBotGuildAccess(guildId: string): Promise<boolean> {
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    if (!botToken) {
+      throw new Error('Discord bot token not configured');
+    }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // User is not in the guild
-          return null;
-        }
-        throw new Error(`Discord API error: ${response.status}`);
+    try {
+      console.log(`[verifyBotGuildAccess] Verifying bot can access guild ${guildId}`);
+      const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+      });
+
+      if (response.status === 404) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`[verifyBotGuildAccess] Guild not found (404): ${JSON.stringify(errorData)}`);
+        console.error(`[verifyBotGuildAccess] The bot is NOT in the server with ID ${guildId}`);
+        console.error(`[verifyBotGuildAccess] SOLUTION: Add the bot to the server using OAuth2 URL Generator`);
+        return false;
       }
 
-      return await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`[verifyBotGuildAccess] Error accessing guild: ${response.status} - ${JSON.stringify(errorData)}`);
+        return false;
+      }
+
+      const guildData = await response.json();
+      console.log(`[verifyBotGuildAccess] Bot can access guild: ${guildData.name} (${guildData.id})`);
+      return true;
     } catch (error) {
-      console.error('Error fetching guild member:', error);
-      return null;
+      console.error(`[verifyBotGuildAccess] Error:`, error);
+      return false;
     }
   }
 
-  async login(user: UserResponseDto) {
+  async getGuildMember(
+    guildId: string,
+    userId: string,
+    maxRetries: number = 3,
+  ): Promise<DiscordGuildMember | null> {
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    if (!botToken) {
+      throw new Error('Discord bot token not configured');
+    }
+
+    console.log(`[getGuildMember] Fetching member info for user ${userId} in guild ${guildId}`);
+
+    // First verify bot can access the guild
+    const canAccessGuild = await this.verifyBotGuildAccess(guildId);
+    if (!canAccessGuild) {
+      throw new Error(
+        `Bot cannot access guild ${guildId}. Please add the bot to the server. ` +
+        `Go to Discord Developer Portal → OAuth2 → URL Generator → Select 'bot' scope → Copy URL → Open in browser → Select server`
+      );
+    }
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const url = `https://discord.com/api/v10/guilds/${guildId}/members/${userId}`;
+        console.log(`[getGuildMember] Attempt ${attempt + 1}/${maxRetries}: Fetching ${url}`);
+
+        const memberResponse = await fetch(url, {
+          headers: {
+            Authorization: `Bot ${botToken}`,
+          },
+        });
+
+        console.log(`[getGuildMember] Response status: ${memberResponse.status} ${memberResponse.statusText}`);
+
+        // Handle rate limiting (429)
+        if (memberResponse.status === 429) {
+          const rateLimitData = await memberResponse.json().catch(() => ({}));
+          const retryAfter = rateLimitData.retry_after 
+            ? parseFloat(rateLimitData.retry_after) * 1000 
+            : Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+
+          if (attempt < maxRetries - 1) {
+            console.warn(
+              `Discord API rate limited. Retrying after ${retryAfter}ms (attempt ${attempt + 1}/${maxRetries})`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, retryAfter));
+            continue;
+          } else {
+            throw new Error(
+              `Discord API rate limited. Max retries exceeded. Retry after ${retryAfter}ms`,
+            );
+          }
+        }
+
+        if (!memberResponse.ok) {
+          const errorText = await memberResponse.text().catch(() => 'Unable to read error response');
+          let errorData: any = {};
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            // Not JSON, ignore
+          }
+          console.error(`[getGuildMember] API error response: ${errorText}`);
+
+          if (memberResponse.status === 404) {
+            // Check if it's "Unknown Guild" error (bot not in server)
+            if (errorData.code === 10004 || errorText.includes('Unknown Guild')) {
+              console.error(`[getGuildMember] CRITICAL: Bot is NOT in the server!`);
+              console.error(`[getGuildMember] Error code: 10004 - Unknown Guild`);
+              console.error(`[getGuildMember] SOLUTION:`);
+              console.error(`  1. Go to https://discord.com/developers/applications`);
+              console.error(`  2. Select your application`);
+              console.error(`  3. Go to "OAuth2" → "URL Generator"`);
+              console.error(`  4. Select scope: "bot"`);
+              console.error(`  5. Select bot permissions: "View Server Members"`);
+              console.error(`  6. Copy the generated URL and open it in your browser`);
+              console.error(`  7. Select your server and authorize the bot`);
+              throw new Error(
+                `Bot is not in the server. Please add the bot using OAuth2 URL Generator in Discord Developer Portal.`
+              );
+            }
+            
+            console.warn(`[getGuildMember] User ${userId} not found in guild ${guildId} (404)`);
+            console.warn(`[getGuildMember] Possible causes:`);
+            console.warn(`  - User is not in the server`);
+            console.warn(`  - Bot doesn't have permission to view members`);
+            console.warn(`  - Server Members Intent is not enabled`);
+            return null;
+          }
+
+          if (memberResponse.status === 403) {
+            const errorData = await memberResponse.json().catch(() => ({}));
+            console.error(`[getGuildMember] Forbidden (403): ${JSON.stringify(errorData)}`);
+            console.error(`[getGuildMember] Possible causes:`);
+            console.error(`  - Bot doesn't have permission to view members`);
+            console.error(`  - Server Members Intent is not enabled`);
+            console.error(`  - Bot is not in the server`);
+            throw new Error(`Discord API error: 403 Forbidden - Bot may lack permissions or Server Members Intent`);
+          }
+
+          throw new Error(`Discord API error: ${memberResponse.status} - ${errorText}`);
+        }
+
+        const memberData = await memberResponse.json();
+        console.log(`[getGuildMember] Success! Member roles:`, memberData.roles);
+        return memberData;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`[getGuildMember] Error on attempt ${attempt + 1}:`, lastError.message);
+        
+        // If it's not a rate limit error and not the last attempt, retry with exponential backoff
+        if (attempt < maxRetries - 1 && !lastError.message.includes('rate limited')) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.warn(
+            `Error fetching guild member (attempt ${attempt + 1}/${maxRetries}). Retrying after ${delay}ms:`,
+            lastError.message,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+    }
+
+    // If we get here, all retries failed
+    console.error('Error fetching guild member after all retries:', lastError);
+    throw lastError || new Error('Failed to fetch guild member');
+  }
+
+  async login(user: UserResponseDto, ipAddress?: string, userAgent?: string) {
     const payload = {
       sub: user.id,
       discordId: user.discordId,
       username: user.username,
     };
+
+    // Log audit trail
+    await this.auditLogService.log(
+      AuditLogAction.LOGIN,
+      user.id,
+      user.username,
+      {
+        discordId: user.discordId,
+        ipAddress,
+        userAgent,
+      },
+    ).catch(err => console.error('Failed to log audit trail:', err));
 
     return {
       access_token: this.jwtService.sign(payload),

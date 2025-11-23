@@ -1037,10 +1037,10 @@ This document contains a comprehensive, granular task list organized by epic. Ea
   - Show loading state during auth check
   - Estimated: 1.5 hours
 
-- [ ] **Task 5.3.5**: Update API client for auth
-  - Add JWT token to requests (Authorization header)
-  - Handle 401 errors (redirect to login)
-  - Refresh token if needed
+- [x] **Task 5.3.5**: Update API client for auth
+  - [x] Add JWT token to requests (Authorization header) - **COMPLETED**: Token automatically included in all API requests via `apps/web/src/services/api.ts`
+  - [ ] Handle 401 errors (redirect to login) - **PENDING**: Currently shows error, could redirect to login
+  - [ ] Refresh token if needed - **PENDING**: Not implemented (re-authentication required)
   - Estimated: 1.5 hours
 
 - [ ] **Task 5.3.6**: Add logout functionality

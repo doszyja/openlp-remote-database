@@ -4,10 +4,10 @@ import { PassportModule } from '@nestjs/passport';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-// Temporarily disabled - requires Discord OAuth configuration
-// import { DiscordStrategy } from './strategies/discord.strategy';
+import { DiscordStrategy } from './strategies/discord.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User, UserSchema } from '../schemas/user.schema';
+import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({
   imports: [
@@ -19,12 +19,12 @@ import { User, UserSchema } from '../schemas/user.schema';
         expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any,
       },
     }),
+    AuditLogModule,
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
-    // Temporarily disabled - requires Discord OAuth configuration
-    // DiscordStrategy,
+    DiscordStrategy,
     JwtStrategy,
   ],
   exports: [AuthService],

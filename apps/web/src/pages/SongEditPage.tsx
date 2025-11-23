@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Typography, Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
+import { Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSong, useUpdateSong } from '../hooks';
 import SongForm from '../components/SongForm';
@@ -14,14 +14,14 @@ export default function SongEditPage() {
   const { showSuccess, showError } = useNotification();
 
   const handleSubmit = async (data: UpdateSongDto) => {
-    if (!id) return;
+    if (!id || updateSong.isPending) return;
 
     try {
       await updateSong.mutateAsync({ id, data });
-      showSuccess('Song updated successfully!');
+      showSuccess('Pieśń została zaktualizowana pomyślnie!');
       navigate(`/songs/${id}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update song. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Nie udało się zaktualizować pieśni. Spróbuj ponownie.';
       showError(errorMessage);
       console.error('Failed to update song:', error);
     }
@@ -29,56 +29,64 @@ export default function SongEditPage() {
 
   if (isLoading) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 } }}>
+        <Box display="flex" justifyContent="center" py={2}>
           <CircularProgress />
         </Box>
-      </Container>
+      </Box>
     );
   }
 
   if (error || !song) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Alert severity="error">Failed to load song. Please try again.</Alert>
-      </Container>
+      <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 } }}>
+        <Alert severity="error">Nie udało się załadować pieśni. Spróbuj ponownie.</Alert>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 }, maxWidth: '1200px', mx: 'auto' }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/songs')}
+          variant="outlined"
+          size="small"
+          sx={{
+            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+            color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit',
+            '&:hover': {
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
         >
-          Back to List
+          Wstecz
         </Button>
         <Stack direction="row" spacing={1}>
           <Button
             onClick={() => navigate(`/songs/${id}`)}
             disabled={updateSong.isPending}
+            size="small"
           >
-            Cancel
+            Anuluj
           </Button>
           <Button
             variant="contained"
             form="song-form"
             type="submit"
             disabled={updateSong.isPending}
+            size="small"
           >
-            {updateSong.isPending ? 'Updating...' : 'Update Song'}
+            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj Pieśń'}
           </Button>
         </Stack>
       </Box>
 
-      <Typography variant="h4" component="h1" gutterBottom>
-        Edit Song
-      </Typography>
-
       {updateSong.isError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to update song. Please try again.
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Nie udało się zaktualizować pieśni. Spróbuj ponownie.
         </Alert>
       )}
 
@@ -89,7 +97,7 @@ export default function SongEditPage() {
         isLoading={updateSong.isPending}
         hideButtons={true}
       />
-    </Container>
+    </Box>
   );
 }
 

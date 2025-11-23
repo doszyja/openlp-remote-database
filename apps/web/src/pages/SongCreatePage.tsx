@@ -11,12 +11,17 @@ export default function SongCreatePage() {
   const { showSuccess, showError } = useNotification();
 
   const handleSubmit = async (data: CreateSongDto | UpdateSongDto) => {
+    // Prevent double submission
+    if (createSong.isPending) {
+      return;
+    }
+
     try {
       const result = await createSong.mutateAsync(data as CreateSongDto);
-      showSuccess('Song created successfully!');
+      showSuccess('Pieśń została utworzona pomyślnie!');
       navigate(`/songs/${result.id}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create song. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Nie udało się utworzyć pieśni. Spróbuj ponownie.';
       showError(errorMessage);
       console.error('Failed to create song:', error);
     }
@@ -25,12 +30,12 @@ export default function SongCreatePage() {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Create New Song
+        Utwórz Nową Pieśń
       </Typography>
 
       {createSong.isError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Failed to create song. Please try again.
+          Nie udało się utworzyć pieśni. Spróbuj ponownie.
         </Alert>
       )}
 

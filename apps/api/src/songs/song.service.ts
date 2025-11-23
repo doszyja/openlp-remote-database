@@ -6,12 +6,17 @@ import { Tag, TagDocument } from '../schemas/tag.schema';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import { AuditLogAction } from '../schemas/audit-log.schema';
+import * as archiver from 'archiver';
+import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
 
 @Injectable()
 export class SongService {
   constructor(
     @InjectModel(Song.name) private songModel: Model<SongDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
+    private auditLogService: AuditLogService,
   ) {}
 
   async create(createSongDto: CreateSongDto) {
@@ -158,7 +163,7 @@ export class SongService {
     };
   }
 
-  async update(id: string, updateSongDto: UpdateSongDto) {
+  async update(id: string, updateSongDto: UpdateSongDto, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string) {
     const { verses, tags, ...songData } = updateSongDto;
 
     // Check if song exists
@@ -194,24 +199,154 @@ export class SongService {
       updateData.tags = tagIds;
     }
 
+    // Track changes for audit log
+    const changes: Record<string, any> = {};
+    
+    // Check each field in updateData
+    Object.keys(updateData).forEach((key) => {
+      // Skip internal fields
+      if (key === 'searchTitle' || key === 'searchLyrics') {
+        return;
+      }
+      
+      const oldValue = (existing as any)[key];
+      const newValue = updateData[key];
+      
+      // Compare values (handle arrays and objects)
+      let hasChanged = false;
+      if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+        hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
+      } else if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue !== null && newValue !== null) {
+        hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
+      } else {
+        hasChanged = oldValue !== newValue;
+      }
+      
+      if (hasChanged) {
+        changes[key] = {
+          old: oldValue ?? null,
+          new: newValue ?? null,
+        };
+      }
+    });
+
+    // Handle tags separately (tags are handled as array of IDs in updateData, but we want to show names)
+    if (tags !== undefined) {
+      // Get old tag names
+      const oldTags = existing.tags as any[];
+      const oldTagNames = oldTags && oldTags.length > 0
+        ? oldTags.map((tag: any) => (tag.name || tag.toString())).sort().join(', ')
+        : '';
+      
+      // Get new tag names (they're already names in the DTO)
+      const newTagNames = tags.length > 0 ? tags.sort().join(', ') : '';
+      
+      if (oldTagNames !== newTagNames) {
+        changes.tags = {
+          old: oldTagNames || '(brak)',
+          new: newTagNames || '(brak)',
+        };
+      }
+    }
+
     // Update song
     await this.songModel.updateOne({ _id: id }, updateData);
+
+    // Log audit trail if user is authenticated
+    if (userId && username) {
+      await this.auditLogService.log(
+        AuditLogAction.SONG_EDIT,
+        userId,
+        username,
+        {
+          discordId,
+          songId: id,
+          songTitle: updateData.title || existing.title,
+          metadata: Object.keys(changes).length > 0 ? changes : undefined,
+          ipAddress,
+          userAgent,
+        },
+      ).catch(err => console.error('Failed to log audit trail:', err));
+    }
 
     return this.findOne(id);
   }
 
-  async remove(id: string) {
-    // Soft delete
-    const song = await this.songModel.findOneAndUpdate(
-      { _id: id, deletedAt: null },
-      { deletedAt: new Date() },
-      { new: true },
-    );
-
+  async remove(id: string, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+    // Get song before deletion for audit log
+    const song = await this.songModel.findOne({ _id: id, deletedAt: null });
+    
     if (!song) {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
 
-    return { message: 'Song deleted successfully' };
+    // Soft delete
+    await this.songModel.updateOne(
+      { _id: id },
+      { deletedAt: new Date() },
+    );
+
+    // Log audit trail if user is authenticated
+    if (userId && username) {
+      await this.auditLogService.log(
+        AuditLogAction.SONG_DELETE,
+        userId,
+        username,
+        {
+          discordId,
+          songId: id,
+          songTitle: song.title,
+          ipAddress,
+          userAgent,
+        },
+      ).catch(err => console.error('Failed to log audit trail:', err));
+    }
+  }
+
+  /**
+   * Export all songs to ZIP archive with XML files
+   * Each song is exported as a separate XML file named after the song title
+   */
+  async exportAllToZip(): Promise<archiver.Archiver> {
+    // Fetch all non-deleted songs
+    const songs = await this.songModel
+      .find({ deletedAt: null })
+      .populate('tags', 'name')
+      .lean()
+      .exec();
+
+    // Create archiver stream
+    const archive = archiver('zip', {
+      zlib: { level: 9 }, // Maximum compression
+    });
+
+    // Transform songs to match expected format
+    const transformedSongs = songs.map((song: any) => ({
+      id: song._id.toString(),
+      title: song.title || '',
+      number: song.number || null,
+      language: song.language || 'en',
+      chorus: song.chorus || null,
+      verses: typeof song.verses === 'string' ? song.verses : (song.verses || ''),
+      tags: (song.tags || []).map((tag: any) => ({
+        id: tag._id?.toString() || tag.toString(),
+        name: tag.name || tag,
+      })),
+      copyright: song.copyright || null,
+      comments: song.comments || null,
+      ccliNumber: song.ccliNumber || null,
+    }));
+
+    // Generate XML for each song and add to archive
+    for (const song of transformedSongs) {
+      const xmlContent = generateSongXml(song);
+      const filename = `${sanitizeFilename(song.title)}.xml`;
+      archive.append(xmlContent, { name: filename });
+    }
+
+    // Finalize the archive
+    archive.finalize();
+
+    return archive;
   }
 }

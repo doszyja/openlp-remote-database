@@ -6,11 +6,12 @@ export interface UpdateSongDto {
     number?: string | null;
     language?: string;
     chorus?: string | null;
-    verses?: UpdateVerseDto[];
+    verses?: string;
     tags?: string[];
 }
 /**
- * DTO for updating a verse
+ * @deprecated Use string format for verses instead
+ * DTO for updating a verse (kept for backward compatibility)
  */
 export interface UpdateVerseDto {
     id?: string;

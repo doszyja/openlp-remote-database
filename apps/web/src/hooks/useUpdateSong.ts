@@ -10,6 +10,8 @@ export function useUpdateSong() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
       queryClient.invalidateQueries({ queryKey: ['song', data.id] });
+      // Invalidate export cache when song is updated
+      queryClient.invalidateQueries({ queryKey: ['songs', 'export', 'zip'] });
     },
   });
 }

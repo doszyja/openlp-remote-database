@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { SongModule } from './songs/song.module';
 import { AuthModule } from './auth/auth.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
@@ -33,10 +34,16 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
         ttl: 60000, // 60 seconds
         limit: 600, // 600 requests per 60 seconds (for search endpoints)
       },
+      {
+        name: 'zip-export',
+        ttl: 60000, // 60 seconds
+        limit: 50, // 10 requests per 60 seconds per user
+      },
     ]),
     DatabaseModule,
     AuthModule,
     SongModule,
+    AuditLogModule,
   ],
   controllers: [AppController],
   providers: [

@@ -50,28 +50,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         palette: {
           mode,
           primary: {
-            main: mode === 'dark' ? '#1976D2' : '#1976D2', // Professional blue
-            light: '#42A5F5',
-            dark: '#1565C0',
-            contrastText: '#fff',
+            // Dark blue matching church website
+            main: mode === 'dark' ? '#1E3A5F' : '#1E3A5F', // Dark blue from church site
+            light: mode === 'dark' ? '#2E5A8F' : '#2E5A8F',
+            dark: mode === 'dark' ? '#0F1F3A' : '#0F1F3A',
+            contrastText: '#FFFFFF',
           },
           secondary: {
-            main: mode === 'dark' ? '#424242' : '#616161', // Professional gray
-            light: '#757575',
-            dark: '#212121',
+            // Neutral gray
+            main: mode === 'dark' ? '#5A6B7F' : '#5A6B7F',
+            light: mode === 'dark' ? '#7A8B9F' : '#7A8B9F',
+            dark: mode === 'dark' ? '#3A4B5F' : '#3A4B5F',
             contrastText: '#fff',
           },
           background: {
-            default: mode === 'dark' ? '#121212' : '#FAFAFA',
-            paper: mode === 'dark' ? '#1E1E1E' : '#FFFFFF',
+            // Dark blue-gray background (matching church site dark areas)
+            default: mode === 'dark' ? '#1A2332' : '#FAFAFA', // Dark blue-gray
+            paper: mode === 'dark' ? '#252F3F' : '#FFFFFF', // Dark blue-gray paper (lighter than background)
           },
           text: {
-            primary: mode === 'dark' ? '#FFFFFF' : '#212121',
-            secondary: mode === 'dark' ? '#B0B0B0' : '#757575',
+            // Darker text for better contrast and accessibility (WCAG AA/AAA compliance)
+            primary: mode === 'dark' ? '#FFFFFF' : '#000000', // Pure white in dark mode, pure black in light mode
+            secondary: mode === 'dark' ? '#E0E0E0' : '#424242', // Light gray in dark mode, dark gray in light mode
           },
-          divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+          divider: mode === 'dark' ? 'rgba(30, 58, 95, 0.15)' : 'rgba(0, 0, 0, 0.12)', // Blue-tinted divider
           error: {
-            main: '#D32F2F', // Red for error actions
+            main: '#D32F2F',
             light: '#EF5350',
             dark: '#C62828',
             contrastText: '#fff',
@@ -128,29 +132,29 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 letterSpacing: '0.02em',
               },
               contained: {
-                backgroundColor: mode === 'dark' ? '#1976D2' : '#1976D2',
-                color: '#fff',
+                backgroundColor: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
+                color: '#FFFFFF',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? '#1565C0' : '#1565C0',
+                  backgroundColor: mode === 'dark' ? '#0F1F3A' : '#0F1F3A',
                   boxShadow: mode === 'dark' 
-                    ? '0px 2px 4px rgba(25, 118, 210, 0.3)'
-                    : '0px 2px 4px rgba(25, 118, 210, 0.2)',
+                    ? '0px 2px 4px rgba(30, 58, 95, 0.3)'
+                    : '0px 2px 4px rgba(30, 58, 95, 0.2)',
                 },
               },
               outlined: {
-                borderColor: mode === 'dark' ? '#1976D2' : '#1976D2',
-                color: mode === 'dark' ? '#1976D2' : '#1976D2',
+                borderColor: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
+                color: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
                 borderWidth: 1,
                 '&:hover': {
-                  borderColor: mode === 'dark' ? '#1565C0' : '#1565C0',
-                  backgroundColor: mode === 'dark' ? 'rgba(25, 118, 210, 0.08)' : 'rgba(25, 118, 210, 0.04)',
+                  borderColor: mode === 'dark' ? '#0F1F3A' : '#0F1F3A',
+                  backgroundColor: mode === 'dark' ? 'rgba(30, 58, 95, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                   borderWidth: 1,
                 },
               },
               text: {
-                color: mode === 'dark' ? '#1976D2' : '#1976D2',
+                color: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? 'rgba(25, 118, 210, 0.08)' : 'rgba(25, 118, 210, 0.04)',
+                  backgroundColor: mode === 'dark' ? 'rgba(30, 58, 95, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                 },
               },
             },

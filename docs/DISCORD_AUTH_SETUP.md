@@ -1,236 +1,151 @@
-# Discord OAuth Authentication Setup Guide
+# Discord Authentication Setup Guide
 
-This guide explains how to set up Discord OAuth authentication for the OpenLP Database Sync project.
+This guide explains how to set up Discord OAuth authentication with server and role restrictions.
 
 ## Overview
 
-The application uses Discord OAuth 2.0 for authentication. Users log in with their Discord account, and only users with a specific role in your Discord server can access the application.
+The application uses Discord OAuth to authenticate users. Only users who are:
+1. Members of a specific Discord server (guild)
+2. Have a specific role in that server
+
+will be allowed to log in.
 
 ## Prerequisites
 
-1. A Discord account
-2. A Discord server where you want to manage access
-3. Administrator or "Manage Server" permission on the Discord server
+- A Discord application
+- A Discord bot added to your server
+- Bot permissions to read member roles
 
-## Step 1: Create Discord Application
+## Step 1: Create a Discord Application
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click "New Application"
-3. Give it a name (e.g., "OpenLP Song Manager")
-4. Click "Create"
+3. Give it a name (e.g., "OpenLP Song Database")
+4. Go to the "OAuth2" section
+5. Under "Redirects", add **exactly** this URL (case-sensitive, must match exactly):
+   - `http://localhost:3000/api/auth/discord/callback` (for development)
+   - `https://yourdomain.com/api/auth/discord/callback` (for production)
+6. **IMPORTANT**: The redirect URI must match exactly what's in your `.env` file or the default in the code
+7. Copy the **Client ID** and **Client Secret**
 
-## Step 2: Configure OAuth2
+## Step 2: Create a Discord Bot
 
-1. In your application, go to the **OAuth2** section in the left sidebar
-2. Under **Redirects**, add your callback URLs:
-   - Development: `http://localhost:5173/auth/discord/callback`
-   - Production: `https://yourdomain.com/auth/discord/callback`
-3. Copy your **Client ID** and **Client Secret** (you'll need these for environment variables)
-4. Under **OAuth2 URL Generator**:
-   - Select scopes: `identify`, `guilds`, `guilds.members.read`
-   - Copy the generated URL (for testing)
-
-## Step 3: Create Discord Bot (Optional but Recommended)
-
-A bot is needed to check user roles in your Discord server.
-
-1. In your application, go to the **Bot** section
+1. In your Discord application, go to the "Bot" section
 2. Click "Add Bot"
-3. Under **Privileged Gateway Intents**, enable:
-   - **Server Members Intent** (required to check roles)
-4. Copy the **Bot Token** (you'll need this)
-5. Under **OAuth2 URL Generator**:
-   - Select scopes: `bot`
-   - Select permissions: `Read Members` (or minimal permissions)
-   - Copy the generated invite URL
-6. Open the invite URL in a browser
-7. Select your Discord server
-8. Authorize the bot
+3. Under "Privileged Gateway Intents", enable:
+   - **Server Members Intent** (required to read member roles)
+4. Copy the **Bot Token**
 
-## Step 4: Get Discord Server and Role IDs
+## Step 3: Add Bot to Your Server
 
-### Get Server (Guild) ID
+1. In the "OAuth2" → "URL Generator" section
+2. Select scopes:
+   - `bot` (required to add bot to server)
+3. Select bot permissions:
+   - **View Server Members** (required to read member roles)
+4. Copy the generated URL and open it in your browser
+5. Select your server and authorize the bot
 
-1. Enable Developer Mode in Discord:
-   - User Settings → Advanced → Developer Mode
-2. Right-click on your Discord server name
+**Note**: The user authentication OAuth flow only requires the `identify` scope (configured in code). The `bot` scope is only needed when adding the bot to your server using the URL Generator.
+
+## Step 4: Get Server (Guild) ID
+
+1. Enable Developer Mode in Discord (User Settings → Advanced → Developer Mode)
+2. Right-click on your server name
 3. Click "Copy Server ID"
 4. This is your `DISCORD_GUILD_ID`
 
-### Get Role ID
+## Step 5: Get Role ID
 
-1. In Discord, go to Server Settings → Roles
-2. Find the role you want to use for access (or create a new one)
-3. Right-click on the role
+1. In your Discord server, go to Server Settings → Roles
+2. Find the role you want to require for login
+3. Right-click on the role name
 4. Click "Copy Role ID"
 5. This is your `DISCORD_REQUIRED_ROLE_ID`
 
-**Note**: You can create a role specifically for this app (e.g., "Song Editor" or "OpenLP Access")
+## Step 6: Configure Environment Variables
 
-## Step 5: Configure Environment Variables
-
-Add these to your backend `.env` file:
+Add the following to your `.env` file in the `apps/api` directory:
 
 ```env
 # Discord OAuth
-DISCORD_CLIENT_ID=your_client_id_here
-DISCORD_CLIENT_SECRET=your_client_secret_here
-DISCORD_CALLBACK_URL=http://localhost:5173/auth/discord/callback
-DISCORD_GUILD_ID=your_server_id_here
-DISCORD_REQUIRED_ROLE_ID=your_role_id_here
-
-# Optional: Bot token (if using bot for role checking)
-DISCORD_BOT_TOKEN=your_bot_token_here
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
+DISCORD_CALLBACK_URL=http://localhost:3000/api/auth/discord/callback
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_GUILD_ID=your_discord_guild_id
+DISCORD_REQUIRED_ROLE_ID=your_discord_role_id
 
 # JWT
 JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
+
+# Frontend URL (for redirects)
+FRONTEND_URL=http://localhost:5173
 ```
 
-## Step 6: OAuth Flow
+## Step 7: Update Frontend Environment
 
-### How It Works
+In `apps/web/.env`:
 
-1. **User clicks "Login with Discord"**
-   - Frontend redirects to: `GET /auth/discord`
-   - Backend redirects to Discord OAuth authorization page
-
-2. **User authorizes on Discord**
-   - Discord shows authorization page
-   - User clicks "Authorize"
-
-3. **Discord redirects back**
-   - Discord redirects to: `GET /auth/discord/callback?code=...`
-   - Backend receives authorization code
-
-4. **Backend exchanges code for token**
-   - Backend calls Discord API to exchange code for access token
-   - Backend uses access token to fetch user info
-
-5. **Backend verifies role**
-   - Backend checks if user is in the Discord server
-   - Backend checks if user has the required role
-   - If not authorized, return error
-
-6. **Backend creates/updates user**
-   - Create or update user in database
-   - Store Discord ID, username, avatar, roles
-
-7. **Backend issues JWT**
-   - Generate JWT token with user info
-   - Set httpOnly cookie or return token
-
-8. **Frontend receives token**
-   - Store token (cookie or localStorage)
-   - Redirect to application
-   - User is now authenticated
-
-## Implementation Details
-
-### Required Discord Scopes
-
-- `identify`: Get user's basic information (username, avatar, ID)
-- `guilds`: Get list of servers user is in
-- `guilds.members.read`: Read member information (for role checking)
-
-### Role Verification Methods
-
-**Method 1: Using OAuth Token (Recommended)**
-
-- Use the OAuth access token to call Discord API
-- Endpoint: `GET /users/@me/guilds/{guild_id}/member`
-- Check if user has the required role in the response
-
-**Method 2: Using Bot (Alternative)**
-
-- Bot can check member roles directly
-- Requires bot to be in the server
-- More reliable but requires bot setup
-
-### Database Schema
-
-```prisma
-model User {
-  id          String   @id @default(uuid())
-  discordId   String   @unique
-  username    String
-  avatar      String?
-  discordRoles Json?   // Store roles as JSON array
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+```env
+VITE_API_URL=http://localhost:3000/api
 ```
 
-## Security Considerations
+## How It Works
 
-1. **Keep secrets secure**: Never commit Client Secret or Bot Token to version control
-2. **Use httpOnly cookies**: More secure than localStorage for JWT tokens
-3. **Validate roles on each request**: Or cache and refresh periodically
-4. **Handle token expiration**: Re-authenticate or refresh tokens
-5. **Rate limiting**: Discord API has rate limits, implement caching
-
-## Testing
-
-### Test OAuth Flow Locally
-
-1. Start backend: `pnpm dev:api`
-2. Start frontend: `pnpm dev:web`
-3. Navigate to login page
-4. Click "Login with Discord"
-5. Authorize on Discord
-6. Should redirect back and be logged in
-
-### Test Role Verification
-
-1. Test with user who has the role → Should succeed
-2. Test with user who doesn't have the role → Should fail with clear message
-3. Test with user not in server → Should fail
+1. User clicks "Login with Discord" on the frontend
+2. User is redirected to Discord OAuth page
+3. User authorizes the application
+4. Discord redirects back to `/api/auth/discord/callback`
+5. Backend validates:
+   - User is in the required Discord server
+   - User has the required role
+6. If valid, a JWT token is generated and user is redirected to frontend
+7. Frontend stores the token in localStorage and fetches user profile
+8. **All subsequent API requests automatically include the token** in the `Authorization: Bearer <token>` header via the API service (`apps/web/src/services/api.ts`)
 
 ## Troubleshooting
 
-### "Invalid redirect URI"
+### "User not authorized - missing role or not in server"
 
-- Check that callback URL in Discord app matches exactly
-- Check environment variable `DISCORD_CALLBACK_URL`
+- Verify the user is actually in the Discord server
+- Verify the user has the required role
+- Check that `DISCORD_GUILD_ID` and `DISCORD_REQUIRED_ROLE_ID` are correct
+- Ensure the bot has "Server Members Intent" enabled
+- Ensure the bot has permission to read member roles
 
-### "Missing permissions"
+### "Discord API error: 403"
 
-- Ensure bot has "Server Members Intent" enabled
-- Ensure bot is in the Discord server
-- Check bot permissions
+- Check that the bot token is correct
+- Verify the bot is in the server
+- Ensure the bot has the required permissions
 
-### "User not authorized"
+### "Discord configuration missing"
 
-- Verify user is in the Discord server
-- Verify user has the required role
-- Check role ID is correct in environment variables
+- Verify all Discord environment variables are set
+- Check that `.env` file is in the correct location (`apps/api/.env`)
 
-### "Rate limited"
+### "Nieprawidłowy parametr redirect_uri OAuth2" or "Invalid redirect_uri OAuth2 parameter"
 
-- Discord API has rate limits
-- Implement caching for role checks
-- Use exponential backoff for retries
+This error means the redirect URI in your Discord application settings doesn't match what the code is sending.
 
-## Production Checklist
+**To fix:**
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your application
+3. Go to "OAuth2" → "General"
+4. Under "Redirects", make sure you have **exactly** this URL:
+   - `http://localhost:3000/api/auth/discord/callback`
+5. Check your `.env` file in `apps/api/.env` and ensure:
+   ```env
+   DISCORD_CALLBACK_URL=http://localhost:3000/api/auth/discord/callback
+   ```
+6. **Important**: The URL must match exactly (including `http://` vs `https://`, port number, and path)
+7. After updating, restart your API server
 
-- [ ] Discord application created
-- [ ] OAuth redirect URLs configured for production
-- [ ] Bot created and invited to server
-- [ ] Server Members Intent enabled
-- [ ] Role created and ID copied
-- [ ] Environment variables set in production
-- [ ] JWT secret is strong and secure
-- [ ] httpOnly cookies configured (if using)
-- [ ] CORS configured for production domain
-- [ ] Error handling for unauthorized users
-- [ ] Logging for auth events
+## Security Notes
 
-## Additional Resources
-
-- [Discord OAuth2 Documentation](https://discord.com/developers/docs/topics/oauth2)
-- [Discord API Documentation](https://discord.com/developers/docs/resources)
-- [passport-discord npm package](https://www.npmjs.com/package/passport-discord)
-
----
-
-**Last Updated**: 2025-01-XX
+- Never commit `.env` files to version control
+- Use strong, random values for `JWT_SECRET`
+- In production, use HTTPS for all OAuth callbacks
+- Regularly rotate bot tokens and secrets

@@ -13,21 +13,22 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import type { CreateSongDto, UpdateSongDto, SongResponseDto } from '@openlp/shared';
-import { parseVerses, combineVersesToXml, getVerseDisplayLabel, generateVerseOrderString, parseVerseOrderString } from '../utils/verseParser';
-import { useNotification } from '../contexts/NotificationContext';
+import { parseVerses, combineVersesToXml, getVerseDisplayLabel, generateVerseOrderString, parseVerseOrderString, getVerseTypePrefix } from '../utils/verseParser';
 
 interface VerseFormData {
   order: number;
   content: string;
   label?: string | null;
   type?: 'verse' | 'chorus' | 'bridge' | 'pre-chorus' | 'tag';
+  sourceId?: string; // Unique ID for source verse (for repetition support)
 }
 
 interface SongFormData {
   title: string;
-  verses: VerseFormData[]; // Visual verses for editing (will be combined to string on save)
+  sourceVerses: VerseFormData[]; // Unique source verses (v1, v2, c1, c3)
+  verseOrder: string; // Order string like "v1 v2 c1 c3 c1 v2 c1 v1"
 }
 
 interface SongFormProps {
@@ -39,7 +40,7 @@ interface SongFormProps {
 }
 
 export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButtons = false }: SongFormProps) {
-  const { showError } = useNotification();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     control,
     handleSubmit,
@@ -50,12 +51,13 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
   } = useForm<SongFormData>({
     defaultValues: {
       title: '',
-      verses: [{ order: 1, content: '', label: null, type: 'verse' }],
+      sourceVerses: [{ order: 1, content: '', label: null, type: 'verse', sourceId: 'v1' }],
+      verseOrder: 'v1',
     },
   });
 
-  const verses = watch('verses');
-  const [verseOrderString, setVerseOrderString] = useState('');
+  const sourceVerses = watch('sourceVerses');
+  const verseOrder = watch('verseOrder');
 
   // Update form when song data loads or changes
   useEffect(() => {
@@ -78,94 +80,214 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
       }
 
       const parsedVerses = versesToParse && versesToParse.trim()
-        ? parseVerses(versesToParse).map(v => ({
+        ? parseVerses(versesToParse)
+        : [{ order: 1, content: '', label: null, type: 'verse' as const }];
+
+      // Extract unique source verses (deduplicate by label/type)
+      // Use sourceId as key to properly identify unique verses
+      const sourceVersesMap = new Map<string, VerseFormData>();
+      parsedVerses.forEach(v => {
+        const sourceId = v.label || `${getVerseTypePrefix(v.type)}${v.order}`;
+        const key = `${v.type || 'verse'}-${sourceId}`;
+        if (!sourceVersesMap.has(key)) {
+          sourceVersesMap.set(key, {
             order: v.order,
             content: v.content,
             label: v.label ?? null,
             type: (v.type ?? 'verse') as VerseFormData['type'],
-          }))
-        : [{ order: 1, content: '', label: null, type: 'verse' as const }];
+            sourceId: sourceId,
+          });
+        } else {
+          // If verse with same key exists, update content if current has more content
+          const existing = sourceVersesMap.get(key)!;
+          if (v.content.trim().length > existing.content.trim().length) {
+            existing.content = v.content;
+          }
+        }
+      });
+
+      const uniqueSourceVerses = Array.from(sourceVersesMap.values());
+      
+      // Generate order string from parsed verses (preserves execution order)
+      const orderString = generateVerseOrderString(parsedVerses);
+
+      console.log('Loading song:', {
+        parsedVerses: parsedVerses.length,
+        uniqueSourceVerses: uniqueSourceVerses.length,
+        orderString,
+      });
 
       reset({
         title: song.title || '',
-        verses: parsedVerses,
+        sourceVerses: uniqueSourceVerses,
+        verseOrder: orderString,
       });
+    }
+  }, [song, reset]);
 
-      // Update verse order string
-      setVerseOrderString(generateVerseOrderString(parsedVerses.map(v => ({
+  // Update verse order string when source verses change (if order string is empty or matches current)
+  useEffect(() => {
+    if (!verseOrder || verseOrder.trim() === '') {
+      const orderString = generateVerseOrderString(sourceVerses.map(v => ({
         order: v.order,
         content: v.content,
         label: v.label ?? null,
         type: v.type ?? 'verse',
-      }))));
+      })));
+      setValue('verseOrder', orderString);
     }
-  }, [song, reset]);
-
-  // Update verse order string when verses change
-  useEffect(() => {
-    const orderString = generateVerseOrderString(verses.map(v => ({
-      order: v.order,
-      content: v.content,
-      label: v.label ?? null,
-      type: v.type ?? 'verse',
-    })));
-    setVerseOrderString(orderString);
-  }, [verses]);
+  }, [sourceVerses, verseOrder, setValue]);
 
   const addVerse = (type: VerseFormData['type'] = 'verse') => {
-    const newOrder = verses.length > 0 ? Math.max(...verses.map((v) => v.order)) + 1 : 1;
-    setValue('verses', [...verses, { order: newOrder, content: '', label: null, type }]);
+    const prefix = getVerseTypePrefix(type);
+    const existingOfType = sourceVerses.filter(v => v.type === type);
+    const newNumber = existingOfType.length > 0 
+      ? Math.max(...existingOfType.map(v => {
+          const label = v.label || '';
+          const numMatch = label.match(/\d+/);
+          return numMatch ? parseInt(numMatch[0], 10) : 0;
+        })) + 1
+      : 1;
+    
+    const newSourceId = `${prefix}${newNumber}`;
+    const newOrder = sourceVerses.length > 0 ? Math.max(...sourceVerses.map((v) => v.order)) + 1 : 1;
+    
+    const newVerse: VerseFormData = {
+      order: newOrder,
+      content: '',
+      label: newSourceId,
+      type,
+      sourceId: newSourceId,
+    };
+    
+    setValue('sourceVerses', [...sourceVerses, newVerse]);
+    
+    // Automatically add to order string if it's empty, otherwise append
+    const currentOrder = verseOrder.trim();
+    if (currentOrder) {
+      // Check if already in order string
+      const orderPattern = new RegExp(`\\b${newSourceId}\\b`, 'i');
+      if (!orderPattern.test(currentOrder)) {
+        // Add to the end
+        setValue('verseOrder', `${currentOrder} ${newSourceId}`, { shouldValidate: true });
+      }
+    } else {
+      // If order string is empty, set it to just this verse
+      setValue('verseOrder', newSourceId, { shouldValidate: true });
+    }
   };
 
-  const removeVerse = (index: number) => {
-    const newVerses = verses.filter((_, i) => i !== index);
-    // Reorder verses
-    newVerses.forEach((verse, i) => {
-      verse.order = i + 1;
-    });
-    setValue('verses', newVerses);
+  const removeSourceVerse = (index: number) => {
+    if (sourceVerses.length === 1) return;
+    
+    const verseToRemove = sourceVerses[index];
+    const newSourceVerses = sourceVerses.filter((_, i) => i !== index);
+    
+    // Get the identifier to remove
+    const verseId = verseToRemove.sourceId || verseToRemove.label || 
+      `${getVerseTypePrefix(verseToRemove.type)}${verseToRemove.order}`;
+    
+    // Remove from order string
+    const orderPattern = new RegExp(`\\b${verseId}\\b`, 'gi');
+    const newOrder = verseOrder.replace(orderPattern, '').replace(/\s+/g, ' ').trim();
+    
+    setValue('sourceVerses', newSourceVerses);
+    
+    // If order string becomes empty, generate default order
+    if (newOrder) {
+      setValue('verseOrder', newOrder, { shouldValidate: true });
+    } else {
+      const defaultOrder = generateVerseOrderString(newSourceVerses.map(v => ({
+        order: v.order,
+        content: v.content,
+        label: v.label ?? null,
+        type: v.type ?? 'verse',
+      })));
+      setValue('verseOrder', defaultOrder, { shouldValidate: true });
+    }
   };
 
-  const moveVerse = (index: number, direction: 'up' | 'down') => {
-    if (
-      (direction === 'up' && index === 0) ||
-      (direction === 'down' && index === verses.length - 1)
-    ) {
+  const onSubmitForm = async (data: SongFormData) => {
+    // Prevent double submission
+    if (isSubmitting || isLoading) {
       return;
     }
 
-    const newVerses = [...verses];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    [newVerses[index], newVerses[targetIndex]] = [newVerses[targetIndex], newVerses[index]];
-
-    // Update orders
-    newVerses.forEach((verse, i) => {
-      verse.order = i + 1;
-    });
-
-    setValue('verses', newVerses);
-  };
-
-  const onSubmitForm = (data: SongFormData) => {
-    // Combine visual verses into XML format for storage
-    // IMPORTANT: Sort by order (verse_order) to preserve OpenLP verse_order
-    // The sequence in the XML corresponds to verse_order in OpenLP SQLite
-    const versesToSave = data.verses
-      .filter(v => v.content.trim().length > 0)
-      .sort((a, b) => a.order - b.order); // Sort by verse_order
+    setIsSubmitting(true);
+    try {
+      // Filter out empty source verses first
+      const validSourceVerses = data.sourceVerses.filter(v => v.content.trim().length > 0);
+    
+    if (validSourceVerses.length === 0) {
+      // No valid verses, submit empty
+      onSubmit({
+        title: data.title,
+        verses: '',
+      });
+      return;
+    }
+    
+    // Parse order string to get execution order
+    let executionVerses;
+    if (data.verseOrder.trim()) {
+      try {
+        executionVerses = parseVerseOrderString(
+          data.verseOrder,
+          validSourceVerses.map(v => ({
+            order: v.order,
+            content: v.content,
+            label: v.label ?? null,
+            type: v.type ?? 'verse',
+          }))
+        );
+        
+        // Filter out any verses that couldn't be found (empty content)
+        executionVerses = executionVerses.filter(v => v.content.trim().length > 0);
+      } catch (error) {
+        console.error('Error parsing verse order:', error);
+        // Fallback to source verses in order
+        executionVerses = validSourceVerses.map(v => ({
+          order: v.order,
+          content: v.content,
+          label: v.label ?? null,
+          type: v.type ?? 'verse',
+        }));
+      }
+    } else {
+      // No order string, use source verses in their order
+      executionVerses = validSourceVerses.map(v => ({
+        order: v.order,
+        content: v.content,
+        label: v.label ?? null,
+        type: v.type ?? 'verse',
+      }));
+    }
+    
+    // Reorder based on execution sequence
+    const versesToSave = executionVerses.map((v, index) => ({
+      ...v,
+      order: index + 1,
+    }));
     
     // Convert to XML format to preserve OpenLP structure
-    const versesXml = combineVersesToXml(versesToSave.map(v => ({
-      order: v.order, // verse_order from OpenLP
-      content: v.content,
-      label: v.label ?? null,
-      type: v.type ?? 'verse',
-    })));
+    const versesXml = combineVersesToXml(versesToSave);
     
-    onSubmit({
-      title: data.title,
-      verses: versesXml, // XML format string (preserves verse_order and labels)
+    console.log('Submitting verses:', {
+      sourceVerses: validSourceVerses.length,
+      sourceVersesData: validSourceVerses.map(v => ({ id: v.sourceId, label: v.label, type: v.type, hasContent: !!v.content.trim() })),
+      verseOrder: data.verseOrder,
+      executionVerses: executionVerses.length,
+      executionVersesData: executionVerses.map(v => ({ order: v.order, label: v.label, type: v.type, hasContent: !!v.content.trim() })),
+      versesXml: versesXml.substring(0, 200),
     });
+    
+      await onSubmit({
+        title: data.title,
+        verses: versesXml, // XML format string (preserves verse_order and labels)
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -174,11 +296,11 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
         <Controller
           name="title"
           control={control}
-          rules={{ required: 'Title is required', minLength: { value: 1, message: 'Title cannot be empty' } }}
+          rules={{ required: 'Tytuł jest wymagany', minLength: { value: 1, message: 'Tytuł nie może być pusty' } }}
           render={({ field }) => (
             <TextField
               {...field}
-              label="Song Title"
+              label="Tytuł Pieśni"
               required
               fullWidth
               error={!!errors.title}
@@ -187,62 +309,118 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
           )}
         />
 
-        <TextField
-          label="Verse Order"
-          value={verseOrderString}
-          onChange={(e) => {
-            const orderString = e.target.value;
-            setVerseOrderString(orderString);
-            
-            if (orderString.trim()) {
+        <Controller
+          name="verseOrder"
+          control={control}
+          rules={{
+            validate: (value) => {
+              if (!value || !value.trim()) {
+                return 'Kolejność zwrotek jest wymagana';
+              }
+              
+              // Check if all source verses are mentioned in the order
+              const orderPattern = /([vcbpt])(\d+)/gi;
+              const orderMatches = Array.from(value.matchAll(orderPattern));
+              const mentionedVerses = new Set(orderMatches.map(m => `${m[1].toLowerCase()}${m[2]}`));
+              
+              // Get all source verse identifiers
+              const sourceVerseIds = sourceVerses
+                .filter(v => v.content.trim().length > 0) // Only check verses with content
+                .map(v => {
+                  if (v.sourceId) return v.sourceId.toLowerCase();
+                  if (v.label) return v.label.toLowerCase();
+                  const prefix = getVerseTypePrefix(v.type);
+                  return `${prefix}${v.order}`;
+                });
+              
+              // Find missing verses
+              const missingVerses = sourceVerseIds.filter(id => !mentionedVerses.has(id));
+              
+              if (missingVerses.length > 0) {
+                return `Następujące zwrotki nie są wymienione w kolejności: ${missingVerses.join(', ')}`;
+              }
+              
+              // Validate format
               try {
-                const updatedVerses = parseVerseOrderString(
-                  orderString,
-                  verses.map(v => ({
+                parseVerseOrderString(
+                  value,
+                  sourceVerses.map(v => ({
                     order: v.order,
                     content: v.content,
                     label: v.label ?? null,
                     type: v.type ?? 'verse',
                   }))
                 );
-                
-                // Validate that we found verses for all tokens
-                const orderPattern = /([vcbpt])(\d+)/gi;
-                const matches = Array.from(orderString.matchAll(orderPattern));
-                const foundCount = updatedVerses.filter(v => v.content.trim().length > 0).length;
-                
-                if (foundCount < matches.length) {
-                  showError(`Some verses in the order string were not found. Found ${foundCount} of ${matches.length} verses.`);
-                }
-                
-                // Update form with new orders
-                setValue('verses', updatedVerses.map(v => ({
-                  order: v.order,
-                  content: v.content,
-                  label: v.label ?? null,
-                  type: v.type ?? 'verse',
-                })));
               } catch (error) {
-                showError(`Invalid verse order format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                return `Nieprawidłowy format kolejności zwrotek: ${error instanceof Error ? error.message : 'Nieznany błąd'}`;
               }
-            }
+              
+              return true;
+            },
           }}
-          fullWidth
-          placeholder="e.g., v1 c1 v2 c1 v3 c1 v4 c1"
-          helperText="Edit verse order (v=verse, c=chorus, b=bridge, p=pre-chorus, t=tag)"
+          render={({ field, fieldState }) => (
+            <TextField
+              {...field}
+              label="Kolejność Zwrotek"
+              fullWidth
+              placeholder="np. v1 v2 c1 c3 c1 v2 c1 v1"
+              error={!!fieldState.error}
+              helperText={fieldState.error?.message || "Edytuj kolejność wykonania zwrotek (v=zwrotka, c=refren, b=mostek, p=przed-refren, t=tag). Wszystkie źródłowe zwrotki muszą być wymienione."}
+              onChange={(e) => {
+                const orderString = e.target.value;
+                field.onChange(orderString);
+                
+                // Additional real-time validation feedback
+                if (orderString.trim()) {
+                  try {
+                    const testVerses = parseVerseOrderString(
+                      orderString,
+                      sourceVerses.map(v => ({
+                        order: v.order,
+                        content: v.content,
+                        label: v.label ?? null,
+                        type: v.type ?? 'verse',
+                      }))
+                    );
+                    
+                    // Check if all referenced verses exist
+                    const orderPattern = /([vcbpt])(\d+)/gi;
+                    const matches = Array.from(orderString.matchAll(orderPattern));
+                    const foundCount = testVerses.filter(v => v.content.trim().length > 0).length;
+                    
+                    if (foundCount < matches.length) {
+                      // This is just a warning, not blocking
+                      console.warn(`Nie znaleziono niektórych zwrotek w ciągu kolejności. Znaleziono ${foundCount} z ${matches.length} zwrotek.`);
+                    }
+                  } catch (error) {
+                    // Format error will be caught by form validation
+                    console.warn('Błąd formatu kolejności zwrotek:', error);
+                  }
+                }
+              }}
+            />
+          )}
         />
 
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6">Verses</Typography>
+            <Typography variant="h6">Źródłowe Zwrotki</Typography>
             <Stack direction="row" spacing={1}>
               <Button
                 startIcon={<AddIcon />}
                 onClick={() => addVerse('verse')}
                 variant="outlined"
                 size="small"
+                sx={{
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+                  color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit',
+                  '&:hover': {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                }}
               >
-                Add Verse
+                Dodaj Zwrotkę
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -250,8 +428,16 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                 variant="outlined"
                 size="small"
                 color="secondary"
+                sx={{
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                  color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+                  '&:hover': {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+                  },
+                }}
               >
-                Add Chorus
+                Dodaj Refren
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -259,16 +445,24 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                 variant="outlined"
                 size="small"
                 color="secondary"
+                sx={{
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                  color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
+                  '&:hover': {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+                  },
+                }}
               >
-                Add Bridge
+                Dodaj Mostek
               </Button>
             </Stack>
           </Box>
 
-          <Stack spacing={2}>
-            {verses.map((verse, index) => (
-              <Paper key={index} variant="outlined" sx={{ p: 2 }}>
-                <Stack spacing={2}>
+          <Stack spacing={1.5}>
+            {sourceVerses.map((verse, index) => (
+              <Paper key={index} variant="outlined" sx={{ p: 1.5 }}>
+                <Stack spacing={1.5}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="body2" color="text.secondary">
                       {getVerseDisplayLabel({
@@ -281,26 +475,10 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     <Box>
                       <IconButton
                         size="small"
-                        onClick={() => moveVerse(index, 'up')}
-                        disabled={index === 0}
-                        title="Move up"
-                      >
-                        <ArrowUpward fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => moveVerse(index, 'down')}
-                        disabled={index === verses.length - 1}
-                        title="Move down"
-                      >
-                        <ArrowDownward fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => removeVerse(index)}
-                        disabled={verses.length === 1}
+                        onClick={() => removeSourceVerse(index)}
+                        disabled={sourceVerses.length === 1}
                         color="error"
-                        title="Delete verse"
+                        title="Usuń źródłową zwrotkę"
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -308,20 +486,37 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                   </Box>
 
                   <Controller
-                    name={`verses.${index}.type`}
+                    name={`sourceVerses.${index}.type`}
                     control={control}
                     render={({ field }) => (
                       <FormControl size="small" sx={{ minWidth: 150 }}>
-                        <InputLabel>Type</InputLabel>
+                        <InputLabel>Typ</InputLabel>
                         <Select
                           {...field}
-                          label="Type"
+                          label="Typ"
                           value={field.value || 'verse'}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Update sourceId when type changes
+                            const newType = e.target.value as VerseFormData['type'];
+                            const prefix = getVerseTypePrefix(newType);
+                            const existingOfType = sourceVerses.filter(v => v.type === newType && v !== verse);
+                            const newNumber = existingOfType.length > 0 
+                              ? Math.max(...existingOfType.map(v => {
+                                  const label = v.label || '';
+                                  const numMatch = label.match(/\d+/);
+                                  return numMatch ? parseInt(numMatch[0], 10) : 0;
+                                })) + 1
+                              : 1;
+                            const newSourceId = `${prefix}${newNumber}`;
+                            setValue(`sourceVerses.${index}.sourceId`, newSourceId);
+                            setValue(`sourceVerses.${index}.label`, newSourceId);
+                          }}
                         >
-                          <MenuItem value="verse">Verse</MenuItem>
-                          <MenuItem value="chorus">Chorus</MenuItem>
-                          <MenuItem value="bridge">Bridge</MenuItem>
-                          <MenuItem value="pre-chorus">Pre-Chorus</MenuItem>
+                          <MenuItem value="verse">Zwrotka</MenuItem>
+                          <MenuItem value="chorus">Refren</MenuItem>
+                          <MenuItem value="bridge">Mostek</MenuItem>
+                          <MenuItem value="pre-chorus">Przed-Refren</MenuItem>
                           <MenuItem value="tag">Tag</MenuItem>
                         </Select>
                       </FormControl>
@@ -329,23 +524,41 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                   />
 
                   <Controller
-                    name={`verses.${index}.content`}
+                    name={`sourceVerses.${index}.content`}
                     control={control}
-                    rules={{ required: 'Verse content is required' }}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Content"
-                        required
-                        fullWidth
-                        multiline
-                        rows={4}
-                        placeholder="Enter verse content..."
-                        error={!!errors.verses?.[index]?.content}
-                        helperText={errors.verses?.[index]?.content?.message}
-                        value={field.value || ''}
-                      />
-                    )}
+                    rules={{ required: 'Treść zwrotki jest wymagana' }}
+                    render={({ field }) => {
+                      const value = field.value || '';
+                      const lineCount = value.split('\n').length;
+                      const rows = Math.max(1, Math.min(lineCount, 2)); // Min 2, max 4, or actual line count
+                      
+                      return (
+                        <TextField
+                          {...field}
+                          label="Treść"
+                          required
+                          fullWidth
+                          multiline
+                          minRows={1}
+                          rows={rows}
+                          placeholder="Wprowadź treść zwrotki..."
+                          error={!!errors.sourceVerses?.[index]?.content}
+                          helperText={errors.sourceVerses?.[index]?.content?.message}
+                          value={value}
+                          sx={{
+                            '& .MuiInputBase-root': {
+                              fontSize: { xs: '16px', sm: '14px' }, // Prevent zoom on iOS
+                            },
+                            '& .MuiInputBase-input': {
+                              minHeight: '3rem', // Minimum height for 2 lines
+                              lineHeight: 1.5,
+                              paddingTop: '10px',
+                              paddingBottom: '10px',
+                            },
+                          }}
+                        />
+                      );
+                    }}
                   />
                 </Stack>
               </Paper>
@@ -357,15 +570,15 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
           <Box display="flex" gap={2} justifyContent="flex-end">
             {onCancel && (
               <Button onClick={onCancel} disabled={isLoading}>
-                Cancel
+                Anuluj
               </Button>
             )}
             <Button
               type="submit"
               variant="contained"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
-              {isLoading ? 'Saving...' : song ? 'Update Song' : 'Create Song'}
+              {isLoading || isSubmitting ? 'Zapisywanie...' : song ? 'Aktualizuj Pieśń' : 'Utwórz Pieśń'}
             </Button>
           </Box>
         )}

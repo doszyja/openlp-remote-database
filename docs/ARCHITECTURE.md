@@ -298,8 +298,9 @@ Response:
 
 - **Discord OAuth 2.0**: Users authenticate via Discord
 - **JWT-based sessions**: Backend issues JWT tokens after Discord auth
-- **Token storage**: httpOnly cookie (recommended) or localStorage
-- **Refresh mechanism**: Refresh JWT or re-authenticate with Discord
+- **Token storage**: localStorage (stored with key `auth_token`)
+- **Token transmission**: API service automatically includes `Authorization: Bearer <token>` header in all requests
+- **Refresh mechanism**: Re-authenticate with Discord (no refresh token implemented)
 
 ### Discord OAuth Flow
 
@@ -312,7 +313,8 @@ Response:
 7. Backend verifies user has required Discord server role
 8. Backend creates/updates user in database
 9. Backend issues JWT token
-10. Frontend stores token and redirects to app
+10. Frontend stores token in localStorage and redirects to app
+11. Frontend API service automatically includes token in all subsequent API requests
 
 ### Authorization
 

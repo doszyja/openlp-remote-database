@@ -9,6 +9,8 @@ export function useCreateSong() {
     mutationFn: (data) => api.songs.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+      // Invalidate export cache when song is created
+      queryClient.invalidateQueries({ queryKey: ['songs', 'export', 'zip'] });
     },
   });
 }

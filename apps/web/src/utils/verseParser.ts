@@ -462,7 +462,7 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
 /**
  * Get verse type prefix for order string (v, c, b, p, t)
  */
-function getVerseTypePrefix(type?: ParsedVerse['type']): string {
+export function getVerseTypePrefix(type?: ParsedVerse['type']): string {
   switch (type) {
     case 'chorus': return 'c';
     case 'bridge': return 'b';

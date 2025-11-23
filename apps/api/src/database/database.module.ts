@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Song, SongSchema } from '../schemas/song.schema';
 import { Tag, TagSchema } from '../schemas/tag.schema';
 import { User, UserSchema } from '../schemas/user.schema';
+import { AuditLog, AuditLogSchema } from '../schemas/audit-log.schema';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { User, UserSchema } from '../schemas/user.schema';
       { name: Song.name, schema: SongSchema },
       { name: Tag.name, schema: TagSchema },
       { name: User.name, schema: UserSchema },
+      { name: AuditLog.name, schema: AuditLogSchema },
     ]),
   ],
   exports: [MongooseModule],
