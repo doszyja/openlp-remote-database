@@ -57,7 +57,7 @@ export default function Layout({ children }: LayoutProps) {
       >
         {children}
       </Box>
-      {!isHomePage && <Footer />}
+      {isHomePage && <Footer />}
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -10,7 +10,6 @@ import {
 import {
   LibraryMusic as LibraryMusicIcon,
   Add as AddIcon,
-  Language as LanguageIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -271,94 +270,6 @@ export default function HomePage() {
               </Button>
             </Paper>
           )}
-
-          {/* Strona Zborowa / O nas card */}
-          <Paper
-            elevation={0}
-            component={Link}
-            to="/about"
-            sx={{
-              width: '100%',
-              p: { xs: 3, sm: 4 },
-              borderRadius: 3,
-              bgcolor: 'background.paper',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? '0 8px 32px rgba(0, 0, 0, 0.3)'
-                  : '0 8px 32px rgba(0, 0, 0, 0.1)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              textDecoration: 'none',
-              color: 'inherit',
-              display: 'block',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 12px 40px rgba(0, 0, 0, 0.4)'
-                    : '0 12px 40px rgba(0, 0, 0, 0.15)',
-              },
-            }}
-          >
-            <Box display="flex" alignItems="flex-start" gap={3}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <LanguageIcon sx={{ fontSize: 28 }} />
-              </Box>
-              <Box flex={1}>
-                <Typography
-                  variant="h5"
-                  component="h2"
-                  sx={{
-                    fontWeight: 500,
-                    mb: 1,
-                    fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                  }}
-                >
-                  Dowiedz się więcej o naszym kościele
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* Church name card - smaller */}
-          <Paper
-            elevation={0}
-            sx={{
-              width: '100%',
-              p: { xs: 2, sm: 2.5 },
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.03)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="body1"
-              sx={{
-                fontWeight: 400,
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                color: 'text.secondary',
-              }}
-            >
-              Świętochłowice Kościół Wolnych Chrześcijan
-            </Typography>
-          </Paper>
         </Stack>
       </Box>
     </Box>
