@@ -41,8 +41,8 @@ export default function Layout({ children }: LayoutProps) {
         background: !isHomePage
           ? (theme) =>
               theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, #1A2332 0%, #1E2A3A 50%, #1F2D3F 100%)'
-                : 'linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 50%, #d4e1f0 100%)'
+                ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
+                : '#ffffff'
           : 'transparent',
         position: 'relative',
         overflow: 'hidden',

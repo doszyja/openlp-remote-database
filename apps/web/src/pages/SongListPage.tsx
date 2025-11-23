@@ -245,7 +245,7 @@ export default function SongListPage() {
   }
 
   return (
-    <Box sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 2, sm: 3, md: 4, lg: 6 }, position: 'relative', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, width: '100%' }}>
+    <Box sx={{ py: { xs: 1.5, sm: 2.5, md: 4 }, px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 }, position: 'relative', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, width: '100%' }}>
       {/* Skeleton loading for initial load */}
       {isLoading && page === 1 && (
         <Box sx={{ width: '100%' }}>
@@ -381,20 +381,23 @@ export default function SongListPage() {
           component="h1"
           sx={{
             fontWeight: 500,
-            fontSize: { xs: '1.25rem', sm: '1.5rem' },
+            fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
           }}
         >
           Pieśni
         </Typography>
-        <Box display="flex" gap={1} flexWrap="wrap">
+        <Box display="flex" gap={0.75} flexWrap="wrap">
           {hasEditPermission && (
             <Button
               variant="outlined"
-              startIcon={isExporting || exportZip.isFetching ? <CircularProgress size={16} /> : <DownloadIcon />}
+              startIcon={isExporting || exportZip.isFetching ? <CircularProgress size={14} /> : <DownloadIcon />}
               onClick={handleExportZip}
               disabled={isExporting || exportZip.isFetching || !!error}
               size="small"
               sx={{
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 1.5 },
+                py: { xs: 0.5, sm: 0.75 },
                 borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
                 color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
                 '&:hover': {
@@ -413,6 +416,11 @@ export default function SongListPage() {
               onClick={() => navigate('/songs/new')}
               disabled={!!error}
               size="small"
+              sx={{
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 1.5 },
+                py: { xs: 0.5, sm: 0.75 },
+              }}
             >
               Dodaj Pieśń
             </Button>
@@ -420,35 +428,41 @@ export default function SongListPage() {
         </Box>
       </Box>
 
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 2,
-          bgcolor: 'background.paper',
-          boxShadow: (theme) =>
-            theme.palette.mode === 'dark'
-              ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-              : '0 4px 16px rgba(0, 0, 0, 0.08)',
-          border: (theme) =>
-            theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-        }}
-      >
-        <TextField
-          fullWidth
-          placeholder="Szukaj pieśni..."
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <MusicNoteIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Paper>
+                 <Paper
+                   elevation={0}
+                   sx={{
+                     p: { xs: 1.5, sm: 2 },
+                     mb: { xs: 1.5, sm: 2 },
+                     bgcolor: 'background.paper',
+                     boxShadow: (theme) =>
+                       theme.palette.mode === 'dark'
+                         ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                         : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                     border: (theme) =>
+                       theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+                   }}
+                 >
+                   <TextField
+                     fullWidth
+                     placeholder="Szukaj pieśni..."
+                     value={search}
+                     onChange={(e) => handleSearch(e.target.value)}
+                     size="small"
+                     InputProps={{
+                       startAdornment: (
+                         <InputAdornment position="start">
+                           <MusicNoteIcon fontSize="small" />
+                         </InputAdornment>
+                       ),
+                     }}
+                     sx={{
+                       '& .MuiInputBase-input': {
+                         fontSize: { xs: '0.875rem', sm: '1rem' },
+                         py: { xs: 0.75, sm: 1 },
+                       },
+                     }}
+                   />
+                 </Paper>
 
       {allSongs.length === 0 && !isLoading && !error && page === 1 && data && data.data.length === 0 && (
         <Alert severity="info">Nie znaleziono pieśni. Utwórz pierwszą pieśń!</Alert>

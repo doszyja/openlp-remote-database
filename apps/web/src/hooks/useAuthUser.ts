@@ -14,7 +14,11 @@ interface User {
  * Caches user data for 10 minutes to avoid unnecessary requests
  */
 export function useAuthUser(token: string | null) {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  // In development, use relative paths (via Vite proxy)
+  // In production, use full API URL
+  const apiUrl = import.meta.env.DEV 
+    ? '/api' 
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
 
   return useQuery<User | null>({
     queryKey: ['auth', 'me', token],
@@ -42,8 +46,14 @@ export function useAuthUser(token: string | null) {
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     retry: false, // Don't retry on auth errors
-    // Return cached data immediately if available
-    placeholderData: (previousData) => previousData,
+    // Return cached data immediately if available, but only if token exists
+    placeholderData: (previousData) => {
+      // If token is null, always return null (don't use cached data)
+      if (!token) {
+        return null;
+      }
+      return previousData;
+    },
   });
 }
 

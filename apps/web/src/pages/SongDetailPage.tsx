@@ -232,7 +232,7 @@ export default function SongDetailPage() {
 
     return (
     <>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={{ xs: 2, md: 3 }} flexWrap="wrap" gap={1}>
+      <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={{ xs: 2, md: 3 }} flexWrap="wrap" gap={{ xs: 1.5, sm: 1 }}>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate('/songs')}
@@ -245,11 +245,12 @@ export default function SongDetailPage() {
               borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
               backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
             },
+            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Wstecz
         </Button>
-        <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" flexWrap="wrap">
+        <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" flexWrap="wrap" sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
           <FormControlLabel
             control={
               <Switch
@@ -571,7 +572,13 @@ export default function SongDetailPage() {
   );
 
   return (
-    <Box sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
+    <Box sx={{ 
+      py: { xs: 2, sm: 3, md: 4 }, 
+      px: { xs: 2, sm: 3, md: 4 },
+      width: '100%',
+      maxWidth: '100%',
+      overflowX: 'hidden',
+    }}>
       {isFullscreen ? (
         <Box maxWidth={{ xs: '100%', sm: '800px', md: '1000px', lg: '1200px' }} mx="auto">
           <Box key={id}>
@@ -587,12 +594,13 @@ export default function SongDetailPage() {
           maxWidth={{ xs: '100%', sm: '1200px', lg: '1400px' }} 
           mx="auto"
           width="100%"
+          sx={{ overflowX: 'hidden' }}
         >
           <Box
             sx={{
-              width: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
-              minWidth: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
-              maxWidth: { xs: 0, md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              width: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              minWidth: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              maxWidth: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -609,6 +617,7 @@ export default function SongDetailPage() {
               maxWidth: { xs: '100%', md: isFullscreen ? '1000px' : '900px', lg: isFullscreen ? '1200px' : '1000px' },
               flexShrink: 0,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              overflowX: 'hidden',
             }}
           >
             <Box key={id}>

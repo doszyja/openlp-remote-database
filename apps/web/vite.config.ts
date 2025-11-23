@@ -14,6 +14,16 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Proxy API requests to backend to avoid CORS issues in development
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        // Don't rewrite the /api path
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 });
 

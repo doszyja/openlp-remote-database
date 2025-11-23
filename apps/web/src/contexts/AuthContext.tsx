@@ -81,8 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setToken(null);
-    // Clear all auth-related queries
+    // Clear all auth-related queries and set user data to null
     queryClient.removeQueries({ queryKey: ['auth'] });
+    // Also explicitly set user data to null to prevent stale data
+    queryClient.setQueryData(['auth', 'me', null], null);
+    queryClient.setQueryData(['auth', 'me'], null);
   };
 
   // Dev helper: expose login function to window for easy testing

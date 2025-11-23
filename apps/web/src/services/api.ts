@@ -7,7 +7,11 @@ import type {
   AuditLog,
 } from '@openlp/shared';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// In development, use relative paths (via Vite proxy)
+// In production, use full API URL
+const API_URL = import.meta.env.DEV 
+  ? '/api' 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
 const STORAGE_KEY = 'auth_token';
 
 class ApiError extends Error {
