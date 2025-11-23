@@ -403,9 +403,28 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
         />
 
         <Box>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6">Źródłowe Zwrotki</Typography>
-            <Stack direction="row" spacing={1}>
+          <Box 
+            display="flex" 
+            flexDirection={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between" 
+            alignItems={{ xs: 'flex-start', sm: 'center' }} 
+            mb={2}
+            gap={{ xs: 1.5, sm: 0 }}
+          >
+            <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Źródłowe Zwrotki</Typography>
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              flexWrap="wrap"
+              sx={{ 
+                width: { xs: '100%', sm: 'auto' },
+                gap: { xs: 1, sm: 1 },
+                '& > *': {
+                  flex: { xs: '0 1 auto', sm: 'none' },
+                  minWidth: { xs: 'min-content', sm: 'auto' },
+                },
+              }}
+            >
               <Button
                 startIcon={<AddIcon />}
                 onClick={() => addVerse('verse')}
@@ -418,9 +437,11 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
                   },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
                 }}
               >
-                Dodaj Zwrotkę
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Zwrotkę
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -435,9 +456,11 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
                   },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
                 }}
               >
-                Dodaj Refren
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Refren
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -452,19 +475,21 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
                   },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
                 }}
               >
-                Dodaj Mostek
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Mostek
               </Button>
             </Stack>
           </Box>
 
           <Stack spacing={1.5}>
             {sourceVerses.map((verse, index) => (
-              <Paper key={index} variant="outlined" sx={{ p: 1.5 }}>
+              <Paper key={index} variant="outlined" sx={{ p: { xs: 1.25, sm: 1.5 } }}>
                 <Stack spacing={1.5}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" color="text.secondary">
+                  <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                       {getVerseDisplayLabel({
                         order: verse.order,
                         content: verse.content,
@@ -479,6 +504,10 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                         disabled={sourceVerses.length === 1}
                         color="error"
                         title="Usuń źródłową zwrotkę"
+                        sx={{ 
+                          width: { xs: 32, sm: 40 },
+                          height: { xs: 32, sm: 40 },
+                        }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -489,7 +518,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     name={`sourceVerses.${index}.type`}
                     control={control}
                     render={({ field }) => (
-                      <FormControl size="small" sx={{ minWidth: 150 }}>
+                      <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150 }, width: { xs: '100%', sm: 'auto' } }}>
                         <InputLabel>Typ</InputLabel>
                         <Select
                           {...field}

@@ -61,11 +61,26 @@ export default function SongEditPage() {
   }
 
   return (
-    <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 }, maxWidth: '1200px', mx: 'auto' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+    <Box sx={{ 
+      px: { xs: 2, sm: 3, md: 4 }, 
+      py: { xs: 2, sm: 3 }, 
+      maxWidth: '1200px', 
+      mx: 'auto',
+      width: '100%',
+      overflowX: 'hidden',
+    }}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'flex-start', sm: 'center' }} 
+        mb={2} 
+        flexWrap="wrap" 
+        gap={{ xs: 1.5, sm: 1 }}
+      >
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/songs')}
+          onClick={() => navigate(`/songs/${id}`)}
           variant="outlined"
           size="small"
           sx={{
@@ -75,11 +90,26 @@ export default function SongEditPage() {
               borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
               backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
             },
+            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Wstecz
         </Button>
-        <Stack direction="row" spacing={1}>
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          flexWrap="wrap"
+          sx={{ 
+            width: { xs: '100%', sm: 'auto' },
+            justifyContent: { xs: 'flex-end', sm: 'flex-end' },
+            gap: { xs: 1, sm: 1 },
+            '& > *': {
+              flex: { xs: '1 1 calc(50% - 4px)', sm: 'none' },
+              minWidth: { xs: 'calc(50% - 4px)', sm: 'auto' },
+              maxWidth: { xs: 'calc(50% - 4px)', sm: 'none' },
+            },
+          }}
+        >
           <Button
             onClick={() => navigate(`/songs/${id}`)}
             disabled={updateSong.isPending}
@@ -103,7 +133,7 @@ export default function SongEditPage() {
             disabled={updateSong.isPending}
             size="small"
           >
-            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj Pieśń'}
+            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
           </Button>
         </Stack>
       </Box>

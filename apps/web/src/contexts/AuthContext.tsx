@@ -9,6 +9,7 @@ interface User {
   discriminator?: string | null;
   avatar?: string | null;
   discordRoles?: string[] | null;
+  hasEditPermission?: boolean;
 }
 
 interface AuthContextType {
@@ -107,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: 'Dev Admin',
           avatar: null,
           discordRoles: ['1161734352447746110'], // Admin role ID
+          hasEditPermission: true, // Mock admin has edit permission
         };
         // Set mock token and cache mock user in React Query
         const mockToken = 'dev-mock-token';
@@ -129,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         token,
         isAuthenticated: !!user && !!token,
-        hasEditPermission: !!user && !!token, // All authenticated users have edit permission
+        hasEditPermission: user?.hasEditPermission ?? false, // Use hasEditPermission from user data
         isLoading,
         login,
         logout,

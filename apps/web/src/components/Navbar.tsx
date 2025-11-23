@@ -4,12 +4,12 @@ import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, Histo
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useSongs } from '../hooks/useSongs';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
 
 export default function Navbar() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -19,6 +19,14 @@ export default function Navbar() {
   // Check if API is working by trying to fetch songs
   const { error: apiError } = useSongs({ page: 1, limit: 1 });
   const isApiError = !!apiError;
+  
+  // Check if there's a token in localStorage to avoid showing login button during initial load
+  const [hasToken, setHasToken] = useState(false);
+  
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    setHasToken(!!token);
+  }, []);
 
   const handleDiscordLogin = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -81,7 +89,8 @@ export default function Navbar() {
 
         {/* Right: User menu / Settings */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-          {isAuthenticated && user ? (
+          {/* Show nothing while loading if user might be authenticated (has token) */}
+          {isLoading && hasToken ? null : isAuthenticated && user ? (
             <>
               {/* User Avatar - opens menu on mobile, shows username on desktop */}
               <Box

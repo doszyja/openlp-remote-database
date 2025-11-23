@@ -7,6 +7,7 @@ interface User {
   discriminator?: string | null;
   avatar?: string | null;
   discordRoles?: string[] | null;
+  hasEditPermission?: boolean;
 }
 
 /**
