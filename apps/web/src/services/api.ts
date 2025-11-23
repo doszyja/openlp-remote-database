@@ -7,7 +7,7 @@ import type {
   AuditLog,
 } from '@openlp/shared';
 
-const API_URL = (import.meta.env?.VITE_API_URL as string) || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const STORAGE_KEY = 'auth_token';
 
 class ApiError extends Error {
@@ -30,9 +30,9 @@ async function request<T>(
   // Get auth token from localStorage
   const token = localStorage.getItem(STORAGE_KEY);
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options?.headers,
+    ...(options?.headers as Record<string, string>),
   };
   
   // Add Authorization header if token exists

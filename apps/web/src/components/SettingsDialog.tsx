@@ -119,7 +119,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   );
 }
 
-const SettingsDialog = forwardRef<SettingsDialogRef>((props, ref) => {
+const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
   const [open, setOpen] = useState(false);
 
   useImperativeHandle(ref, () => ({

@@ -90,7 +90,7 @@ export default function AuditLogPage() {
   const limit = 50;
   
   // Reset page when filters change
-  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   
   const { data, isLoading, error } = useAuditLogs(page, limit, Object.keys(filters).length > 0 ? filters : undefined);
   
