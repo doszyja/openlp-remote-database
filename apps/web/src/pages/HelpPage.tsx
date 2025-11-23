@@ -107,8 +107,8 @@ export default function HelpPage() {
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <SearchIcon sx={{ fontSize: 32, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
+              <SearchIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 Przeglądanie i Wyszukiwanie Pieśni
               </Typography>
             </Box>
@@ -118,8 +118,8 @@ export default function HelpPage() {
             </Typography>
             <List>
               <ListItem>
-                <ListItemIcon>
-                  <LibraryMusicIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <LibraryMusicIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Lista pieśni"
@@ -127,8 +127,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <SearchIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <SearchIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Wyszukiwanie"
@@ -136,8 +136,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <VisibilityIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <VisibilityIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Szczegóły pieśni"
@@ -163,8 +163,8 @@ export default function HelpPage() {
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <LockIcon sx={{ fontSize: 32, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
+              <LockIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 Edycja i Zarządzanie Pieśniami
               </Typography>
             </Box>
@@ -174,8 +174,8 @@ export default function HelpPage() {
             </Typography>
             <List>
               <ListItem>
-                <ListItemIcon>
-                  <LockIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <LockIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Logowanie"
@@ -183,8 +183,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <AddIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <AddIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Dodawanie nowych pieśni"
@@ -201,8 +201,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <DeleteIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <DeleteIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Usuwanie pieśni"
@@ -228,16 +228,16 @@ export default function HelpPage() {
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <DownloadIcon sx={{ fontSize: 32, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
+              <DownloadIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
                 Funkcje Zaawansowane
               </Typography>
             </Box>
             <Divider sx={{ mb: 2 }} />
             <List>
               <ListItem>
-                <ListItemIcon>
-                  <DownloadIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <DownloadIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Eksport do ZIP"
@@ -245,8 +245,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <EditIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <EditIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Kolejność zwrotek"
@@ -254,8 +254,8 @@ export default function HelpPage() {
                 />
               </ListItem>
               <ListItem>
-                <ListItemIcon>
-                  <HistoryIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                  <HistoryIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Historia zmian (tylko dla administratorów)"

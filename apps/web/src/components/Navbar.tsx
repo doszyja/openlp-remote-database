@@ -20,13 +20,14 @@ export default function Navbar() {
   const { error: apiError } = useSongs({ page: 1, limit: 1 });
   const isApiError = !!apiError;
   
-  // Check if there's a token in localStorage to avoid showing login button during initial load
-  const [hasToken, setHasToken] = useState(false);
-  
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    setHasToken(!!token);
-  }, []);
+  // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
+  // Use useState with function initializer to check localStorage only once on mount
+  const [hasToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('auth_token');
+    }
+    return false;
+  });
 
   const handleDiscordLogin = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -90,6 +91,7 @@ export default function Navbar() {
         {/* Right: User menu / Settings */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           {/* Show nothing while loading if user might be authenticated (has token) */}
+          {/* Show login button only if we're sure user is not authenticated */}
           {isLoading && hasToken ? null : isAuthenticated && user ? (
             <>
               {/* User Avatar - opens menu on mobile, shows username on desktop */}
@@ -197,9 +199,9 @@ export default function Navbar() {
                 <SettingsDialog ref={settingsDialogRef} />
               </Box>
             </>
-          ) : (
+          ) : !hasToken && !isLoading ? (
             <>
-              {/* Login button */}
+              {/* Login button - only show if we're sure user is not authenticated (no token and not loading) */}
               <Button
                 variant="contained"
                 onClick={handleDiscordLogin}
@@ -213,7 +215,7 @@ export default function Navbar() {
                 <SettingsDialog ref={settingsDialogRef} />
               </Box>
             </>
-          )}
+          ) : null}
         </Box>
       </Toolbar>
     </AppBar>

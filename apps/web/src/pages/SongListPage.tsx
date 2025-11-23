@@ -33,6 +33,7 @@ export default function SongListPage() {
   const [hasMore, setHasMore] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [lastExportTime, setLastExportTime] = useState<number>(0);
+  const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const exportZip = useExportZip();
 
   // Debounce search input
@@ -64,6 +65,18 @@ export default function SongListPage() {
   }, [page, debouncedSearch]);
 
   const { data, isLoading, error, refetch } = useSongs(query);
+
+  // Debounce loading animation - only show if request takes longer than 300ms
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setShowLoadingAnimation(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoadingAnimation(false);
+    }
+  }, [isLoading]);
 
   // Hide navbar when error state
   useEffect(() => {
@@ -246,134 +259,82 @@ export default function SongListPage() {
 
   return (
     <Box sx={{ py: { xs: 1.5, sm: 2.5, md: 4 }, px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 }, position: 'relative', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, width: '100%' }}>
-      {/* Skeleton loading for initial load */}
-      {isLoading && page === 1 && (
-        <Box sx={{ width: '100%' }}>
-          {/* Header skeleton */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-            <Skeleton 
-              variant="text" 
-              width={120} 
-              height={36}
-              sx={{ 
-                borderRadius: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-              }} 
-            />
-            <Box display="flex" gap={1.5}>
-              <Skeleton 
-                variant="rectangular" 
-                width={130} 
-                height={36} 
-                sx={{ 
-                  borderRadius: 1,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                }} 
-              />
-              <Skeleton 
-                variant="rectangular" 
-                width={130} 
-                height={36} 
-                sx={{ 
-                  borderRadius: 1,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-                }} 
-              />
-            </Box>
-          </Box>
-
-          {/* Search field skeleton */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              mb: 3,
-              bgcolor: 'background.paper',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-              borderRadius: 2,
-            }}
-          >
-            <Skeleton 
-              variant="rectangular" 
-              width="100%" 
-              height={40} 
-              sx={{ 
-                borderRadius: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-              }} 
-            />
-          </Paper>
-
-          {/* Song list skeleton */}
-          <Paper
-            elevation={0}
-            sx={{
-              bgcolor: 'background.paper',
-              boxShadow: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}
-          >
-            <List dense sx={{ py: 1 }}>
-              {[...Array(10)].map((_, index) => (
-                <ListItem 
-                  key={index} 
-                  disablePadding
-                  sx={{
-                    borderBottom: (theme) =>
-                      index < 9
-                        ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
-                        : 'none',
-                  }}
-                >
-                  <ListItemButton disabled sx={{ py: 1.5, px: 2 }}>
-                    <ListItemText
-                      primary={
+      {/* Skeleton loading for list items - only show after debounce delay */}
+      {showLoadingAnimation && isLoading && page === 1 && (
+        <Paper
+          elevation={0}
+          sx={{
+            bgcolor: 'background.paper',
+            boxShadow: (theme) =>
+              theme.palette.mode === 'dark'
+                ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                : '0 4px 16px rgba(0, 0, 0, 0.08)',
+            border: (theme) =>
+              theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+            borderRadius: 2,
+            overflow: 'hidden',
+            animation: 'fadeIn 0.3s ease-in',
+            '@keyframes fadeIn': {
+              from: {
+                opacity: 0,
+              },
+              to: {
+                opacity: 1,
+              },
+            },
+          }}
+        >
+          <List dense sx={{ py: 1 }}>
+            {[...Array(10)].map((_, index) => (
+              <ListItem 
+                key={index} 
+                disablePadding
+                sx={{
+                  borderBottom: (theme) =>
+                    index < 9
+                      ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
+                      : 'none',
+                }}
+              >
+                <ListItemButton disabled sx={{ py: 1.5, px: 2 }}>
+                  <ListItemText
+                    primary={
+                      <Skeleton 
+                        variant="text" 
+                        width={index % 3 === 0 ? '70%' : index % 3 === 1 ? '55%' : '65%'} 
+                        height={22}
+                        animation="wave"
+                        sx={{
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                          borderRadius: 0.5,
+                        }}
+                      />
+                    }
+                    secondary={
+                      index % 3 === 0 ? (
                         <Skeleton 
                           variant="text" 
-                          width={index % 3 === 0 ? '70%' : index % 3 === 1 ? '55%' : '65%'} 
-                          height={22}
+                          width="45%" 
+                          height={18}
+                          animation="wave"
                           sx={{
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                            mt: 0.5,
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
                             borderRadius: 0.5,
                           }}
                         />
-                      }
-                      secondary={
-                        index % 3 === 0 ? (
-                          <Skeleton 
-                            variant="text" 
-                            width="45%" 
-                            height={18}
-                            sx={{
-                              mt: 0.5,
-                              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                              borderRadius: 0.5,
-                            }}
-                          />
-                        ) : null
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-        </Box>
+                      ) : null
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
       )}
 
       {/* Normal content when not loading or loading more pages */}
-      {(!isLoading || page > 1) && (
+      {(!showLoadingAnimation || page > 1) && (
         <>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
         <Typography 

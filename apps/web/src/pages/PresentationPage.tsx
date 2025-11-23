@@ -35,14 +35,47 @@ export default function PresentationPage() {
     return !lowerLabel.match(/^verse\s*\d+$/i);
   };
   
+  // Generate step labels (V1, V2, C1, etc.) for each content item
+  const generateStepLabel = (type: string | undefined, originalLabel: string | null): string => {
+    const verseType = type || 'verse';
+    const label = originalLabel || '';
+    
+    // If we have a label, try to extract the step label from it (e.g., "v1" -> "V1", "c1" -> "C1")
+    if (label) {
+      const labelLower = label.toLowerCase();
+      // Check for patterns like "v1", "c1", "v2", etc.
+      const match = labelLower.match(/([vcbpt])(\d+)/);
+      if (match) {
+        const prefix = match[1].toUpperCase();
+        const number = match[2];
+        // Map prefix to display format
+        const displayPrefix = prefix === 'C' ? 'C' : prefix === 'B' ? 'B' : prefix === 'P' ? 'P' : prefix === 'T' ? 'T' : 'V';
+        return `${displayPrefix}${number}`;
+      }
+      // Try to extract just the number and use type prefix
+      const numMatch = labelLower.match(/\d+/);
+      if (numMatch) {
+        const prefix = verseType === 'chorus' ? 'C' : verseType === 'bridge' ? 'B' : verseType === 'pre-chorus' ? 'P' : verseType === 'tag' ? 'T' : 'V';
+        return `${prefix}${numMatch[0]}`;
+      }
+    }
+    
+    // If no label or number found, generate based on type
+    // For chorus, default to C1, for others use type prefix + 1
+    const prefix = verseType === 'chorus' ? 'C' : verseType === 'bridge' ? 'B' : verseType === 'pre-chorus' ? 'P' : verseType === 'tag' ? 'T' : 'V';
+    const number = verseType === 'chorus' ? '1' : '1'; // Default to 1 if no label
+    return `${prefix}${number}`;
+  };
+
   const allContent = [
-    ...(song?.chorus ? [{ type: 'chorus', content: song.chorus, label: 'Refren' }] : []),
-    ...parsedVerses.map(v => {
+    ...(song?.chorus ? [{ type: 'chorus', content: song.chorus, label: 'Refren', stepLabel: 'C1' }] : []),
+    ...parsedVerses.map((v) => {
       const label = v.label || null;
       const displayLabel = shouldDisplayLabel(label, v.type || 'verse') ? label : null;
       // Use type-based label if original label shouldn't be displayed
       const finalLabel = displayLabel || (v.type === 'chorus' ? 'Refren' : v.type === 'bridge' ? 'Mostek' : null);
-      return { type: v.type || 'verse', content: v.content, label: finalLabel };
+      const stepLabel = generateStepLabel(v.type || 'verse', v.label);
+      return { type: v.type || 'verse', content: v.content, label: finalLabel, stepLabel };
     })
   ];
 
@@ -72,53 +105,60 @@ export default function PresentationPage() {
     return () => window.removeEventListener('resize', calculateFontSizes);
   }, []);
 
-  // Calculate dynamic font size based on content and available space
-  // Recalculate every time slide changes
+  // Calculate dynamic font size based on the largest verse
+  // Calculate once for all slides in the session
   useEffect(() => {
     const calculateDynamicSize = () => {
-      if (!contentRef.current || allContent.length === 0) return;
+      if (allContent.length === 0) return;
 
-      const currentContentItem = allContent[currentVerseIndex] || allContent[0];
-      if (!currentContentItem) return;
+      // Find the largest verse (most lines and longest line)
+      let maxLineCount = 0;
+      let maxLongestLineLength = 0;
 
-      const container = contentRef.current.parentElement?.parentElement;
+      allContent.forEach(item => {
+        const lines = item.content.split('\n').filter(line => line.trim().length > 0);
+        const lineCount = lines.length || 1;
+        const longestLine = lines.reduce((longest, line) => 
+          line.length > longest.length ? line : longest, 
+          lines[0] || ''
+        );
+
+        if (lineCount > maxLineCount) {
+          maxLineCount = lineCount;
+        }
+        if (longestLine.length > maxLongestLineLength) {
+          maxLongestLineLength = longestLine.length;
+        }
+      });
+
+      // Get container dimensions
+      const container = containerRef.current;
       if (!container) return;
 
-      // Get available space (subtract padding and title space)
       const containerHeight = container.clientHeight;
       const containerWidth = container.clientWidth;
-      const padding = 120; // Increased padding to account for title at bottom
+      
+      // Responsive padding based on screen size
+      const isMobile = window.innerWidth < 600;
+      const padding = isMobile ? 80 : 120;
       const availableHeight = Math.max(containerHeight - padding, containerHeight * 0.8);
       const availableWidth = Math.max(containerWidth - padding, containerWidth * 0.9);
 
-      // Count lines in content
-      const lines = currentContentItem.content.split('\n').filter(line => line.trim().length > 0);
-      const lineCount = lines.length || 1;
-      
-      // Find longest line for width calculation
-      const longestLine = lines.reduce((longest, line) => 
-        line.length > longest.length ? line : longest, 
-        lines[0] || ''
-      );
-
       // Calculate font size based on height (line count)
-      // Use line-height of 1.4, but be more aggressive with space usage
       const lineHeight = 1.4;
-      // Use 95% of available height divided by line count for larger text
-      const heightBasedSize = (availableHeight * 0.95 / lineCount) / lineHeight;
+      const heightBasedSize = (availableHeight * 0.95 / maxLineCount) / lineHeight;
       
       // Calculate font size based on width (longest line)
-      // Average character width for most fonts is approximately 0.5-0.6 * font size
-      // Be more generous - use 95% of available width and more accurate char width
-      // For larger screens, we can be more aggressive
-      const avgCharWidth = 0.6; // More generous for larger text
-      const widthBasedSize = (availableWidth * 0.95 / longestLine.length) / avgCharWidth;
+      const avgCharWidth = 0.6;
+      const widthBasedSize = (availableWidth * 0.95 / maxLongestLineLength) / avgCharWidth;
 
       // Use the smaller of the two to ensure text fits
       const optimalSize = Math.min(heightBasedSize, widthBasedSize);
       
-      // Clamp between reasonable min and max (increased max to 150px for large screens)
-      const clampedSize = Math.max(60, Math.min(optimalSize, 90));
+      // Clamp between reasonable min and max (different for mobile/desktop)
+      const minSize = isMobile ? 24 : 60;
+      const maxSize = isMobile ? 60 : 90;
+      const clampedSize = Math.max(minSize, Math.min(optimalSize, maxSize));
       
       // Only update if size actually changed to prevent infinite loops
       setDynamicContentSize(prevSize => {
@@ -130,12 +170,11 @@ export default function PresentationPage() {
       });
     };
 
-    // Calculate after a delay to ensure DOM is updated with new content
+    // Calculate after a delay to ensure DOM is updated
     const timer1 = setTimeout(calculateDynamicSize, 50);
-    // Also recalculate after a longer delay to ensure layout is stable
     const timer2 = setTimeout(calculateDynamicSize, 200);
     
-    // Recalculate on resize (with debounce to prevent too many calls)
+    // Recalculate on resize (with debounce)
     let resizeTimer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
       clearTimeout(resizeTimer);
@@ -150,7 +189,7 @@ export default function PresentationPage() {
       clearTimeout(resizeTimer);
       window.removeEventListener('resize', handleResize);
     };
-  }, [allContent.length, currentVerseIndex]);
+  }, [allContent]);
 
   // Handle fullscreen
   useEffect(() => {
@@ -387,7 +426,7 @@ export default function PresentationPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          p: 2,
+          p: { xs: 1, sm: 1.5, md: 2 },
           zIndex: 10001,
           bgcolor: 'transparent',
           opacity: 0,
@@ -402,6 +441,7 @@ export default function PresentationPage() {
             e.stopPropagation();
             handleExit();
           }}
+          size={window.innerWidth < 600 ? 'small' : 'medium'}
           sx={{
             color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
             bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -412,13 +452,14 @@ export default function PresentationPage() {
         >
           <FullscreenExitIcon />
         </IconButton>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }}>
           <IconButton
             onClick={(e) => {
               e.stopPropagation();
               handlePrevious();
             }}
             disabled={currentVerseIndex === 0}
+            size={window.innerWidth < 600 ? 'small' : 'medium'}
             sx={{
               color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
               bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -438,6 +479,7 @@ export default function PresentationPage() {
               handleNext();
             }}
             disabled={currentVerseIndex === allContent.length - 1}
+            size={window.innerWidth < 600 ? 'small' : 'medium'}
             sx={{
               color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
               bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
@@ -465,8 +507,8 @@ export default function PresentationPage() {
           alignItems: 'center',
           width: '100%',
           maxWidth: '100%',
-          px: { xs: 4, sm: 6, md: 8, lg: 10 },
-          py: { xs: 8, sm: 10, md: 12 },
+          px: { xs: 2, sm: 4, md: 6, lg: 8 },
+          py: { xs: 4, sm: 6, md: 8, lg: 10 },
           overflow: 'auto',
           cursor: 'pointer',
         }}
@@ -476,27 +518,11 @@ export default function PresentationPage() {
           sx={{
             width: '100%',
             maxWidth: '100%',
-            p: { xs: 4, sm: 6, md: 8 },
+            p: { xs: 2, sm: 3, md: 4, lg: 6 },
             bgcolor: 'transparent',
             textAlign: 'center',
           }}
         >
-          {/* Verse/Chorus label */}
-          {currentContent.label && (
-            <Typography
-              variant="h6"
-              sx={{
-                fontSize: `${fontSizes.contentSize * 0.5}px`,
-                fontWeight: 500,
-                mb: { xs: 2, sm: 3, md: 4 },
-                color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}
-            >
-              {currentContent.label}
-            </Typography>
-          )}
 
           {/* Verse/Chorus content - dynamically sized and lighter weight */}
           <Typography
@@ -527,7 +553,7 @@ export default function PresentationPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          p: 2,
+          p: { xs: 1, sm: 1.5, md: 2 },
           zIndex: 10001,
         }}
       >
@@ -536,11 +562,11 @@ export default function PresentationPage() {
           variant="h6"
           component="h1"
           sx={{
-            fontSize: `${fontSizes.titleSize * 0.4}px`,
+            fontSize: { xs: `${dynamicContentSize * 0.15}px`, sm: `${dynamicContentSize * 0.2}px`, md: `${fontSizes.titleSize * 0.4}px` },
             fontWeight: 500,
             color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
             wordBreak: 'break-word',
-            maxWidth: '40%',
+            maxWidth: { xs: '50%', sm: '45%', md: '40%' },
           }}
         >
           {song.title}
@@ -551,10 +577,10 @@ export default function PresentationPage() {
           variant="body2"
           sx={{
             color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)',
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.875rem' },
             bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-            px: 2,
-            py: 1,
+            px: { xs: 1, sm: 1.5, md: 2 },
+            py: { xs: '0.5', sm: 0.75, md: 1 },
             borderRadius: 1,
             opacity: 0,
             transition: 'opacity 0.3s',
@@ -566,8 +592,33 @@ export default function PresentationPage() {
           {currentVerseIndex + 1} / {allContent.length}
         </Typography>
 
-        {/* Spacer for right side */}
-        <Box sx={{ width: '40%' }} />
+        {/* Step labels - bottom right */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: { xs: 0.5, sm: 0.75, md: 1 },
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+            maxWidth: { xs: '50%', sm: '45%', md: '40%' },
+          }}
+        >
+          {allContent.map((item, idx) => (
+            <Typography
+              key={idx}
+              variant="body2"
+              sx={{
+                fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.8rem' },
+                fontWeight: idx === currentVerseIndex ? 600 : 400,
+                color: theme.palette.mode === 'dark' 
+                  ? (idx === currentVerseIndex ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)')
+                  : (idx === currentVerseIndex ? 'rgba(0, 0, 0, 0.9)' : 'rgba(0, 0, 0, 0.5)'),
+                transition: 'all 0.2s',
+              }}
+            >
+              {item.stepLabel}
+            </Typography>
+          ))}
+        </Box>
       </Box>
     </Box>
   );

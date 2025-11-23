@@ -305,6 +305,17 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
               fullWidth
               error={!!errors.title}
               helperText={errors.title?.message}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                },
+              }}
             />
           )}
         />
@@ -366,6 +377,17 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
               placeholder="np. v1 v2 c1 c3 c1 v2 c1 v1"
               error={!!fieldState.error}
               helperText={fieldState.error?.message || "Edytuj kolejność wykonania zwrotek (v=zwrotka, c=refren, b=mostek, p=przed-refren, t=tag). Wszystkie źródłowe zwrotki muszą być wymienione."}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                },
+              }}
               onChange={(e) => {
                 const orderString = e.target.value;
                 field.onChange(orderString);
@@ -418,7 +440,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
               flexWrap="wrap"
               sx={{ 
                 width: { xs: '100%', sm: 'auto' },
-                gap: { xs: 1, sm: 1 },
+                gap: { xs: 1, sm: 2 },
                 '& > *': {
                   flex: { xs: '0 1 auto', sm: 'none' },
                   minWidth: { xs: 'min-content', sm: 'auto' },
