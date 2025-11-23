@@ -33,7 +33,7 @@ import type { SongQueryDto } from '@openlp/shared';
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, hasEditPermission } = useAuth();
+  const { hasEditPermission } = useAuth();
   const { data: song, isLoading, isFetching, error } = useSong(id!);
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();

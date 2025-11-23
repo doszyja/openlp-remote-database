@@ -9,7 +9,7 @@ import type { UpdateSongDto } from '@openlp/shared';
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: song, isLoading, isFetching, error } = useSong(id!);
+  const { data: song, isFetching, error } = useSong(id!);
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
 
