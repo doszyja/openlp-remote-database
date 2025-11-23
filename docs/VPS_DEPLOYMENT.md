@@ -189,6 +189,7 @@ server {
     }
 
     # Backend API
+    # Forward /api/* to http://localhost:3000/api/* (NestJS expects /api prefix)
     location /api {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -251,6 +252,7 @@ server {
     }
 
     # Backend API
+    # Forward /api/* to http://localhost:3000/api/* (NestJS expects /api prefix)
     location /api {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;

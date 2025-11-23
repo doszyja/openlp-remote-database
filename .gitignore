@@ -4,3 +4,7 @@ dist/
 *.d.ts.map
 *.js
 *.js.map
+# Environment variables
+.env
+.env.local
+.env.*.local

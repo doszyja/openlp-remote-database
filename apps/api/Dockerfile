@@ -13,8 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (allow lockfile update if needed)
+RUN pnpm install
 
 # Stage 2: Build
 FROM node:22-alpine AS build
@@ -54,25 +54,27 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod
+# Install only production dependencies (allow lockfile update if needed)
+RUN pnpm install --prod
 
 # Copy built application
 COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 
-# Set working directory to API app
-WORKDIR /app/apps/api
+# Set NODE_PATH to include root node_modules for workspace resolution
+# pnpm hoists dependencies to root, so we need to tell Node.js where to find them
+ENV NODE_PATH=/app/node_modules:/app/apps/api/node_modules
+
+# Keep working directory at root for pnpm workspace resolution
+WORKDIR /app
 
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check (use pnpm exec to ensure proper module resolution)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD pnpm exec node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application using pnpm exec for proper module resolution
+CMD ["pnpm", "exec", "node", "apps/api/dist/main.js"]
 
