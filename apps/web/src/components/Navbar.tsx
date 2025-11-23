@@ -4,7 +4,7 @@ import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, Histo
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useSongs } from '../hooks/useSongs';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
 
