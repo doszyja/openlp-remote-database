@@ -41,7 +41,7 @@ export default function SongEditPage() {
   useEffect(() => {
     if (!isFormDirty) return;
 
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = (_event: PopStateEvent) => {
       if (isFormDirty) {
         const confirmed = window.confirm('Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?');
         if (!confirmed) {

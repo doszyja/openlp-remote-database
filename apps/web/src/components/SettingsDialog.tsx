@@ -14,7 +14,6 @@ import {
   Divider,
 } from '@mui/material';
 import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSongs } from '../hooks/useSongs';
@@ -25,8 +24,7 @@ export interface SettingsDialogRef {
 
 function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const { mode, toggleMode } = useTheme();
-  const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   
   // Check if API is working by trying to fetch songs
   const { error: apiError } = useSongs({ page: 1, limit: 1 });
