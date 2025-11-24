@@ -1,0 +1,32 @@
+{
+  "name": "@openlp/shared",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types and DTOs for OpenLP Database Sync",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./dto": {
+      "types": "./dist/dto/index.d.ts",
+      "default": "./dist/dto/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist"
+  ]
+}

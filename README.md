@@ -6,12 +6,12 @@ A web-based song management system for churches using OpenLP projection software
 
 ## 🎯 Project Overview
 
-This project enables collaborative song editing through a web application, with automatic synchronization to OpenLP's SQLite database. The backend PostgreSQL database serves as the single source of truth, and a CLI sync tool keeps OpenLP up to date.
+This project enables collaborative song editing through a web application, with automatic synchronization to OpenLP's SQLite database. The backend MongoDB database serves as the single source of truth, and a CLI sync tool keeps OpenLP up to date.
 
 ### Key Features
 
 - **Web Application**: Mobile-friendly React app for editing songs from phones/browsers
-- **REST API**: NestJS backend with PostgreSQL database
+- **REST API**: NestJS backend with MongoDB database
 - **Sync Tool**: CLI application that syncs backend → OpenLP SQLite
 - **Monorepo**: pnpm workspaces with shared TypeScript types
 
@@ -36,6 +36,7 @@ openlp-database/
 1. **Prerequisites**: Docker and Docker Compose installed
 
 2. **Clone and setup**:
+
    ```bash
    git clone https://github.com/doszyja/openlp-remote-database.git
    cd openlp-remote-database
@@ -44,14 +45,12 @@ openlp-database/
    ```
 
 3. **Start services**:
+
    ```bash
    docker-compose up -d
    ```
 
-4. **Run migrations**:
-   ```bash
-   docker-compose exec api pnpm prisma migrate dev
-   ```
+4. **Access**:
 
 5. **Access**:
    - Frontend: http://localhost:5173
@@ -63,16 +62,17 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
 ### Option 2: Local Development
 
 1. **Prerequisites**:
-   - Node.js 18+ and pnpm
-   - PostgreSQL (or SQLite for local dev)
+   - Node.js 22+ and pnpm
+   - MongoDB (local or Docker)
    - OpenLP SQLite database file (for sync tool)
 
 2. **Installation**:
+
    ```bash
    # Clone repository
    git clone https://github.com/doszyja/openlp-remote-database.git
    cd openlp-remote-database
-   
+
    # Install dependencies
    pnpm install
    ```
@@ -82,11 +82,8 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
    - Configure database URLs and API endpoints
 
 4. **Set up database**:
-   ```bash
-   cd apps/api
-   pnpm prisma migrate dev
-   pnpm prisma generate
-   ```
+   - Ensure MongoDB is running locally or via Docker
+   - The application will automatically create collections on first run
 
 5. **Start development servers**:
    ```bash
@@ -98,7 +95,8 @@ See [Docker Setup Guide](docs/DOCKER_SETUP.md) for detailed instructions.
 ## 🤖 Cursor AI Configuration
 
 This project includes `.cursorrules` to help Cursor AI maintain proper context:
-- All markdown files (*.md) are automatically included in context
+
+- All markdown files (\*.md) are automatically included in context
 - Project plan and TODO list are prioritized for task tracking
 - Architecture and rules are always referenced
 
@@ -113,6 +111,8 @@ This project includes `.cursorrules` to help Cursor AI maintain proper context:
 - **[MATERIAL_UI_GUIDE.md](docs/MATERIAL_UI_GUIDE.md)** - Material UI implementation guide
 - **[DISCORD_AUTH_SETUP.md](docs/DISCORD_AUTH_SETUP.md)** - Discord OAuth setup guide
 - **[DOCKER_SETUP.md](docs/DOCKER_SETUP.md)** - Docker and Docker Compose setup guide
+- **[PROGRESS.md](docs/PROGRESS.md)** - Detailed progress tracking
+- **[QUICK_START.md](docs/QUICK_START.md)** - Quick start guide
 
 ## 🛠️ Development
 
@@ -141,6 +141,7 @@ pnpm test:web     # Test frontend
 ### Individual App Scripts
 
 Each app has its own scripts in its `package.json`. See individual READMEs:
+
 - `apps/api/README.md`
 - `apps/web/README.md`
 - `apps/sync/README.md`
@@ -148,12 +149,14 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 ## 🏗️ Architecture
 
 ### Backend (NestJS)
+
 - **Framework**: NestJS with TypeScript
-- **Database**: PostgreSQL with Prisma ORM
+- **Database**: MongoDB with Mongoose ODM
 - **API**: REST endpoints with Swagger documentation
 - **Validation**: class-validator
 
 ### Frontend (React)
+
 - **Framework**: React 18 with Vite
 - **Routing**: React Router v6
 - **State**: React Query for server state
@@ -161,6 +164,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 - **Forms**: React Hook Form
 
 ### Sync Tool (Node CLI)
+
 - **Runtime**: Node.js with TypeScript
 - **SQLite**: better-sqlite3
 - **HTTP**: axios for API calls
@@ -169,7 +173,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 ## 🔄 Sync Workflow
 
 1. Users edit songs in the web application
-2. Songs are saved to the backend PostgreSQL database
+2. Songs are saved to the backend MongoDB database
 3. Before services, run the sync tool on the church PC
 4. Sync tool fetches songs from backend API
 5. Sync tool updates OpenLP SQLite database
@@ -177,14 +181,18 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 
 ## 📋 Current Status
 
-**Phase 1 (MVP)**: In Progress
+**Phase 1 (MVP)**: Core Features Complete (~85% Complete)
+
 - [x] Project planning and documentation
-- [ ] Monorepo setup
-- [ ] Backend API
-- [ ] Frontend application
-- [ ] Sync tool
+- [x] Monorepo setup
+- [x] Backend API (CRUD complete)
+- [x] Frontend application (full CRUD with forms)
+- [x] Sync tool (one-way sync implemented)
+
+**See [PROGRESS.md](docs/PROGRESS.md) for detailed progress tracking.**
 
 **Phase 2**: Planned
+
 - Authentication and authorization
 - Advanced features
 - Production deployment
@@ -211,5 +219,4 @@ Built for churches using OpenLP projection software.
 
 ---
 
-**Last Updated**: 2025-01-XX
-
+**Last Updated**: 2025-01-22

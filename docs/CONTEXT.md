@@ -9,12 +9,14 @@ This project enables collaborative song management for churches using OpenLP pro
 ## Key Concepts
 
 ### OpenLP
+
 - **What it is**: Open-source church presentation software
 - **Database**: Uses SQLite database (`songs.sqlite`) to store songs
 - **Current workflow**: Songs are edited directly in OpenLP application
 - **Problem**: Only one person can edit at a time, no collaboration
 
 ### Our Solution
+
 - **Web App**: Multiple users can edit songs simultaneously from phones/browsers
 - **Backend Database**: PostgreSQL database as single source of truth
 - **Sync Tool**: CLI application that syncs backend → OpenLP SQLite
@@ -23,13 +25,16 @@ This project enables collaborative song management for churches using OpenLP pro
 ## Domain Model
 
 ### Song Structure
+
 A song consists of:
+
 - **Metadata**: Title, number (hymnbook), language, tags
 - **Verses**: Ordered list of verse text (each with optional label)
 - **Chorus**: Optional repeated section
 - **Tags**: Categories for organization (e.g., "worship", "praise", "classic")
 
 ### Example Song
+
 ```
 Title: "Amazing Grace"
 Number: "123"
@@ -50,24 +55,28 @@ Verse 2:
 ## Technical Decisions
 
 ### Why Prisma?
+
 - Type-safe database access
 - Excellent developer experience
 - Automatic migrations
 - Great TypeScript support
 
 ### Why PostgreSQL?
+
 - Production-ready relational database
 - Better than SQLite for concurrent access
 - Supports complex queries and indexes
 - Can use SQLite for local development
 
 ### Why One-Way Sync?
+
 - Backend is source of truth
 - Prevents conflicts
 - Simpler to implement
 - OpenLP is read-only during services
 
 ### Why Monorepo?
+
 - Shared types between frontend/backend
 - Easier development and testing
 - Single version control
@@ -102,11 +111,14 @@ song_verses (
 ## ID Mapping Strategy
 
 ### Challenge
+
 - Backend uses UUIDs (e.g., `550e8400-e29b-41d4-a716-446655440000`)
 - OpenLP uses integers (e.g., `123`)
 
 ### Solution (MVP)
+
 Store backend UUID in OpenLP's `comments` field as JSON:
+
 ```json
 {
   "backendId": "550e8400-e29b-41d4-a716-446655440000",
@@ -115,7 +127,9 @@ Store backend UUID in OpenLP's `comments` field as JSON:
 ```
 
 ### Alternative (Future)
+
 Create mapping table in OpenLP:
+
 ```sql
 backend_sync (
   openlp_id INTEGER,
@@ -127,6 +141,7 @@ backend_sync (
 ## Sync Workflow
 
 ### Manual Sync (MVP)
+
 1. User runs sync tool on church PC
 2. Tool fetches all songs from backend API
 3. Tool reads OpenLP database
@@ -135,6 +150,7 @@ backend_sync (
 6. OpenLP now has latest songs
 
 ### Scheduled Sync (Future)
+
 - Windows Task Scheduler runs sync tool
 - Runs before Sunday service
 - Automatic updates
@@ -142,6 +158,7 @@ backend_sync (
 ## User Workflows
 
 ### Adding a New Song
+
 1. Open web app on phone
 2. Click "Create New Song"
 3. Fill in title, verses, tags
@@ -150,6 +167,7 @@ backend_sync (
 6. (Later) Run sync tool to add to OpenLP
 
 ### Editing a Song
+
 1. Open web app
 2. Search/filter to find song
 3. Click song to view details
@@ -159,6 +177,7 @@ backend_sync (
 7. (Later) Run sync tool to update OpenLP
 
 ### Syncing to OpenLP
+
 1. On church PC, open sync tool
 2. Run sync command (or double-click .bat file)
 3. Tool shows progress
@@ -168,6 +187,7 @@ backend_sync (
 ## Authentication
 
 ### Discord OAuth
+
 - Users authenticate using their Discord account
 - Only users with a specific Discord server role can access the application
 - No password management needed
@@ -175,6 +195,7 @@ backend_sync (
 - JWT tokens issued after successful Discord authentication
 
 ### Access Control
+
 - Discord server role determines access
 - Role ID configured in environment variables
 - Backend verifies role membership via Discord API
@@ -183,40 +204,50 @@ backend_sync (
 ## Common Questions
 
 ### Q: What if two people edit the same song?
+
 **A**: Last write wins. For Phase 2, we can add versioning/conflict resolution.
 
 ### Q: Can we edit songs directly in OpenLP?
+
 **A**: Not recommended. Backend is source of truth. Changes in OpenLP will be overwritten on next sync.
 
 ### Q: What about offline editing?
+
 **A**: Phase 2 feature. For MVP, requires internet connection.
 
 ### Q: How do we handle song deletions?
+
 **A**: Deleted songs in backend will be removed from OpenLP on next sync (or marked as orphaned).
 
 ### Q: What about song versions/history?
+
 **A**: Phase 2 feature. For MVP, no version history.
 
 ### Q: What if a user loses their Discord role?
+
 **A**: They will be denied access on next login. Admin can manually remove access if needed.
 
 ### Q: Do users need to be in a specific Discord server?
+
 **A**: Yes, users must be members of the configured Discord server and have the required role.
 
 ## Development Context
 
 ### Local Development Setup
+
 - Backend: `localhost:3000`
 - Frontend: `localhost:5173`
 - Database: Local PostgreSQL or SQLite
 - Sync Tool: Run locally with test OpenLP DB
 
 ### Testing Strategy
+
 - Backend: Unit tests for services, integration tests for API
 - Frontend: Component tests, integration tests
 - Sync Tool: Unit tests for mapping, integration tests with mock DB
 
 ### Code Organization
+
 - **By feature, not by type**: `songs/` folder contains controller, service, DTOs
 - **Shared code**: `packages/shared` for types
 - **Documentation**: `docs/` folder for all docs
@@ -224,6 +255,7 @@ backend_sync (
 ## Important Files
 
 ### Configuration Files
+
 - `pnpm-workspace.yaml` - Monorepo workspace config
 - `package.json` (root) - Workspace scripts
 - `.env.example` - Environment variable templates
@@ -231,10 +263,12 @@ backend_sync (
 - `.cursorignore` - Files to exclude from Cursor context
 
 ### Repository
+
 - **GitHub**: https://github.com/doszyja/openlp-remote-database
 - **License**: MIT
 
 ### Documentation
+
 - `PROJECT_DESCRIPTION.md` - Original project requirements
 - `PROJECT_PLAN.md` - High-level plan with epics
 - `DETAILED_TODO.md` - Granular task list
@@ -243,6 +277,7 @@ backend_sync (
 - `CONTEXT.md` - This file
 
 ### Key Directories
+
 - `apps/api/` - NestJS backend
 - `apps/web/` - React frontend
 - `apps/sync/` - OpenLP sync CLI tool
@@ -259,6 +294,7 @@ backend_sync (
 ## Future Considerations
 
 ### Phase 2 Features
+
 - Authentication and user management
 - Version history for songs
 - Two-way sync (with conflict resolution)
@@ -267,6 +303,7 @@ backend_sync (
 - Bulk import/export
 
 ### Phase 3 Features
+
 - Multi-tenancy (multiple churches)
 - Real-time sync (WebSocket)
 - Offline support (PWA)
@@ -286,6 +323,7 @@ backend_sync (
 ## Maintaining Context
 
 When working on tasks:
+
 1. **Check relevant docs** - Read architecture and rules before coding
 2. **Update docs** - If you make architectural decisions, update ADRs
 3. **Follow conventions** - Stick to project rules for consistency
@@ -295,4 +333,3 @@ When working on tasks:
 
 **Last Updated**: 2025-01-XX
 **Maintained By**: Development Team
-

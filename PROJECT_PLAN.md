@@ -5,6 +5,7 @@
 ## Overview
 
 This project creates a web-based song management system for churches using OpenLP. The system consists of:
+
 - **Backend (NestJS)**: Single source of truth for all songs
 - **Frontend (React + Vite)**: Mobile-friendly web app for editing songs
 - **Sync Tool (Node CLI)**: Synchronizes backend database with OpenLP SQLite database
@@ -48,6 +49,7 @@ This project creates a web-based song management system for churches using OpenL
 ### Database Design
 
 **Song Model** (using Prisma):
+
 - `id` (UUID, primary key)
 - `title` (string, required)
 - `number` (string, optional - hymnbook number)
@@ -59,6 +61,7 @@ This project creates a web-based song management system for churches using OpenL
 - `verses` (one-to-many relationship with Verse model)
 
 **Verse Model**:
+
 - `id` (UUID, primary key)
 - `songId` (UUID, foreign key)
 - `order` (integer, required - for verse ordering)
@@ -66,11 +69,13 @@ This project creates a web-based song management system for churches using OpenL
 - `label` (string, optional - e.g., "Verse 1", "Bridge")
 
 **Tag Model**:
+
 - `id` (UUID, primary key)
 - `name` (string, unique, required)
 - `songs` (many-to-many relationship)
 
 **OpenLP Mapping Table** (for sync tracking):
+
 - `id` (UUID, primary key)
 - `songId` (UUID, foreign key to Song)
 - `openlpId` (integer, nullable - OpenLP's internal ID)
@@ -332,11 +337,13 @@ apps/sync/
 ### OpenLP Schema Assumptions
 
 Based on typical OpenLP SQLite structure:
+
 - `songs` table: `id`, `title`, `copyright`, `comments`, etc.
 - `song_verses` table: `song_id`, `verse_order`, `verse_text`, `verse_type` (verse/chorus)
 - `song_books` table: book references (optional)
 
 **Mapping Strategy**:
+
 - Backend UUIDs stored in OpenLP `songs.comments` or custom field as JSON metadata
 - Or: Create mapping table in OpenLP (if we can modify schema)
 - Or: Use OpenLP's `id` and maintain bidirectional mapping in backend
@@ -551,12 +558,14 @@ Based on typical OpenLP SQLite structure:
 ## MVP Scope (Phase 1)
 
 Focus on these epics for the first usable version:
+
 - ✅ Epic 1: Monorepo & Tooling Setup
 - ✅ Epic 2: Backend API & Database (core CRUD)
 - ✅ Epic 3: Frontend Application (core features)
 - ✅ Epic 4: OpenLP Sync Tool (one-way sync)
 
 Defer to Phase 2:
+
 - Epic 5: Auth & Permissions
 - Epic 6: Deployment (basic deployment only for MVP)
 
@@ -569,4 +578,3 @@ Defer to Phase 2:
 3. Build Epic 3 frontend in parallel once API endpoints are ready
 4. Implement Epic 4 sync tool after backend is stable
 5. Test end-to-end workflow: create song in frontend → sync to OpenLP
-

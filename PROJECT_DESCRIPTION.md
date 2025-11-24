@@ -4,13 +4,11 @@ Your job: take the description below and break it down into a clean, modern 2025
 PROJECT CONTEXT (REAL WORLD)
 
 - Church setup:
-
   - There is a Windows PC in the church that runs OpenLP (song/projection software).
   - OpenLP keeps its songs database in a local SQLite file (e.g. songs.sqlite).
   - Right now, this database is edited manually / statically inside OpenLP.
 
 - Goal:
-
   - I want a **web application** where several people can use their phones / browsers to **add and edit songs**.
   - The **NestJS backend database** will be the **single source of truth** for all songs.
   - A separate **sync program** will periodically synchronize the NestJS database with the OpenLP SQLite database on the church computer.
@@ -24,7 +22,6 @@ PROJECT CONTEXT (REAL WORLD)
 TECH STACK EXPECTATIONS
 
 - Monorepo:
-
   - Use **pnpm workspaces**.
   - Structure like:
     - `apps/web` – React + Vite + TypeScript
@@ -33,7 +30,6 @@ TECH STACK EXPECTATIONS
     - (optionally) `packages/shared` for shared types / DTOs
 
 - Frontend:
-
   - React 18 + Vite + TypeScript
   - Simple, mobile-friendly UI (for phones)
   - Core screens:
@@ -43,7 +39,6 @@ TECH STACK EXPECTATIONS
   - Basic validation and good UX for editing verses (stanzas), chorus, etc.
 
 - Backend:
-
   - NestJS with TypeScript.
   - Use a relational DB, preferably PostgreSQL (but for planning you can say "relational DB, most likely Postgres").
   - Use an ORM (Prisma or TypeORM – choose one and stay consistent).
@@ -77,7 +72,6 @@ TECH STACK EXPECTATIONS
 REQUIREMENTS FOR YOU (CURSOR)
 
 1. **Break the project into epics and tasks**
-
    - Create a clear hierarchy, e.g.:
      - Epic 1: Monorepo & tooling setup
      - Epic 2: Backend API & database
@@ -89,13 +83,11 @@ REQUIREMENTS FOR YOU (CURSOR)
    - Focus on a realistic first version (MVP) that can be used in the church.
 
 2. **Monorepo and folder structure**
-
    - Propose an initial monorepo structure with `apps/` and `packages/`.
    - Show example `pnpm-workspace.yaml`, root `package.json` scripts, and explain how dev flows will look (e.g. `pnpm dev:web`, `pnpm dev:api`).
    - Suggest minimal shared types package (`packages/shared`) for DTOs and domain types used by both Nest and React.
 
 3. **Backend design**
-
    - Define the main NestJS modules and folders:
      - e.g. `SongModule` with `song.controller.ts`, `song.service.ts`, `song.entity.ts` or Prisma model, DTOs, etc.
    - Define main REST endpoints for songs:
@@ -105,14 +97,12 @@ REQUIREMENTS FOR YOU (CURSOR)
    - Plan how to **import existing OpenLP database** into the NestJS DB for the first time (one-time migration script).
 
 4. **OpenLP SQLite schema and mapping**
-
    - Assume we can inspect the OpenLP SQLite schema.
    - Describe how to map the OpenLP song structure to our NestJS song model.
    - Plan how to keep IDs stable (so that sync works reliably).
    - Propose a simple strategy where backend IDs become canonical, and OpenLP database stores a foreign key/reference to them if needed.
 
 5. **Sync tool design (`apps/sync`)**
-
    - Describe architecture of the Node CLI:
      - config file (e.g. path to OpenLP DB file, Nest API URL, API key/token)
      - services for:
@@ -128,7 +118,6 @@ REQUIREMENTS FOR YOU (CURSOR)
      - basic error handling and reporting.
 
 6. **Frontend design**
-
    - Propose the main React routes/pages:
      - `/` – list of songs with search
      - `/songs/new` – create song
@@ -140,7 +129,6 @@ REQUIREMENTS FOR YOU (CURSOR)
    - Include validation and basic error display.
 
 7. **Auth & roles (Phase 2, optional)**
-
    - Propose a simple auth model for later:
      - minimal login (e.g. shared password or simple accounts)
      - role: regular editor vs admin
