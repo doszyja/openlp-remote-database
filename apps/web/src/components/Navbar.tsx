@@ -94,14 +94,14 @@ export default function Navbar() {
           {/* Show login button only if we're sure user is not authenticated */}
           {isLoading && hasToken ? null : isAuthenticated && user ? (
             <>
-              {/* User Avatar - opens menu on mobile, shows username on desktop */}
+              {/* User Avatar - clickable to open menu on all screen sizes */}
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1,
                   cursor: 'pointer',
-                  px: { xs: 0.5, sm: 1 },
+                  px: { xs: 0.5, md: 1 },
                   py: 0.5,
                   borderRadius: 1,
                   '&:hover': {
@@ -110,22 +110,26 @@ export default function Navbar() {
                 }}
                 onClick={handleMenuOpen}
               >
-                {user.avatar && (
-                  <Avatar 
-                    src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`}
-                    sx={{ 
-                      width: { xs: 32, sm: 36 }, 
-                      height: { xs: 32, sm: 36 },
-                      cursor: 'pointer',
-                    }}
-                  />
-                )}
+                <Avatar 
+                  src={user.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
+                  sx={{ 
+                    width: { xs: 32, md: 36 }, 
+                    height: { xs: 32, md: 36 },
+                    cursor: 'pointer',
+                    bgcolor: !user.avatar ? 'action.selected' : undefined,
+                    color: !user.avatar ? 'text.primary' : undefined,
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+                </Avatar>
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     display: { xs: 'none', md: 'block' },
                     fontWeight: 500,
-                    maxWidth: { md: 120 },
+                    maxWidth: 120,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -157,42 +161,58 @@ export default function Navbar() {
               >
                 <MenuItem disabled>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {user.avatar && (
-                      <Avatar 
-                        src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`}
-                        sx={{ width: 24, height: 24 }}
-                      />
-                    )}
+                    <Avatar 
+                      src={user.avatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : undefined}
+                      sx={{ 
+                        width: 24, 
+                        height: 24,
+                        bgcolor: !user.avatar ? 'action.selected' : undefined,
+                        color: !user.avatar ? 'text.primary' : undefined,
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+                    </Avatar>
                     <Typography variant="body2">{user.username}</Typography>
                   </Box>
                 </MenuItem>
                 <Divider />
                 {isAdmin && (
-                  <MenuItem 
+                  <MenuItem
                     onClick={() => {
                       handleMenuClose();
                       navigate('/audit-logs');
                     }}
                     sx={{
-                      minHeight: 48, // Match other menu items
-                      py: 1.5,
+                      minHeight: 48,
+                      py: 1.25,
                     }}
                   >
                     <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
                     Logi Audytu
                   </MenuItem>
                 )}
-                <Divider />
                 <MenuItem 
                   onClick={() => {
                     handleMenuClose();
                     settingsDialogRef.current?.open();
                   }}
+                  sx={{
+                    minHeight: 48,
+                    py: 1.25,
+                  }}
                 >
                   <SettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
                   Ustawienia
                 </MenuItem>
-                <MenuItem onClick={handleLogout}>
+                <MenuItem 
+                  onClick={handleLogout}
+                  sx={{
+                    minHeight: 48,
+                    py: 1.25,
+                  }}
+                >
                   <LogoutIcon sx={{ mr: 1.5, fontSize: 20 }} />
                   Wyloguj
                 </MenuItem>

@@ -367,7 +367,7 @@ export default function SongListPage() {
                 },
               }}
             >
-              {isExporting || exportZip.isFetching ? 'Eksportowanie...' : 'Eksportuj ZIP'}
+              {isExporting || exportZip.isFetching ? 'Eksportowanie...' : 'Eksportuj'}
             </Button>
           )}
           {hasEditPermission && (

@@ -45,10 +45,10 @@ export class Song {
   @Prop()
   ccliNumber?: string; // OpenLP ccli_number field (alternative to number)
 
-  @Prop({ index: true })
+  @Prop()
   searchTitle?: string; // OpenLP search_title (lowercase title for searching)
 
-  @Prop({ index: true })
+  @Prop()
   searchLyrics?: string; // OpenLP search_lyrics (lowercase lyrics for searching)
 
   @Prop({ type: Date, default: null })

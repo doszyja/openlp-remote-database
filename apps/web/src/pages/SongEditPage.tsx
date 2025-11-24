@@ -1,11 +1,11 @@
-import { useNavigate, useParams, useBlocker } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSong, useUpdateSong } from '../hooks';
 import SongForm from '../components/SongForm';
 import { useNotification } from '../contexts/NotificationContext';
 import type { UpdateSongDto } from '@openlp/shared';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,24 +14,60 @@ export default function SongEditPage() {
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const navigateRef = useRef(navigate);
   
-  // Block navigation if form is dirty
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isFormDirty && currentLocation.pathname !== nextLocation.pathname
-  );
-  
-  // Show confirmation dialog if trying to navigate away with dirty form
+  // Update navigate ref when it changes
   useEffect(() => {
-    if (blocker.state === 'blocked') {
+    navigateRef.current = navigate;
+  }, [navigate]);
+  
+  // Block browser navigation if form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isFormDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isFormDirty]);
+  
+  // Intercept in-app navigation
+  useEffect(() => {
+    if (!isFormDirty) return;
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (isFormDirty) {
+        const confirmed = window.confirm('Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?');
+        if (!confirmed) {
+          window.history.pushState(null, '', window.location.href);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isFormDirty]);
+  
+  // Custom navigation wrapper that checks for dirty form
+  const handleNavigation = (path: string) => {
+    if (isFormDirty) {
       const confirmed = window.confirm('Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?');
       if (confirmed) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
+        setIsFormDirty(false);
+        navigate(path);
       }
+    } else {
+      navigate(path);
     }
-  }, [blocker]);
+  };
 
   const handleSubmit = async (data: UpdateSongDto) => {
     if (!id || updateSong.isPending) return;
@@ -44,6 +80,7 @@ export default function SongEditPage() {
 
     try {
       await updateSong.mutateAsync({ id, data });
+      setIsFormDirty(false);
       showSuccess('Pieśń została zaktualizowana pomyślnie!');
       navigate(`/songs/${id}`);
     } catch (error) {
@@ -106,7 +143,7 @@ export default function SongEditPage() {
       >
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(`/songs/${id}`)}
+          onClick={() => handleNavigation(`/songs/${id}`)}
           variant="outlined"
           size="small"
           sx={{
@@ -137,7 +174,7 @@ export default function SongEditPage() {
           }}
         >
           <Button
-            onClick={() => navigate(`/songs/${id}`)}
+            onClick={() => handleNavigation(`/songs/${id}`)}
             disabled={updateSong.isPending}
             size="small"
             variant="outlined"
@@ -175,7 +212,7 @@ export default function SongEditPage() {
       <SongForm
         song={song}
         onSubmit={handleSubmit}
-        onCancel={() => navigate(`/songs/${id}`)}
+        onCancel={() => handleNavigation(`/songs/${id}`)}
         isLoading={updateSong.isPending}
         hideButtons={true}
         onDirtyChange={setIsFormDirty}

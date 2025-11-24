@@ -13,6 +13,43 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @Get('dev')
+  async devLogin(@Req() req: Request, @Res() res: Response) {
+    console.log('[devLogin] Dev login endpoint called');
+    console.log('[devLogin] NODE_ENV:', process.env.NODE_ENV);
+    
+    // Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      console.log('[devLogin] Blocked: Production mode');
+      return res.status(403).json({ 
+        message: 'Dev authentication is only available in development mode' 
+      });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    console.log('[devLogin] Frontend URL:', frontendUrl);
+
+    // Get user type from query parameter (admin or regular, default to regular)
+    const userType = req.query.type === 'admin' ? 'admin' : 'regular';
+    console.log('[devLogin] User type:', userType);
+
+    try {
+      const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+      const userAgent = req.get('user-agent') || undefined;
+      console.log('[devLogin] Calling authService.devLogin');
+      const result = await this.authService.devLogin(ipAddress, userAgent, userType);
+      console.log('[devLogin] Login successful, redirecting to:', `${frontendUrl}/auth/callback?token=${result.access_token.substring(0, 20)}...`);
+
+      // Redirect to frontend with token
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
+    } catch (error) {
+      console.error('[devLogin] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Dev authentication failed';
+      res.redirect(`${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`);
+    }
+  }
+
+  @Public()
   @Get('discord')
   @UseGuards(DiscordAuthGuard)
   async discordAuth() {

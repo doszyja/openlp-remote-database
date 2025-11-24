@@ -37,11 +37,6 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
     window.location.href = `${apiUrl}/auth/discord`;
   };
 
-  const handleLogout = () => {
-    logout();
-    onClose();
-    navigate('/');
-  };
 
   return (
     <>
@@ -66,24 +61,6 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
               <Typography variant="body1" fontWeight={500} gutterBottom>
                 {user?.username}
               </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={handleLogout}
-                fullWidth
-                sx={{ 
-                  mt: 1,
-                  color: 'error.main',
-                  borderColor: 'error.main',
-                  '&:hover': {
-                    borderColor: 'error.dark',
-                    backgroundColor: 'error.dark',
-                    color: 'error.contrastText',
-                  },
-                }}
-              >
-                Wyloguj
-              </Button>
             </Box>
           ) : (
             <Box sx={{ mb: 3 }}>
@@ -123,7 +100,15 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
               <Switch
                 checked={mode === 'dark'}
                 onChange={toggleMode}
-                color="primary"
+                color={mode === 'dark' ? 'default' : 'primary'}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': {
+                    color: mode === 'dark' ? '#fff' : undefined,
+                  },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: mode === 'dark' ? '#fff' : undefined,
+                  },
+                }}
               />
             }
             label={

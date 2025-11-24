@@ -13,6 +13,7 @@ import AuditLogPage from './pages/AuditLogPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AboutPage from './pages/AboutPage';
 import HelpPage from './pages/HelpPage';
+import RecentChangesPage from './pages/RecentChangesPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/help" element={<HelpPage />} />
+              <Route path="/recent-changes" element={<RecentChangesPage />} />
               <Route path="/songs" element={<SongListPage />} />
               <Route path="/songs/new" element={<ProtectedRoute><SongCreatePage /></ProtectedRoute>} />
               <Route path="/songs/:id" element={<SongDetailPage />} />

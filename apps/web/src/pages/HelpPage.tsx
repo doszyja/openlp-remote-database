@@ -241,7 +241,7 @@ export default function HelpPage() {
                 </ListItemIcon>
                 <ListItemText
                   primary="Eksport do ZIP"
-                  secondary="Po zalogowaniu, na liście pieśni dostępny jest przycisk 'Eksportuj ZIP', który pozwala pobrać wszystkie pieśni w formacie XML, gotowe do importu do OpenLP. Każda pieśń jest zapisana jako osobny plik XML."
+                  secondary="Po zalogowaniu, na liście pieśni dostępny jest przycisk 'Eksportuj', który pozwala pobrać wszystkie pieśni w formacie XML, gotowe do importu do OpenLP. Każda pieśń jest zapisana jako osobny plik XML."
                 />
               </ListItem>
               <ListItem>
