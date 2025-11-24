@@ -21,6 +21,7 @@ const recentChanges: ChangeItem[] = [
       'Poprawiono układ na stronie szczegółów pieśni w widoku 1024px (węższa kolumna nawigacyjna, ograniczona szerokość kontenera, dodatkowe odstępy)',
       'Przełącznik normalny/pełny widok jest teraz widoczny dopiero od szerokości lg, więc przyciski mieszczą się na mniejszych ekranach',
       'Sekcje „Instrukcja użytkownika” i „Ostatnie zmiany” na stronie głównej przywrócono do kompaktowego stylu z dopasowanym tłem i cieniami w obu trybach',
+      'Skonfigurowano PWA (vite-plugin-pwa, manifest, rejestracja service workera), aby aplikacja działała offline',
     ],
   },
   {
