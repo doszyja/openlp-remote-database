@@ -18,7 +18,7 @@ This project enables collaborative song management for churches using OpenLP pro
 ### Our Solution
 
 - **Web App**: Multiple users can edit songs simultaneously from phones/browsers
-- **Backend Database**: PostgreSQL database as single source of truth
+- **Backend Database**: MongoDB database (via Mongoose) as the single source of truth
 - **Sync Tool**: CLI application that syncs backend → OpenLP SQLite
 - **Workflow**: Edit in web app → Run sync tool → OpenLP has latest songs
 
@@ -54,19 +54,19 @@ Verse 2:
 
 ## Technical Decisions
 
-### Why Prisma?
+### Why Mongoose?
 
-- Type-safe database access
-- Excellent developer experience
-- Automatic migrations
-- Great TypeScript support
+- Mature MongoDB ODM with middleware/hooks
+- Schema validation + indexes in TypeScript-friendly API
+- Works seamlessly in NestJS with `@nestjs/mongoose`
+- Simple integration with document-based verse and tag data
 
-### Why PostgreSQL?
+### Why MongoDB?
 
-- Production-ready relational database
-- Better than SQLite for concurrent access
-- Supports complex queries and indexes
-- Can use SQLite for local development
+- Document model matches song + verses (nested documents) without heavy joins
+- Flexible schema for OpenLP metadata mapping
+- Easy Docker deployment (official image) and Atlas compatibility
+- Handles concurrent writes without manual migrations
 
 ### Why One-Way Sync?
 
@@ -237,7 +237,7 @@ backend_sync (
 
 - Backend: `localhost:3000`
 - Frontend: `localhost:5173`
-- Database: Local PostgreSQL or SQLite
+- Database: Local MongoDB (Docker container or Atlas)
 - Sync Tool: Run locally with test OpenLP DB
 
 ### Testing Strategy

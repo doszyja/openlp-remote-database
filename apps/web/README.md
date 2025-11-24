@@ -29,6 +29,9 @@ pnpm typecheck
 
 # Lint
 pnpm lint
+
+# E2E tests (Playwright)
+pnpm test:e2e
 ```
 
 ## Environment Variables
@@ -37,6 +40,10 @@ Create `.env` file:
 ```
 VITE_API_URL=http://localhost:3000/api
 ```
+
+## Testing
+
+- `pnpm test:e2e` – runs the Playwright suite documented in `docs/E2E_TEST_STRATEGY.md`.
 
 ## Project Structure
 

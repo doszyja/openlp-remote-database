@@ -1,8 +1,193 @@
-# Detailed TODO List - OpenLP Database Sync Project
+# Detailed TODO List – OpenLP Database Sync Project
 
-This document contains a comprehensive, granular task list organized by epic. Each task is designed to be completed in 1-3 hours of focused work.
+_Last updated: 2025-11-24_
+
+This document captures the current implementation status and actionable next steps for every epic in the monorepo. Items are grouped by epic, then by milestone. Each line represents a task that should take no longer than ~2 hours. Use the legend below to interpret the checkboxes.
+
+## Legend
+- `[x]` – Completed and merged into `main`
+- `[~]` – In progress
+- `[ ]` – Not started
+- `[!]` – Blocked or needs a decision
+
+## Epic Status Overview
+
+| Epic | Status | Notes |
+| --- | --- | --- |
+| 1. Monorepo & Tooling | ✅ Complete | Workspace, linting, shared package all set. |
+| 2. Backend API & DB | ⏳ Mostly complete | Mongo/Mongoose stack running; remaining work is documentation, Swagger, and seed data. |
+| 3. Frontend Application | ⏳ Mostly complete | CRUD UI, verse tooling, auth-aware UX ready; still need error boundaries & polish. |
+| 4. OpenLP Sync Tool | ⏳ Feature-complete | CLI + dry-run + Vitest done; packaging + DX polish outstanding. |
+| 5. Auth & Permissions | 🔄 Phase 2 underway | Discord OAuth, guards, contexts are live; need UX edge cases and role messaging. |
+| 6. Deployment & Environment | ♻️ Partially complete | Docker (dev/prod) ready; documentation + production hardening pending. |
 
 ---
+
+## EPIC 1: Monorepo & Tooling Setup (✅ Complete)
+
+### Completed Milestones
+- [x] **Task 1.1.1**: Root `package.json` with pnpm workspace scripts (`dev:*`, `build:*`, `test:*`).
+- [x] **Task 1.1.2**: `pnpm-workspace.yaml` covering `apps/*` and `packages/*`.
+- [x] **Task 1.1.3**: Root `tsconfig.json` with strict mode and path aliases.
+- [x] **Task 1.1.4**: Root `.gitignore` & `.prettierignore`.
+- [x] **Task 1.2.1**: `@openlp/shared` package scaffolding with build pipeline.
+- [x] **Task 1.2.2**: Shared song/tag/OpenLP mapping types.
+- [x] **Task 1.2.3**: Shared DTOs (`CreateSongDto`, `UpdateSongDto`, `SongResponseDto`, `PaginatedResponseDto`, `SongQueryDto`).
+- [x] **Task 1.2.4**: Barrel exports + workspace protocol wiring.
+- [x] **Task 1.3.1**: ESLint config (NestJS, React, TypeScript).
+- [x] **Task 1.3.2**: Prettier config + format scripts.
+- [x] **Task 1.3.3**: VS Code workspace settings & recommended extensions.
+- [x] **Task 1.3.4**: `.env.example` files for `api`, `web`, `sync`.
+
+### Remaining Work
+- None. Epic 1 is fully complete.
+
+---
+
+## EPIC 2: Backend API & Database (MongoDB + NestJS)
+
+### Completed Milestones
+- [x] **Task 2.1.1**: NestJS project initialized in `apps/api` with modular structure.
+- [x] **Task 2.1.2**: Global `ConfigModule`, `.env` templates, typed config helpers.
+- [x] **Task 2.1.3**: Folder structure (`songs/`, `auth/`, `audit-log/`, `database/`, `schemas/`).
+- [x] **Task 2.2.1**: Migrated to MongoDB 7 + Mongoose 8 (see `DatabaseModule`).
+- [x] **Task 2.2.2**: Mongoose schemas for `Song`, `Tag`, `User`, `AuditLog`, with indexes and timestamps.
+- [x] **Task 2.3.1**: `SongModule` with dependency wiring + `AuditLogModule`.
+- [x] **Task 2.3.2**: `SongService` implementing create/read/update/delete/search, tagging, soft-deletes, and audit log hooks.
+- [x] **Task 2.3.3**: `SongController` with REST endpoints (`/songs`, `/songs/search`, `/:id`, `/export/zip`).
+- [x] **Task 2.4.1–2.4.5**: DTOs & validation (`CreateSongDto`, `UpdateSongDto`, `QuerySongDto`), `class-validator`, global `ValidationPipe`.
+- [x] **Task 2.5.1–2.5.6**: Full CRUD logic with pagination, regex search, tag lookups, and audit logging.
+- [x] **Task 2.6.1–2.6.6**: Public GET endpoints, protected mutate endpoints via `EditPermissionGuard`, throttled search + ZIP export.
+- [x] **Task 2.7.3**: Global CORS + validation + helmet + Express body limits configured in `main.ts`.
+- [x] **Task 2.8.1–2.8.2**: CORS whitelist (multi-origin), API prefix `/api`, throttler guard registered globally.
+- [x] **Task 2.10.1–2.10.5**: OpenLP import/migration script (`src/scripts/migrate-openlp.ts`) using better-sqlite3 with XML/verse parsing + logging.
+- [x] **Task 2.5.7 (Extension)**: Song ZIP export with `archiver`, sanitized filenames, and audit trail.
+- [x] **Task 2.3.4 (Extension)**: Audit logging service + schema capturing edits, deletes, logins, exports.
+
+### Remaining / Upcoming
+- [ ] **Task 2.7.1**: Add global HTTP exception filter for consistent API errors (normalize Mongoose, Discord, and validation errors).
+- [ ] **Task 2.7.2**: Introduce typed domain exceptions (`SongNotFoundException`, `ValidationException`) used inside services.
+- [ ] **Task 2.9.1**: Wire up Swagger/OpenAPI (`@nestjs/swagger`) in `main.ts`, expose `/api/docs`.
+- [ ] **Task 2.9.2**: Annotate controllers/DTOs with Swagger decorators + response schemas.
+- [ ] **Task 2.11.1**: Seed script (e.g., `scripts/seed.ts`) with representative songs/tags for demo/staging data.
+- [ ] **Task 2.11.2**: Document & automate seed execution (`pnpm seed:api`).
+- [ ] **Task 2.3.x**: Add unit/integration tests covering ZIP export + audit logging flows (SongService spec currently only covers CRUD basics).
+
+---
+
+## EPIC 3: Frontend Application (React 18 + Vite + MUI)
+
+### Completed Milestones
+- [x] **Task 3.1.1–3.1.5**: Vite + React + TypeScript app, path aliases, env handling, Material UI theme + CssBaseline.
+- [x] **Task 3.2.1–3.2.3**: React Router v6 layout with protected routes, admin routes, Navbar/Footer/ScrollToTop, Layout component.
+- [x] **Task 3.3.1–3.3.3**: API client wrapper (`src/services/api.ts`) w/ token injection, error handling, typed helpers, ZIP export.
+- [x] **Task 3.4.1–3.4.6**: React Query hooks (`useSongs`, `useSong`, `useCreateSong`, `useUpdateSong`, `useDeleteSong`, `useExportZip`).
+- [x] **Task 3.5.1–3.5.3**: Shared components (Navbar, Layout, Footer, ThemeToggle, SettingsDialog) using MUI system.
+- [x] **Task 3.6.1–3.6.5**: Song list experience with search (debounced), filter sidebar, responsive layout, loading & empty states.
+- [x] **Task 3.7.1–3.7.4**: Advanced `SongForm` with verse editor, order management, validation, XML/string parsing helpers.
+- [x] **Task 3.8.1–3.8.3**: Song detail/edit/delete flows with confirmation dialogs and notifications.
+- [x] **Task 3.9.1–3.9.2**: Song create page + success navigation + notifications.
+- [x] **Task 3.10.1–3.10.2**: Responsive layout + mobile-first Navbar (sticky AppBar, touch-friendly spacing).
+- [x] **Task 3.11.2**: Toast/notification system via `NotificationContext` + MUI Snackbar (centralized success/error UX).
+- [x] **Task 3.11.3**: Loading states with `CircularProgress`, disabled submit buttons during mutations, skeleton placeholders on lists.
+- [x] **Task 3.12.1–3.12.3**: Verse parsing utilities, verse order string editing, async form resets.
+- [x] **Task 3.13 (Extension)**: Auth-aware UI (ProtectedRoute, AdminRoute, login/logout buttons in Navbar).
+
+### Remaining / Upcoming
+- [ ] **Task 3.10.3**: Formal mobile QA – capture screenshots + fix any touch issues observed on iOS/Android hardware.
+- [ ] **Task 3.11.1**: Error boundary component wrapping route tree with friendly fallback + reset option.
+- [ ] **Task 3.6.x**: Add saved filter presets + multi-select tags UI (currently tags optional).
+- [ ] **Task 3.14 (New)**: Add offline warning & retry banner when network fails (bubble up `ApiError` status 0).
+- [ ] **Task 3.15 (New)**: Implement audit log page filters (front-end stub exists; needs UI polish + pagination controls).
+- [x] **Task 3.16.1 (New)**: Add Playwright E2E suite (list/search, CRUD, auth, export) and document in `docs/E2E_TEST_STRATEGY.md` (Completed 2025-11-24).
+
+---
+
+## EPIC 4: OpenLP Sync Tool (Node.js CLI)
+
+### Completed Milestones
+- [x] **Task 4.1.1–4.1.3**: `apps/sync` TypeScript CLI scaffold (pnpm scripts, tsconfig, vitest, build).
+- [x] **Task 4.2.1–4.2.3**: Config loader (`loadConfig`) with env + `.env` support and strong typing.
+- [x] **Task 4.3.1–4.3.6**: `OpenLPDatabaseService` (better-sqlite3) for read/write/list operations, metadata parsing.
+- [x] **Task 4.4.1–4.4.4**: `ApiClientService` with pagination helpers + error handling (axios).
+- [x] **Task 4.5.1–4.5.4**: Mapping utilities embedded in `SyncService` (UUID metadata in comments, verse order preservation).
+- [x] **Task 4.6.1–4.6.4**: `SyncService` implementing reconciliation (create/update/delete), progress summaries, force mode.
+- [x] **Task 4.6.5**: Dry-run support with change summary and zero writes.
+- [x] **Task 4.7.1–4.7.2**: Custom logger utility with log levels + verbose flag.
+- [x] **Task 4.8.1–4.8.4**: Commander CLI commands (`sync`, `sync-song`, `list`) + version + help text.
+- [x] **Task 4.9.1–4.9.3**: Error handling, exit codes (0/1), aggregate stats.
+- [x] **Task 4.11.1–4.11.3**: Vitest unit tests for SyncService, ApiClientService, and OpenLPDb service with mocks.
+
+### Remaining / Upcoming
+- [ ] **Task 4.7.3 (New)**: Log file output option (`--log-file`) for audit trails on church PC.
+- [ ] **Task 4.8.5 (New)**: `import` command (OpenLP ➜ backend) using existing mapping utilities for one-time migrations.
+- [ ] **Task 4.10.1**: Windows batch launcher (`sync.bat`) & README snippet for double-click execution.
+- [ ] **Task 4.10.2**: End-user installation guide (copy CLI build + .env template to church PC).
+- [ ] **Task 4.12 (New)**: Packaging exploration (pkg / nexe) or simple `pnpm dlx` instructions for volunteers.
+
+---
+
+## EPIC 5: Auth & Permissions (Discord OAuth – Phase 2)
+
+### Completed Milestones
+- [x] **Task 5.1.1**: Discord application + bot wiring (client ID/secret, callback URL documented in `.env.example` and `docs/DISCORD_AUTH_SETUP.md`).
+- [x] **Task 5.1.3**: Auth dependencies installed (`@nestjs/passport`, `passport-discord`, `@nestjs/jwt`, etc.).
+- [x] **Task 5.2.1**: `User` schema via Mongoose (Discord IDs, roles, timestamps).
+- [x] **Task 5.2.2**: `DiscordStrategy` w/ guild membership + role validation + verbose troubleshooting logs.
+- [x] **Task 5.2.3**: Discord helper methods inside `AuthService` (`getGuildMember`, `verifyBotGuildAccess`) with rate-limit retries.
+- [x] **Task 5.2.4–5.2.6**: `AuthModule`, `/auth/discord`, `/auth/discord/callback`, `/auth/me`, `/auth/logout`, dev login bypass.
+- [x] **Task 5.2.7**: Guards (`JwtAuthGuard`, `EditPermissionGuard`, `DiscordAuthGuard`) applied to routes.
+- [x] **Task 5.2.8**: Environment variable plumbing for Discord + JWT secrets.
+- [x] **Task 5.3.1**: Frontend `AuthProvider` + context with token persistence and React Query integration.
+- [x] **Task 5.3.2**: Login page & callback handling (redirect + token storage).
+- [x] **Task 5.3.4**: Protected routes (`ProtectedRoute`, `AdminRoute`) gating editing/audit log screens.
+- [x] **Task 5.3.5**: API client automatically includes JWT token (Authorization header).
+- [x] **Task 5.3.6**: Logout UX (clears token + query cache, server endpoint responds 200).
+- [x] **Task 5.3.8 (Extension)**: Admin-only Audit Log view + Settings dialog.
+
+### Remaining / Upcoming
+- [ ] **Task 5.1.2**: Optional Discord bot role-check automation (invite helper scripts + docs).
+- [ ] **Task 5.3.3**: User profile dropdown now shows avatar; need dedicated profile page with role list + permissions info.
+- [ ] **Task 5.3.5b**: Handle 401 responses globally (auto logout + redirect to `/login` when token expires).
+- [ ] **Task 5.3.7**: Friendly messaging for users missing required Discord role + instructions to contact admin.
+- [ ] **Task 5.4.1**: Formalize Discord API error handling (rate limit telemetry, exponential backoff metrics).
+- [ ] **Task 5.4.3**: Token refresh / re-auth flow (optional but recommended before production).
+
+---
+
+## EPIC 6: Deployment & Environment
+
+### Completed Milestones
+- [x] **Task 6.1.1**: `apps/api/Dockerfile` (multi-stage, Node 22, production build).
+- [x] **Task 6.1.2**: `apps/web/Dockerfile` (Node 22 build + nginx serve with `nginx.conf`).
+- [x] **Task 6.1.3**: `docker-compose.dev.yml` with MongoDB, API, hot-reloaded web, shared envs.
+- [x] **Task 6.1.4**: `docker-compose.prod.yml` (Mongo, API, Web) with health checks, env injection, secrets.
+- [x] **Task 6.1.5**: `.dockerignore` files for API/Web.
+- [x] **Task 6.1.6**: `docs/DOCKER_SETUP.md` covering dev/prod flows + troubleshooting.
+- [x] **Task 6.2.1**: Production Dockerfile for backend (multi-stage).
+- [x] **Task 6.2.4**: Production logging basics (stdout structured logs, throttler metrics).
+- [x] **Task 6.3.1**: Vite production build optimized (see `apps/web` README + `vite.config.ts` tweaks).
+- [x] **Task 6.4.1**: Root README updated with quick start, docker instructions, and context files.
+- [x] **Task 6.4.2**: Docs set (`PROJECT_PLAN`, `ARCHITECTURE`, `ADRs`, etc.) kept in sync with Mongo migration.
+
+### Remaining / Upcoming
+- [ ] **Task 6.2.2**: Production `.env.example` + checklist for secrets/Discord tokens.
+- [ ] **Task 6.2.3**: Dedicated `/api/health` already exists—document uptime checks + monitoring plan.
+- [ ] **Task 6.3.2**: Document static hosting alternative (e.g., Vercel/Netlify) with environment overrides.
+- [ ] **Task 6.4.3**: API documentation (Markdown or Swagger export) with request/response examples.
+- [ ] **Task 6.4.4**: End-to-end deployment guide (Mongo provisioning, docker compose, sync tool install on church PC).
+- [ ] **Task 6.5 (New)**: CI pipeline (lint + test + build) using GitHub Actions.
+
+---
+
+## Recent Highlights (Snapshot: 2025-11-24)
+
+- ✅ Backend migrated from PostgreSQL/Prisma plan to MongoDB/Mongoose with audit logging, Discord auth, rate limiting, ZIP export, and OpenLP import.
+- ✅ Frontend delivers full CRUD, verse parsing, auth-aware UX, responsive layout, and global notifications.
+- ✅ Sync tool provides dry-run, verbose logging, and unit-tested reconciliation logic.
+- ✅ Docker dev/prod workflows finalized; docs refreshed across architecture, rules, and context files.
+
+Use this document to identify the next actionable task before writing code or updating documentation. Update the checkboxes and descriptions whenever work lands in `main`.
 
 ## EPIC 1: Monorepo & Tooling Setup
 
