@@ -173,6 +173,10 @@ export default function Navbar() {
                       handleMenuClose();
                       navigate('/audit-logs');
                     }}
+                    sx={{
+                      minHeight: 48, // Match other menu items
+                      py: 1.5,
+                    }}
                   >
                     <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
                     Logi Audytu

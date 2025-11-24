@@ -71,7 +71,16 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
                 color="error"
                 onClick={handleLogout}
                 fullWidth
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  color: 'error.main',
+                  borderColor: 'error.main',
+                  '&:hover': {
+                    borderColor: 'error.dark',
+                    backgroundColor: 'error.dark',
+                    color: 'error.contrastText',
+                  },
+                }}
               >
                 Wyloguj
               </Button>
@@ -86,7 +95,18 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
                 onClick={handleDiscordLogin}
                 disabled={isApiError}
                 fullWidth
-                sx={{ mt: 1 }}
+                sx={{ 
+                  mt: 1,
+                  color: 'primary.contrastText',
+                  backgroundColor: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'action.disabledBackground',
+                    color: 'action.disabled',
+                  },
+                }}
               >
                 Zaloguj
               </Button>
@@ -119,7 +139,17 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Zamknij</Button>
+        <Button 
+          onClick={onClose}
+          sx={{
+            color: 'text.primary',
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            },
+          }}
+        >
+          Zamknij
+        </Button>
       </DialogActions>
     </>
   );

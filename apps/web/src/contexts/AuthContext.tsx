@@ -89,42 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData(['auth', 'me'], null);
   };
 
-  // Dev helper: expose login function to window for easy testing
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      (window as any).__devLogin = async (token: string) => {
-        await login(token);
-        console.log('✅ Zalogowano jako dev user');
-      };
-      (window as any).__devLogout = () => {
-        logout();
-        console.log('✅ Wylogowano');
-      };
-      (window as any).__devSetAdmin = () => {
-        // Create a mock admin user for dev testing
-        const mockAdminUser: User = {
-          id: 'dev-admin-id',
-          discordId: 'dev-discord-id',
-          username: 'Dev Admin',
-          avatar: null,
-          discordRoles: ['1161734352447746110'], // Admin role ID
-          hasEditPermission: true, // Mock admin has edit permission
-        };
-        // Set mock token and cache mock user in React Query
-        const mockToken = 'dev-mock-token';
-        localStorage.setItem(STORAGE_KEY, mockToken);
-        setToken(mockToken);
-        queryClient.setQueryData(['auth', 'me', mockToken], mockAdminUser);
-        console.log('✅ Ustawiono jako dev admin (mock user)');
-        console.log('Uwaga: To jest tylko mock - API calls mogą nie działać');
-      };
-      console.log('🔧 Dev helpers dostępne:');
-      console.log('  - window.__devLogin(token) - zaloguj z tokenem');
-      console.log('  - window.__devLogout() - wyloguj');
-      console.log('  - window.__devSetAdmin() - ustaw jako admin (mock)');
-    }
-  }, [login, logout]);
-
   return (
     <AuthContext.Provider
       value={{

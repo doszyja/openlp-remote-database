@@ -1,5 +1,5 @@
 import { useForm, Controller } from 'react-hook-form';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Box,
   TextField,
@@ -37,14 +37,15 @@ interface SongFormProps {
   onCancel?: () => void;
   isLoading?: boolean;
   hideButtons?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
-export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButtons = false }: SongFormProps) {
+export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButtons = false, onDirtyChange }: SongFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     setValue,
     watch,
     reset,
@@ -55,6 +56,32 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
       verseOrder: 'v1',
     },
   });
+  
+  // Track if form has been submitted to prevent false dirty warnings after save
+  const hasSubmittedRef = useRef(false);
+  
+  // Warn user before leaving page if form is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && !hasSubmittedRef.current) {
+        e.preventDefault();
+        e.returnValue = 'Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+  
+  // Expose dirty state to parent component via callback
+  useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(isDirty);
+    }
+  }, [isDirty, onDirtyChange]);
 
   const sourceVerses = watch('sourceVerses');
   const verseOrder = watch('verseOrder');
@@ -213,7 +240,14 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
       return;
     }
 
+    // Prevent empty update requests - only submit if form is dirty (for edit mode)
+    if (song && !isDirty) {
+      console.log('Form is not dirty, skipping submission');
+      return;
+    }
+
     setIsSubmitting(true);
+    hasSubmittedRef.current = true; // Mark as submitted to prevent dirty warnings
     try {
       // Filter out empty source verses first
       const validSourceVerses = data.sourceVerses.filter(v => v.content.trim().length > 0);
@@ -285,6 +319,9 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
         title: data.title,
         verses: versesXml, // XML format string (preserves verse_order and labels)
       });
+      // Reset dirty state after successful submission
+      reset(data, { keepValues: true });
+      hasSubmittedRef.current = false;
     } finally {
       setIsSubmitting(false);
     }

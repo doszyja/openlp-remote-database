@@ -1,10 +1,11 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useBlocker } from 'react-router-dom';
 import { Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSong, useUpdateSong } from '../hooks';
 import SongForm from '../components/SongForm';
 import { useNotification } from '../contexts/NotificationContext';
 import type { UpdateSongDto } from '@openlp/shared';
+import { useState, useEffect } from 'react';
 
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,9 +13,34 @@ export default function SongEditPage() {
   const { data: song, isFetching, error } = useSong(id!);
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  
+  // Block navigation if form is dirty
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isFormDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+  
+  // Show confirmation dialog if trying to navigate away with dirty form
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const confirmed = window.confirm('Masz niezapisane zmiany. Czy na pewno chcesz opuścić stronę?');
+      if (confirmed) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker]);
 
   const handleSubmit = async (data: UpdateSongDto) => {
     if (!id || updateSong.isPending) return;
+
+    // Prevent empty update requests - only submit if form is dirty
+    if (!isFormDirty) {
+      console.log('Form is not dirty, skipping update request');
+      return;
+    }
 
     try {
       await updateSong.mutateAsync({ id, data });
@@ -126,15 +152,17 @@ export default function SongEditPage() {
           >
             Anuluj
           </Button>
-          <Button
-            variant="contained"
-            form="song-form"
-            type="submit"
-            disabled={updateSong.isPending}
-            size="small"
-          >
-            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
-          </Button>
+          {isFormDirty && (
+            <Button
+              variant="contained"
+              form="song-form"
+              type="submit"
+              disabled={updateSong.isPending}
+              size="small"
+            >
+              {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
+            </Button>
+          )}
         </Stack>
       </Box>
 
@@ -150,6 +178,7 @@ export default function SongEditPage() {
         onCancel={() => navigate(`/songs/${id}`)}
         isLoading={updateSong.isPending}
         hideButtons={true}
+        onDirtyChange={setIsFormDirty}
       />
     </Box>
   );

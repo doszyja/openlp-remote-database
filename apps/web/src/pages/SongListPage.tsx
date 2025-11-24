@@ -40,7 +40,7 @@ export default function SongListPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 300); // 300ms debounce delay
+    }, 500); // 600ms debounce delay (increased from 300ms)
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -418,7 +418,7 @@ export default function SongListPage() {
                      }}
                      sx={{
                        '& .MuiInputBase-input': {
-                         fontSize: { xs: '0.875rem', sm: '1rem' },
+                         fontSize: '16px', // Minimum 16px to prevent iOS zoom
                          py: { xs: 0.75, sm: 1 },
                        },
                      }}
@@ -489,6 +489,18 @@ export default function SongListPage() {
                 disabled={isLoading}
                 size="small"
                 startIcon={isLoading && page > 1 ? <CircularProgress size={16} /> : null}
+                sx={{
+                  color: 'text.primary',
+                  borderColor: 'divider',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    backgroundColor: 'action.hover',
+                  },
+                  '&:disabled': {
+                    borderColor: 'divider',
+                    color: 'text.disabled',
+                  },
+                }}
               >
                 {isLoading && page > 1 ? 'Ładowanie...' : 'Załaduj więcej'}
               </Button>

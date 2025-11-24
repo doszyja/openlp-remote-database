@@ -83,7 +83,7 @@ export default function SongDetailPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 300); // 300ms debounce delay
+    }, 500); // 600ms debounce delay (increased from 300ms)
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -250,7 +250,17 @@ export default function SongDetailPage() {
         >
           Wstecz
         </Button>
-        <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center" flexWrap="wrap" sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+        <Stack 
+          direction="row" 
+          spacing={{ xs: 0.5, sm: 1, md: 2 }} 
+          alignItems="center" 
+          flexWrap="wrap" 
+          sx={{ 
+            width: { xs: '100%', sm: 'auto' }, 
+            justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+            gap: { xs: 0.5, sm: 1 },
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<SlideshowIcon />}
@@ -259,6 +269,10 @@ export default function SongDetailPage() {
             sx={{
               borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
               color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 1.5 },
+              minWidth: { xs: 'auto', sm: 'auto' },
+              whiteSpace: 'nowrap',
               '&:hover': {
                 borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
                 backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
@@ -292,6 +306,12 @@ export default function SongDetailPage() {
                 startIcon={<EditIcon />}
                 onClick={() => navigate(`/songs/${id}/edit`)}
                 size="small"
+                sx={{
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
+                  minWidth: { xs: 'auto', sm: 'auto' },
+                  whiteSpace: 'nowrap',
+                }}
               >
                 Edytuj
               </Button>
@@ -304,6 +324,10 @@ export default function SongDetailPage() {
                 sx={{
                   borderColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.main : undefined,
                   color: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
+                  minWidth: { xs: 'auto', sm: 'auto' },
+                  whiteSpace: 'nowrap',
                   '&:hover': {
                     borderColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
                     backgroundColor: (theme) => theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : undefined,
@@ -502,7 +526,13 @@ export default function SongDetailPage() {
         value={search}
         onChange={(e) => handleSearch(e.target.value)}
         size="small"
-        sx={{ mb: 1.5, flexShrink: 0 }}
+        sx={{ 
+          mb: 1.5, 
+          flexShrink: 0,
+          '& .MuiInputBase-input': {
+            fontSize: '16px', // Minimum 16px to prevent iOS zoom
+          },
+        }}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
@@ -572,9 +602,21 @@ export default function SongDetailPage() {
               onClick={handleLoadMoreSearch}
               disabled={searchResults.isLoading}
               startIcon={searchResults.isLoading && (searchQuery.page || 1) > 1 ? <CircularProgress size={16} /> : null}
-              sx={{ width: '100%' }}
+              sx={{ 
+                width: '100%',
+                color: 'text.primary',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'action.hover',
+                },
+                '&:disabled': {
+                  borderColor: 'divider',
+                  color: 'text.disabled',
+                },
+              }}
             >
-              {searchResults.isLoading && (searchQuery.page || 1) > 1 ? 'Loading...' : 'Load More'}
+              {searchResults.isLoading && (searchQuery.page || 1) > 1 ? 'Ładowanie...' : 'Załaduj więcej'}
             </Button>
           </Box>
         )}

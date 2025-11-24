@@ -89,20 +89,80 @@ export default function PresentationPage() {
     const calculateFontSizes = () => {
       const vh = window.innerHeight;
       const vw = window.innerWidth;
+      const isLandscape = vw > vh;
       const minDimension = Math.min(vh, vw);
       
       // Base font size scales with viewport
-      // For title: 4-8% of smaller dimension, clamped between 32-80px
-      // For content: 4-8% of smaller dimension, clamped between 32-96px (much larger for lyrics)
-      const titleSize = Math.min(Math.max(minDimension * 0.05, 60), 80);
-      const contentSize = Math.min(Math.max(minDimension * 0.06, 60), 96);
+      // In landscape, use height as primary constraint since it's more limited
+      const primaryDimension = isLandscape ? vh : minDimension;
+      
+      // Check for mobile landscape (very constrained height, typically 300-450px)
+      const isMobile = vw < 600;
+      const isMobileLandscape = isMobile && isLandscape;
+      
+      // Check if height is particularly constrained in landscape
+      const isShortLandscape = isLandscape && vh < 600;
+      
+      // For title: adjust for orientation (most conservative for mobile landscape)
+      let titleMultiplier, titleMin, titleMax;
+      if (isMobileLandscape) {
+        titleMultiplier = 0.025;
+        titleMin = 20;
+        titleMax = 32;
+      } else if (isShortLandscape) {
+        titleMultiplier = 0.03;
+        titleMin = 28;
+        titleMax = 45;
+      } else if (isLandscape) {
+        titleMultiplier = 0.035;
+        titleMin = 32;
+        titleMax = 50;
+      } else {
+        titleMultiplier = 0.05;
+        titleMin = 60;
+        titleMax = 80;
+      }
+      const titleBase = primaryDimension * titleMultiplier;
+      const titleSize = Math.min(Math.max(titleBase, titleMin), titleMax);
+      
+      // For content: adjust for orientation (most conservative for mobile landscape)
+      let contentMultiplier, contentMin, contentMax;
+      if (isMobileLandscape) {
+        contentMultiplier = 0.03;
+        contentMin = 20;
+        contentMax = 35;
+      } else if (isShortLandscape) {
+        contentMultiplier = 0.035;
+        contentMin = 28;
+        contentMax = 50;
+      } else if (isLandscape) {
+        contentMultiplier = 0.04;
+        contentMin = 32;
+        contentMax = 60;
+      } else {
+        contentMultiplier = 0.06;
+        contentMin = 60;
+        contentMax = 96;
+      }
+      const contentBase = primaryDimension * contentMultiplier;
+      const contentSize = Math.min(Math.max(contentBase, contentMin), contentMax);
       
       setFontSizes({ titleSize, contentSize });
     };
 
     calculateFontSizes();
+    
+    // Handle resize and orientation change
     window.addEventListener('resize', calculateFontSizes);
-    return () => window.removeEventListener('resize', calculateFontSizes);
+    window.addEventListener('orientationchange', () => {
+      // Delay to allow orientation change to complete
+      setTimeout(calculateFontSizes, 100);
+    });
+    
+    return () => {
+      window.removeEventListener('resize', calculateFontSizes);
+      window.removeEventListener('orientationchange', calculateFontSizes);
+    };
   }, []);
 
   // Calculate dynamic font size based on the largest verse
@@ -138,26 +198,48 @@ export default function PresentationPage() {
       const containerHeight = container.clientHeight;
       const containerWidth = container.clientWidth;
       
-      // Responsive padding based on screen size
+      // Detect orientation
+      const isLandscape = containerWidth > containerHeight;
       const isMobile = window.innerWidth < 600;
-      const padding = isMobile ? 80 : 120;
-      const availableHeight = Math.max(containerHeight - padding, containerHeight * 0.8);
-      const availableWidth = Math.max(containerWidth - padding, containerWidth * 0.9);
+      
+      // For mobile landscape, height is very constrained (typically 300-450px)
+      const isMobileLandscape = isMobile && isLandscape;
+      
+      // For landscape, check if height is particularly constrained
+      // If height is less than 600px in landscape, be extra conservative
+      const isShortLandscape = isLandscape && containerHeight < 600;
+      
+      // Adjust padding based on orientation and screen size
+      // Mobile landscape needs even less padding due to very limited height
+      const padding = isMobileLandscape ? 40 : (isMobile ? (isLandscape ? 50 : 80) : (isLandscape ? (isShortLandscape ? 80 : 100) : 120));
+      
+      // In landscape, we have less height, so be more conservative
+      // Mobile landscape needs the most conservative settings
+      const heightMultiplier = isMobileLandscape ? 0.70 : (isLandscape ? (isShortLandscape ? 0.75 : 0.80) : 0.95);
+      const widthMultiplier = isMobileLandscape ? 0.85 : (isLandscape ? (isShortLandscape ? 0.88 : 0.90) : 0.95);
+      
+      const availableHeight = Math.max(containerHeight - padding, containerHeight * heightMultiplier);
+      const availableWidth = Math.max(containerWidth - padding, containerWidth * widthMultiplier);
 
       // Calculate font size based on height (line count)
+      // Use more conservative multiplier in landscape, especially mobile landscape
       const lineHeight = 1.4;
-      const heightBasedSize = (availableHeight * 0.95 / maxLineCount) / lineHeight;
+      const heightMultiplierForCalc = isMobileLandscape ? 0.70 : (isLandscape ? (isShortLandscape ? 0.75 : 0.80) : 0.9);
+      const heightBasedSize = (availableHeight * heightMultiplierForCalc / maxLineCount) / lineHeight;
       
       // Calculate font size based on width (longest line)
+      // Use more conservative multiplier in landscape, especially mobile landscape
       const avgCharWidth = 0.6;
-      const widthBasedSize = (availableWidth * 0.95 / maxLongestLineLength) / avgCharWidth;
+      const widthMultiplierForCalc = isMobileLandscape ? 0.75 : (isLandscape ? (isShortLandscape ? 0.80 : 0.85) : 0.9);
+      const widthBasedSize = (availableWidth * widthMultiplierForCalc / maxLongestLineLength) / avgCharWidth;
 
       // Use the smaller of the two to ensure text fits
       const optimalSize = Math.min(heightBasedSize, widthBasedSize);
       
-      // Clamp between reasonable min and max (different for mobile/desktop)
-      const minSize = isMobile ? 24 : 60;
-      const maxSize = isMobile ? 60 : 90;
+      // Clamp between reasonable min and max (adjust for landscape and mobile)
+      // Mobile landscape needs the smallest max size
+      const minSize = isMobileLandscape ? 20 : (isMobile ? 24 : (isShortLandscape ? 28 : (isLandscape ? 32 : 50)));
+      const maxSize = isMobileLandscape ? 32 : (isMobile ? (isShortLandscape ? 35 : (isLandscape ? 45 : 60)) : (isShortLandscape ? 50 : (isLandscape ? 60 : 90)));
       const clampedSize = Math.max(minSize, Math.min(optimalSize, maxSize));
       
       // Only update if size actually changed to prevent infinite loops
@@ -181,13 +263,20 @@ export default function PresentationPage() {
       resizeTimer = setTimeout(calculateDynamicSize, 100);
     };
     
+    // Handle orientation change with delay to allow orientation to complete
+    const handleOrientationChange = () => {
+      setTimeout(calculateDynamicSize, 200);
+    };
+    
     window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleOrientationChange);
     
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(resizeTimer);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
     };
   }, [allContent]);
 
