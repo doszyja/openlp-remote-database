@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -79,7 +79,16 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [filters, setFilters] = useState<{
+  // Input values (update immediately for UI responsiveness)
+  const [inputFilters, setInputFilters] = useState<{
+    action?: string;
+    username?: string;
+    songId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }>({});
+  // Debounced filter values (used for API calls)
+  const [debouncedFilters, setDebouncedFilters] = useState<{
     action?: string;
     username?: string;
     songId?: string;
@@ -87,15 +96,22 @@ export default function AuditLogPage() {
     toDate?: string;
   }>({});
   const [showFilters, setShowFilters] = useState(false);
-  const limit = 50;
+  const limit = 25;
   
-  // Reset page when filters change
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Debounce filter inputs with 450ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilters(inputFilters);
+      setPage(1); // Reset to first page when debounced filters change
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [inputFilters]);
   
-  const { data, isLoading, error } = useAuditLogs(page, limit, Object.keys(filters).length > 0 ? filters : undefined);
+  const { data, isLoading, error } = useAuditLogs(page, limit, Object.keys(debouncedFilters).length > 0 ? debouncedFilters : undefined);
   
   const handleFilterChange = (key: string, value: string | undefined) => {
-    setFilters(prev => {
+    setInputFilters(prev => {
       const newFilters = { ...prev };
       if (value && value.trim()) {
         newFilters[key as keyof typeof newFilters] = value;
@@ -104,15 +120,15 @@ export default function AuditLogPage() {
       }
       return newFilters;
     });
-    setPage(1); // Reset to first page when filters change
   };
   
   const clearFilters = () => {
-    setFilters({});
+    setInputFilters({});
+    setDebouncedFilters({});
     setPage(1);
   };
   
-  const hasActiveFilters = Object.keys(filters).length > 0;
+  const hasActiveFilters = Object.keys(debouncedFilters).length > 0;
   
   // Export to CSV
   const handleExportCSV = () => {
@@ -228,6 +244,14 @@ export default function AuditLogPage() {
               onClick={clearFilters}
               size="small"
               variant="outlined"
+              sx={{
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : theme.palette.primary.main,
+                color: (theme) => theme.palette.mode === 'dark' ? theme.palette.grey[50] : theme.palette.primary.main,
+                '&:hover': {
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : theme.palette.primary.dark,
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(30,58,95,0.04)',
+                },
+              }}
             >
               Wyczyść Filtry
             </Button>
@@ -237,6 +261,18 @@ export default function AuditLogPage() {
             onClick={() => setShowFilters(!showFilters)}
             size="small"
             variant={showFilters ? 'contained' : 'outlined'}
+            sx={
+              showFilters
+                ? undefined
+                : {
+                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : theme.palette.primary.main,
+                    color: (theme) => theme.palette.mode === 'dark' ? theme.palette.grey[50] : theme.palette.primary.main,
+                    '&:hover': {
+                      borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : theme.palette.primary.dark,
+                      backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(30,58,95,0.04)',
+                    },
+                  }
+            }
           >
             Filtry
           </Button>
@@ -246,6 +282,14 @@ export default function AuditLogPage() {
             size="small"
             variant="outlined"
             disabled={!data?.data || data.data.length === 0}
+            sx={{
+              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.4)' : theme.palette.primary.main,
+              color: (theme) => theme.palette.mode === 'dark' ? theme.palette.grey[50] : theme.palette.primary.main,
+              '&:hover': {
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : theme.palette.primary.dark,
+                backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(30,58,95,0.04)',
+              },
+            }}
           >
             Eksport CSV
           </Button>
@@ -321,14 +365,24 @@ export default function AuditLogPage() {
               theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            useFlexGap
+          >
+            <Box sx={{ flex: '1 1 180px', minWidth: { xs: '100%', sm: 200 } }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Akcja</InputLabel>
                 <Select
-                  value={filters.action || ''}
+                  value={inputFilters.action || ''}
                   label="Akcja"
                   onChange={(e) => handleFilterChange('action', e.target.value || undefined)}
+                  sx={{
+                    '& .MuiSelect-select': {
+                      fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                    },
+                  }}
                 >
                   <MenuItem value="">Wszystkie</MenuItem>
                   <MenuItem value={AuditLogAction.LOGIN}>Logowanie</MenuItem>
@@ -337,50 +391,70 @@ export default function AuditLogPage() {
                   <MenuItem value={AuditLogAction.ZIP_EXPORT}>Eksport ZIP</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Box>
+            <Box sx={{ flex: '1 1 180px', minWidth: { xs: '100%', sm: 200 } }}>
               <TextField
                 fullWidth
                 size="small"
                 label="Użytkownik"
-                value={filters.username || ''}
+                value={inputFilters.username || ''}
                 onChange={(e) => handleFilterChange('username', e.target.value || undefined)}
                 placeholder="Wyszukaj użytkownika..."
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                  },
+                }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Box>
+            <Box sx={{ flex: '1 1 180px', minWidth: { xs: '100%', sm: 200 } }}>
               <TextField
                 fullWidth
                 size="small"
                 label="ID Pieśni"
-                value={filters.songId || ''}
+                value={inputFilters.songId || ''}
                 onChange={(e) => handleFilterChange('songId', e.target.value || undefined)}
                 placeholder="Wprowadź ID pieśni..."
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                  },
+                }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Box>
+            <Box sx={{ flex: '1 1 180px', minWidth: { xs: '100%', sm: 200 } }}>
               <TextField
                 fullWidth
                 size="small"
                 label="Od daty"
                 type="date"
-                value={filters.fromDate || ''}
+                value={inputFilters.fromDate || ''}
                 onChange={(e) => handleFilterChange('fromDate', e.target.value || undefined)}
                 InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                  },
+                }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Box>
+            <Box sx={{ flex: '1 1 180px', minWidth: { xs: '100%', sm: 200 } }}>
               <TextField
                 fullWidth
                 size="small"
                 label="Do daty"
                 type="date"
-                value={filters.toDate || ''}
+                value={inputFilters.toDate || ''}
                 onChange={(e) => handleFilterChange('toDate', e.target.value || undefined)}
                 InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                  },
+                }}
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
         </Paper>
       )}
 
@@ -402,13 +476,13 @@ export default function AuditLogPage() {
             }}
           >
             <TableContainer>
-              <Table>
+              <Table size="medium">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Akcja</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Użytkownik</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Pieśń</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', py: { xs: 1, md: 1.5 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Data</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', py: { xs: 1, md: 1.5 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Akcja</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', py: { xs: 1, md: 1.5 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Użytkownik</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary', py: { xs: 1, md: 1.5 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>Pieśń</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -417,28 +491,39 @@ export default function AuditLogPage() {
                       key={log._id} 
                       hover 
                       onClick={() => handleRowClick(log)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: (theme) => theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
                     >
-                      <TableCell>
+                      <TableCell sx={{ color: 'text.primary', py: { xs: 0.75, md: 1.25 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>
                         {formatDate(log.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ color: 'text.primary', py: { xs: 0.75, md: 1.25 } }}>
                         <Chip
                           label={getActionLabel(log.action)}
                           color={getActionColor(log.action)}
                           size="small"
+                          sx={{ 
+                            height: { xs: 20, md: 24 }, 
+                            fontSize: { xs: '0.75rem', md: '0.8125rem' } 
+                          }}
                         />
                       </TableCell>
-                      <TableCell>{log.username}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ color: 'text.primary', py: { xs: 0.75, md: 1.25 }, fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>{log.username}</TableCell>
+                      <TableCell sx={{ color: 'text.primary', py: { xs: 0.75, md: 1.25 } }}>
                         {log.songTitle ? (
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: { xs: '0.875rem', md: '0.9375rem' }, lineHeight: { xs: 1.3, md: 1.5 } }}>
                               {log.songTitle}
                             </Typography>
                             {log.songId && (
-                              <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-                                <Typography variant="caption" color="text.secondary">
+                              <Box display="flex" alignItems="center" gap={{ xs: 0.25, md: 0.5 }} mt={{ xs: 0.25, md: 0.5 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}>
                                   ID: {log.songId}
                                 </Typography>
                                 <IconButton
@@ -448,21 +533,21 @@ export default function AuditLogPage() {
                                     navigate(`/songs/${log.songId}`);
                                   }}
                                   sx={{ 
-                                    p: 0.25,
-                                    ml: 0.5,
+                                    p: { xs: 0.25, md: 0.5 },
+                                    ml: { xs: 0.25, md: 0.5 },
                                     '&:hover': {
                                       bgcolor: 'action.hover',
                                     },
                                   }}
                                   title="Przejdź do pieśni"
                                 >
-                                  <LinkIcon fontSize="small" />
+                                  <LinkIcon fontSize="small" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }} />
                                 </IconButton>
                               </Box>
                             )}
                           </Box>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '0.9375rem' } }}>
                             -
                           </Typography>
                         )}
@@ -522,7 +607,7 @@ export default function AuditLogPage() {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Data
                 </Typography>
-                <Typography variant="body1">{formatDate(selectedLog.createdAt)}</Typography>
+                <Typography variant="body1" sx={{ color: 'text.primary' }}>{formatDate(selectedLog.createdAt)}</Typography>
               </Box>
 
               <Divider />
@@ -544,7 +629,7 @@ export default function AuditLogPage() {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Użytkownik
                 </Typography>
-                <Typography variant="body1">{selectedLog.username}</Typography>
+                <Typography variant="body1" sx={{ color: 'text.primary' }}>{selectedLog.username}</Typography>
                 {selectedLog.discordId && (
                   <Typography variant="caption" color="text.secondary">
                     Discord ID: {selectedLog.discordId}
@@ -559,7 +644,7 @@ export default function AuditLogPage() {
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       Pieśń
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500, color: 'text.primary' }}>
                       {selectedLog.songTitle}
                     </Typography>
                     {selectedLog.songId && (
@@ -629,6 +714,7 @@ export default function AuditLogPage() {
                                         whiteSpace: 'pre-wrap',
                                         wordBreak: 'break-word',
                                         fontSize: '0.875rem',
+                                        color: 'text.primary',
                                       }}
                                     >
                                       {value.old === null || value.old === undefined ? '(puste)' : String(value.old)}
@@ -659,6 +745,7 @@ export default function AuditLogPage() {
                                         whiteSpace: 'pre-wrap',
                                         wordBreak: 'break-word',
                                         fontSize: '0.875rem',
+                                        color: 'text.primary',
                                       }}
                                     >
                                       {(() => {
@@ -754,6 +841,7 @@ export default function AuditLogPage() {
                                       fontFamily: 'monospace',
                                       whiteSpace: 'pre-wrap',
                                       wordBreak: 'break-word',
+                                      color: 'text.primary',
                                     }}
                                   >
                                     {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
@@ -775,7 +863,7 @@ export default function AuditLogPage() {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Adres IP
                 </Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                   {selectedLog.ipAddress || '-'}
                 </Typography>
               </Box>
@@ -787,7 +875,7 @@ export default function AuditLogPage() {
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       User Agent
                     </Typography>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', color: 'text.primary' }}>
                       {selectedLog.userAgent}
                     </Typography>
                   </Box>

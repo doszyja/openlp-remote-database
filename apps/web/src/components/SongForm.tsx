@@ -352,6 +352,9 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
                   },
                 },
+                '& .MuiInputBase-input': {
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                },
               }}
             />
           )}
@@ -424,6 +427,9 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
                   },
                 },
+                '& .MuiInputBase-input': {
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                },
               }}
               onChange={(e) => {
                 const orderString = e.target.value;
@@ -473,11 +479,11 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
             <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Źródłowe Zwrotki</Typography>
             <Stack 
               direction="row" 
-              spacing={1} 
+              spacing={0.5} 
               flexWrap="wrap"
               sx={{ 
                 width: { xs: '100%', sm: 'auto' },
-                gap: { xs: 1, sm: 2 },
+                gap: { xs: 0.5, sm: 0.75 },
                 '& > *': {
                   flex: { xs: '0 1 auto', sm: 'none' },
                   minWidth: { xs: 'min-content', sm: 'auto' },
@@ -500,7 +506,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                   px: { xs: 1, sm: 1.5 },
                 }}
               >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Zwrotkę
+                Zwrotkę
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -519,7 +525,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                   px: { xs: 1, sm: 1.5 },
                 }}
               >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Refren
+                Refren
               </Button>
               <Button
                 startIcon={<AddIcon />}
@@ -538,7 +544,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                   px: { xs: 1, sm: 1.5 },
                 }}
               >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dodaj </Box>Mostek
+                Mostek
               </Button>
             </Stack>
           </Box>
@@ -583,6 +589,11 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                           {...field}
                           label="Typ"
                           value={field.value || 'verse'}
+                          sx={{
+                            '& .MuiSelect-select': {
+                              fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                            },
+                          }}
                           onChange={(e) => {
                             field.onChange(e);
                             // Update sourceId when type changes
@@ -635,9 +646,10 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                           value={value}
                           sx={{
                             '& .MuiInputBase-root': {
-                              fontSize: { xs: '16px', sm: '14px' }, // Prevent zoom on iOS
+                              fontSize: '16px', // Always 16px to prevent iOS zoom
                             },
                             '& .MuiInputBase-input': {
+                              fontSize: '16px', // Minimum 16px to prevent iOS zoom
                               minHeight: '3rem', // Minimum height for 2 lines
                               lineHeight: 1.5,
                               paddingTop: '10px',

@@ -73,7 +73,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             primary: mode === 'dark' ? '#FFFFFF' : '#000000', // Pure white in dark mode, pure black in light mode
             secondary: mode === 'dark' ? '#E0E0E0' : '#424242', // Light gray in dark mode, dark gray in light mode
           },
-          divider: mode === 'dark' ? 'rgba(30, 58, 95, 0.15)' : 'rgba(0, 0, 0, 0.12)', // Blue-tinted divider
+          divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)', // Light divider in dark mode for better visibility
           error: {
             main: '#D32F2F',
             light: '#EF5350',
@@ -142,19 +142,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 },
               },
               outlined: {
-                borderColor: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
-                color: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
+                borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#1E3A5F',
+                color: mode === 'dark' ? '#E8EAF6' : '#1E3A5F',
                 borderWidth: 1,
                 '&:hover': {
-                  borderColor: mode === 'dark' ? '#0F1F3A' : '#0F1F3A',
-                  backgroundColor: mode === 'dark' ? 'rgba(30, 58, 95, 0.08)' : 'rgba(30, 58, 95, 0.04)',
+                  borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : '#0F1F3A',
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                   borderWidth: 1,
                 },
               },
               text: {
-                color: mode === 'dark' ? '#1E3A5F' : '#1E3A5F',
+                color: mode === 'dark' ? '#E8EAF6' : '#1E3A5F',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? 'rgba(30, 58, 95, 0.08)' : 'rgba(30, 58, 95, 0.04)',
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                 },
               },
             },
@@ -179,8 +179,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             styleOverrides: {
               root: {
                 '& .MuiInputBase-root': {
-                  fontSize: '14px',
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
                   borderRadius: 4,
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                },
+              },
+            },
+          },
+          MuiSelect: {
+            styleOverrides: {
+              root: {
+                '& .MuiSelect-select': {
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
                 },
               },
             },

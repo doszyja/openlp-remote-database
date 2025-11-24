@@ -284,8 +284,8 @@ export default function SongDetailPage() {
           <FormControlLabel
             control={
               <Switch
-                checked={isFullscreen}
-                onChange={(e) => setIsFullscreen(e.target.checked)}
+                checked={!isFullscreen}
+                onChange={(e) => setIsFullscreen(!e.target.checked)}
                 size="small"
               />
             }
@@ -297,10 +297,10 @@ export default function SongDetailPage() {
                 </Typography>
               </Box>
             }
-            sx={{ display: { xs: 'none', sm: 'flex' }, m: 0 }}
+            sx={{ display: { xs: 'none', lg: 'flex' }, m: 0 }}
           />
           {hasEditPermission && (
-            <>
+            <Box display="flex" gap={{ xs: 0.25, sm: 0.5 }}>
               <Button
                 variant="contained"
                 startIcon={<EditIcon />}
@@ -336,7 +336,7 @@ export default function SongDetailPage() {
               >
                 Usuń
               </Button>
-            </>
+            </Box>
           )}
         </Stack>
       </Box>
@@ -647,32 +647,32 @@ export default function SongDetailPage() {
         <Box 
           display="flex" 
           flexDirection={{ xs: 'column', md: 'row' }}
-          gap={{ xs: 2, md: 3 }} 
+          gap={{ xs: 2, md: 2 }} 
           alignItems="flex-start" 
-          maxWidth={{ xs: '100%', sm: '1200px', lg: '1400px' }} 
+          maxWidth={{ xs: '100%', md: '1024px', lg: '1200px' }} 
           mx="auto"
           width="100%"
-          sx={{ overflowX: 'hidden' }}
+          sx={{ px: { xs: 0, md: 2 }, overflowX: 'hidden' }}
         >
           <Box
             sx={{
-              width: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
-              minWidth: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
-              maxWidth: { xs: '100%', md: isFullscreen ? 0 : '300px', lg: isFullscreen ? 0 : '320px' },
+              width: { xs: '100%', md: isFullscreen ? 0 : '260px', lg: isFullscreen ? 0 : '320px' },
+              minWidth: { xs: '100%', md: isFullscreen ? 0 : '260px', lg: isFullscreen ? 0 : '320px' },
+              maxWidth: { xs: '100%', md: isFullscreen ? 0 : '260px', lg: isFullscreen ? 0 : '320px' },
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               display: { xs: 'none', md: 'block' },
             }}
           >
-            <Box sx={{ width: { md: '300px', lg: '320px' }, position: 'sticky', top: 20 }}>
+            <Box sx={{ width: { md: '240px', lg: '320px' }, position: 'sticky', top: 20 }}>
               {searchColumn}
             </Box>
           </Box>
           <Box 
             sx={{ 
-              width: { xs: '100%', md: isFullscreen ? '100%' : 'calc(100% - 300px)', lg: isFullscreen ? '100%' : 'calc(100% - 320px)' }, 
-              maxWidth: { xs: '100%', md: isFullscreen ? '1000px' : '900px', lg: isFullscreen ? '1200px' : '1000px' },
+              width: { xs: '100%', md: isFullscreen ? '100%' : 'calc(100% - 260px)', lg: isFullscreen ? '100%' : 'calc(100% - 320px)' }, 
+              maxWidth: { xs: '100%', md: '100%', lg: isFullscreen ? '1200px' : '1000px' },
               flexShrink: 0,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               overflowX: 'hidden',

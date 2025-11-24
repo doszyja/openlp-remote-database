@@ -314,13 +314,22 @@ export class AuthService {
       return null;
     }
 
+    const ADMIN_ROLE_ID = '1161734352447746110';
+    const devDiscordId = 'dev-user-0000';
+    
     // Check if user has any of the required roles for edit permission
     // Support multiple role IDs (comma-separated or space-separated)
     const requiredRoleId = process.env.DISCORD_REQUIRED_ROLE_ID;
     const allowedRoleIds = requiredRoleId
       ? requiredRoleId.split(/[,\s]+/).map(id => id.trim()).filter(id => id.length > 0)
       : [];
-    const hasEditPermission = allowedRoleIds.some(roleId => user.discordRoles?.includes(roleId)) || false;
+    
+    // For dev users with admin role, always grant edit permission
+    const isDevUser = user.discordId === devDiscordId;
+    const hasAdminRole = user.discordRoles?.includes(ADMIN_ROLE_ID) || false;
+    const hasEditPermission = isDevUser && hasAdminRole
+      ? true
+      : allowedRoleIds.some(roleId => user.discordRoles?.includes(roleId)) || false;
 
     return {
       id: user._id.toString(),
@@ -333,5 +342,75 @@ export class AuthService {
       createdAt: (user as any).createdAt || new Date(),
       updatedAt: (user as any).updatedAt || new Date(),
     };
+  }
+
+  /**
+   * Dev-only login method that creates a mock user for development
+   * Only works when NODE_ENV !== 'production'
+   * @param ipAddress - Optional IP address for audit logging
+   * @param userAgent - Optional user agent for audit logging
+   * @param userType - 'admin' for admin access, 'regular' for regular user (default: 'regular')
+   */
+  async devLogin(ipAddress?: string, userAgent?: string, userType: 'admin' | 'regular' = 'regular'): Promise<{ access_token: string; user: UserResponseDto }> {
+    // Only allow in development
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Dev login is only available in development mode');
+    }
+
+    const ADMIN_ROLE_ID = '1161734352447746110';
+    const devDiscordId = 'dev-user-0000';
+    const devUsername = 'Dev User';
+    
+    // Determine roles and permissions based on user type
+    const isAdmin = userType === 'admin';
+    const discordRoles = isAdmin ? [ADMIN_ROLE_ID] : [];
+    const hasEditPermission = isAdmin;
+
+    // Find or create dev user
+    let user = await this.userModel.findOne({ discordId: devDiscordId }).lean().exec();
+
+    if (!user) {
+      // Create dev user
+      const newUser = await this.userModel.create({
+        discordId: devDiscordId,
+        username: devUsername,
+        discriminator: '0000',
+        avatar: null,
+        discordRoles: discordRoles,
+      });
+      user = newUser.toObject();
+    } else {
+      // Update existing dev user with current role selection
+      await this.userModel.updateOne(
+        { discordId: devDiscordId },
+        { discordRoles: discordRoles }
+      );
+      user.discordRoles = discordRoles;
+    }
+
+    const userDto: UserResponseDto = {
+      id: user._id.toString(),
+      discordId: user.discordId,
+      username: user.username,
+      discriminator: user.discriminator || null,
+      avatar: user.avatar || null,
+      discordRoles: discordRoles,
+      hasEditPermission: hasEditPermission,
+      createdAt: (user as any).createdAt || new Date(),
+      updatedAt: (user as any).updatedAt || new Date(),
+    };
+
+    // Generate token and log audit
+    const result = await this.login(userDto, ipAddress, userAgent);
+    
+    console.log('[devLogin] Dev user logged in:', {
+      id: userDto.id,
+      username: userDto.username,
+      userType,
+      discordRoles: userDto.discordRoles,
+      hasEditPermission: hasEditPermission,
+    });
+
+    return result;
   }
 }
