@@ -4,6 +4,7 @@ import { Song, SongSchema } from '../schemas/song.schema';
 import { Tag, TagSchema } from '../schemas/tag.schema';
 import { User, UserSchema } from '../schemas/user.schema';
 import { AuditLog, AuditLogSchema } from '../schemas/audit-log.schema';
+import { SongsVersion, SongsVersionSchema } from '../schemas/songs-version.schema';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AuditLog, AuditLogSchema } from '../schemas/audit-log.schema';
       { name: Tag.name, schema: TagSchema },
       { name: User.name, schema: UserSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
+      { name: SongsVersion.name, schema: SongsVersionSchema },
     ]),
   ],
   exports: [MongooseModule],

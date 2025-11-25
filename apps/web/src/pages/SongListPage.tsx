@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Typography,
@@ -16,11 +16,53 @@ import {
   Skeleton,
 } from '@mui/material';
 import { Add as AddIcon, MusicNote as MusicNoteIcon, Download as DownloadIcon, ErrorOutline as ErrorOutlineIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import { useSongs } from '../hooks/useSongs';
+import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useAuth } from '../contexts/AuthContext';
 import { useExportZip } from '../hooks/useExportZip';
 import { useNotification } from '../contexts/NotificationContext';
-import type { SongQueryDto } from '@openlp/shared';
+import type { SongListCacheItem } from '@openlp/shared';
+
+// Memoized song list item to prevent unnecessary re-renders
+const SongListItem = memo(({ song, onNavigate }: { 
+  song: SongListCacheItem; 
+  onNavigate: (path: string) => void;
+}) => {
+  const displayTitle = song.number
+    ? `${song.title} (${song.number})`
+    : song.title;
+  
+  const handleClick = useCallback(() => {
+    onNavigate(`/songs/${song.id}`);
+  }, [song.id, onNavigate]);
+  
+  return (
+    <ListItem
+      disablePadding
+      sx={{
+        '&:hover': {
+          backgroundColor: 'action.hover',
+        },
+      }}
+    >
+      <ListItemButton onClick={handleClick}>
+        <ListItemText
+          primary={displayTitle}
+          primaryTypographyProps={{
+            variant: 'body1',
+            sx: {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontSize: '0.95rem',
+            },
+          }}
+        />
+      </ListItemButton>
+    </ListItem>
+  );
+});
+
+SongListItem.displayName = 'SongListItem';
 
 export default function SongListPage() {
   const navigate = useNavigate();
@@ -36,11 +78,11 @@ export default function SongListPage() {
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const exportZip = useExportZip();
 
-  // Debounce search input
+  // Debounce search input - faster for cached searches (200ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 500); // 600ms debounce delay (increased from 300ms)
+    }, 200); // 200ms debounce for cached search (instant, no API calls)
 
     return () => clearTimeout(timer);
   }, [search]);
@@ -52,19 +94,15 @@ export default function SongListPage() {
     setHasMore(true);
   }, [debouncedSearch]);
 
-  // Memoize query object to prevent unnecessary re-renders
-  const query = useMemo<SongQueryDto>(() => {
-    const q: SongQueryDto = {
-      page,
-      limit: 200,
-    };
-    if (debouncedSearch) {
-      q.search = debouncedSearch;
-    }
-    return q;
-  }, [page, debouncedSearch]);
-
-  const { data, isLoading, error, refetch } = useSongs(query);
+  // Use cached songs for both search and initial list (no API calls needed)
+  const { songs: cachedSongs, isLoading: isCacheLoading, error, refetch: refetchCache } = useCachedSongs();
+  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(debouncedSearch);
+  
+  // Use cached search results if we have a search query, otherwise use cached songs list
+  const useCacheForSearch = !!debouncedSearch;
+  
+  // Determine loading state
+  const isLoading = useCacheForSearch ? isSearchLoading : isCacheLoading;
 
   // Debounce loading animation - only show if request takes longer than 300ms
   useEffect(() => {
@@ -90,27 +128,57 @@ export default function SongListPage() {
     }
   }, [error, page]);
 
-  // Update allSongs when new data arrives
+  // Update allSongs state only when data actually changes
   useEffect(() => {
-    if (data?.data) {
+    if (useCacheForSearch) {
+      // Use cached search results - only update if different
+      setAllSongs((prev) => {
+        // Quick length check first
+        if (prev.length !== searchResults.length) {
+          return searchResults;
+        }
+        // Deep comparison of IDs to avoid unnecessary updates
+        const prevIds = prev.map(s => s.id).join(',');
+        const newIds = searchResults.map(s => s.id).join(',');
+        if (prevIds !== newIds) {
+          return searchResults;
+        }
+        return prev; // No change, keep previous reference
+      });
+      setHasMore(false); // No pagination for cached search
+    } else if (cachedSongs && cachedSongs.length > 0) {
+      // Use cached songs list (paginated client-side)
+      const itemsPerPage = 200;
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedSongs = cachedSongs.slice(startIndex, endIndex);
+      
       if (page === 1) {
-        setAllSongs(data.data);
+        setAllSongs(paginatedSongs);
       } else {
-        setAllSongs((prev) => [...prev, ...data.data]);
+        setAllSongs((prev) => {
+          // Only append if not already added
+          const existingIds = new Set(prev.map(s => s.id));
+          const newSongs = paginatedSongs.filter(s => !existingIds.has(s.id));
+          if (newSongs.length > 0) {
+            return [...prev, ...newSongs];
+          }
+          return prev;
+        });
       }
-      setHasMore(data.data.length === 200 && data.data.length > 0);
+      setHasMore(endIndex < cachedSongs.length);
     }
-  }, [data, page]);
+  }, [useCacheForSearch, searchResults, cachedSongs, page]);
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setSearch(value);
-  };
+  }, []);
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     setPage((prev) => prev + 1);
-  };
+  }, []);
 
-  const handleExportZip = async () => {
+  const handleExportZip = useCallback(async () => {
     // Prevent multiple clicks - debounce of 3 seconds
     const now = Date.now();
     const timeSinceLastExport = now - lastExportTime;
@@ -146,7 +214,7 @@ export default function SongListPage() {
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [isExporting, exportZip, lastExportTime, showSuccess, showError]);
 
   // Show full-screen error if API fails
   if (error && page === 1) {
@@ -219,7 +287,9 @@ export default function SongListPage() {
           <Button
             variant="contained"
             startIcon={<RefreshIcon />}
-            onClick={() => refetch()}
+            onClick={() => {
+              refetchCache();
+            }}
             size="large"
             sx={{
               px: 4,
@@ -425,7 +495,7 @@ export default function SongListPage() {
                    />
                  </Paper>
 
-      {allSongs.length === 0 && !isLoading && !error && page === 1 && data && data.data.length === 0 && (
+      {allSongs.length === 0 && !isLoading && !error && page === 1 && cachedSongs && cachedSongs.length === 0 && (
         <Alert severity="info">Nie znaleziono pieśni. Utwórz pierwszą pieśń!</Alert>
       )}
 
@@ -445,39 +515,13 @@ export default function SongListPage() {
           }}
         >
           <List dense>
-            {allSongs.map((song) => {
-              // Format song title with author if available
-              const displayTitle = song.number
-                ? `${song.title} (${song.number})`
-                : song.title;
-              
-              return (
-                <ListItem
-                  key={song.id}
-                  disablePadding
-                  sx={{
-                    '&:hover': {
-                      backgroundColor: 'action.hover',
-                    },
-                  }}
-                >
-                  <ListItemButton onClick={() => navigate(`/songs/${song.id}`)}>
-                    <ListItemText
-                      primary={displayTitle}
-                      primaryTypographyProps={{
-                        variant: 'body1',
-                        sx: {
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontSize: '0.95rem',
-                        },
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+            {allSongs.map((song) => (
+              <SongListItem
+                key={song.id}
+                song={song}
+                onNavigate={navigate}
+              />
+            ))}
           </List>
           
           {/* Load More button */}

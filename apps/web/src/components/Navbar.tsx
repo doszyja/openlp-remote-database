@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, History as HistoryIcon } from '@mui/icons-material';
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
-import { useSongs } from '../hooks/useSongs';
+import { useCachedSongs } from '../hooks/useCachedSongs';
 import { useState, useRef } from 'react';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
@@ -16,8 +16,8 @@ export default function Navbar() {
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
   
-  // Check if API is working by trying to fetch songs
-  const { error: apiError } = useSongs({ page: 1, limit: 1 });
+  // Check if API is working using cached songs (no unnecessary requests)
+  const { error: apiError } = useCachedSongs();
   const isApiError = !!apiError;
   
   // Check if there's a token in localStorage synchronously to avoid showing login button during initial load

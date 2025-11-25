@@ -7,6 +7,7 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AuthProvider } from './contexts/AuthContext';
+import './utils/cache-debug'; // Initialize cache debug utilities
 import './index.css';
 
 // Disable browser's automatic scroll restoration

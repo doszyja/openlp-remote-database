@@ -56,6 +56,26 @@ export class SongController {
     return this.songService.findAll({ ...query, search });
   }
 
+  @Get('version')
+  @Public() // Public: Anonymous users can check version
+  async getVersion() {
+    const version = await this.songService.getVersion();
+    return { version };
+  }
+
+  @Get('all')
+  @Public() // Public: Anonymous users can get all songs (for caching)
+  // Security: Rate limit this endpoint more strictly as it returns all songs
+  @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100 requests per minute
+  async getAllSongs() {
+    const songs = await this.songService.findAllForCache();
+    const version = await this.songService.getVersion();
+    return {
+      version,
+      songs,
+    };
+  }
+
   @Get(':id')
   @Public() // Public: Anonymous users can view individual songs
   findOne(@Param('id') id: string) {

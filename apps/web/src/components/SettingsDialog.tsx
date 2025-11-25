@@ -16,7 +16,7 @@ import {
 import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useSongs } from '../hooks/useSongs';
+import { useCachedSongs } from '../hooks/useCachedSongs';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -26,8 +26,8 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const { mode, toggleMode } = useTheme();
   const { isAuthenticated, user } = useAuth();
   
-  // Check if API is working by trying to fetch songs
-  const { error: apiError } = useSongs({ page: 1, limit: 1 });
+  // Check if API is working using cached songs (no unnecessary requests)
+  const { error: apiError } = useCachedSongs();
   const isApiError = !!apiError;
 
   const handleDiscordLogin = () => {
