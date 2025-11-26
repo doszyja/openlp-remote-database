@@ -1,10 +1,76 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+
+const manifestIcons = [
+  {
+    src: '/android/android-launchericon-192-192.png',
+    sizes: '192x192',
+    type: 'image/png',
+    purpose: 'any',
+  },
+  {
+    src: '/android/android-launchericon-512-512.png',
+    sizes: '512x512',
+    type: 'image/png',
+    purpose: 'any',
+  },
+  {
+    src: '/ios/180.png',
+    sizes: '180x180',
+    type: 'image/png',
+    purpose: 'any apple-touch-icon',
+  },
+  {
+    src: '/ios/512.png',
+    sizes: '512x512',
+    type: 'image/png',
+    purpose: 'maskable',
+  },
+  {
+    src: '/windows11/SplashScreen.scale-200.png',
+    sizes: '1240x600',
+    type: 'image/png',
+  },
+];
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: [
+        'android/android-launchericon-192-192.png',
+        'android/android-launchericon-512-512.png',
+        'ios/32.png',
+        'ios/180.png',
+        'ios/512.png',
+        'windows11/SplashScreen.scale-200.png',
+        'Obraz1.png',
+      ],
+      manifest: {
+        name: 'OpenLP Remote Database',
+        short_name: 'OpenLP DB',
+        description: 'Zarządzaj pieśniami zborowymi i synchronizuj je z OpenLP nawet offline.',
+        theme_color: '#1E3A5F',
+        background_color: '#ffffff',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        lang: 'pl',
+        icons: manifestIcons,
+      },
+      workbox: {
+        navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+      },
+      devOptions: {
+        enabled: true,
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

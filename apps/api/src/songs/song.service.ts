@@ -8,6 +8,7 @@ import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditLogAction } from '../schemas/audit-log.schema';
+import { SongsVersionService } from './songs-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
 
@@ -17,6 +18,7 @@ export class SongService {
     @InjectModel(Song.name) private songModel: Model<SongDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
     private auditLogService: AuditLogService,
+    private songsVersionService: SongsVersionService,
   ) {}
 
   async create(createSongDto: CreateSongDto) {
@@ -50,6 +52,11 @@ export class SongService {
       searchLyrics: songData.searchLyrics || searchLyrics, // Auto-generate from verses if not provided
     });
 
+    // Increment version when song is created
+    await this.songsVersionService.incrementVersion().catch(err => 
+      console.error('Failed to increment songs version:', err)
+    );
+
     return this.findOne(song._id.toString());
   }
 
@@ -73,9 +80,14 @@ export class SongService {
     }
 
     if (search) {
+      // Use indexed search fields (searchTitle, searchLyrics) for better performance
+      // Also search in original fields as fallback
+      const searchLower = search.toLowerCase();
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { verses: { $regex: search, $options: 'i' } }, // Search in verses string field
+        { searchTitle: { $regex: searchLower, $options: 'i' } }, // Indexed field
+        { title: { $regex: search, $options: 'i' } }, // Fallback to original
+        { searchLyrics: { $regex: searchLower, $options: 'i' } }, // Indexed field (lowercase lyrics)
+        { verses: { $regex: search, $options: 'i' } }, // Fallback to original verses
       ];
     }
 
@@ -252,6 +264,11 @@ export class SongService {
     // Update song
     await this.songModel.updateOne({ _id: id }, updateData);
 
+    // Increment version when song is updated
+    await this.songsVersionService.incrementVersion().catch(err => 
+      console.error('Failed to increment songs version:', err)
+    );
+
     // Log audit trail if user is authenticated
     if (userId && username) {
       await this.auditLogService.log(
@@ -286,6 +303,11 @@ export class SongService {
       { deletedAt: new Date() },
     );
 
+    // Increment version when song is deleted
+    await this.songsVersionService.incrementVersion().catch(err => 
+      console.error('Failed to increment songs version:', err)
+    );
+
     // Log audit trail if user is authenticated
     if (userId && username) {
       await this.auditLogService.log(
@@ -301,6 +323,44 @@ export class SongService {
         },
       ).catch(err => console.error('Failed to log audit trail:', err));
     }
+  }
+
+  /**
+   * Get all songs list (lightweight, for caching) - only metadata, no full content
+   */
+  async findAllForCache() {
+    const songs = await this.songModel
+      .find({ deletedAt: null })
+      .select('title number language tags searchTitle searchLyrics chorus verses')
+      .populate('tags', 'name')
+      .sort({ title: 1 })
+      .lean()
+      .exec();
+
+    // Transform to lightweight format (only fields needed for search and display)
+    const transformedSongs = songs.map((song: any) => ({
+      id: song._id.toString(),
+      title: song.title,
+      number: song.number,
+      language: song.language,
+      tags: song.tags.map((tag: any) => ({
+        id: tag._id.toString(),
+        name: tag.name,
+      })),
+      chorus: song.chorus ?? null,
+      verses: song.verses ?? null,
+      searchTitle: song.searchTitle,
+      searchLyrics: song.searchLyrics,
+    }));
+
+    return transformedSongs;
+  }
+
+  /**
+   * Get current version of songs collection
+   */
+  async getVersion(): Promise<number> {
+    return this.songsVersionService.getVersion();
   }
 
   /**

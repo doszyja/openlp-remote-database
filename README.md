@@ -13,6 +13,7 @@ This project enables collaborative song editing through a web application, with 
 - **Web Application**: Mobile-friendly React app for editing songs from phones/browsers
 - **REST API**: NestJS backend with MongoDB database
 - **Sync Tool**: CLI application that syncs backend → OpenLP SQLite
+- **OpenLP Plugin**: Native OpenLP plugin with "Synchronizuj" button for easy syncing
 - **Monorepo**: pnpm workspaces with shared TypeScript types
 
 ## 📁 Project Structure
@@ -22,7 +23,8 @@ openlp-database/
 ├── apps/
 │   ├── api/          # NestJS backend
 │   ├── web/           # React + Vite frontend
-│   └── sync/          # OpenLP sync CLI tool
+│   ├── sync/          # OpenLP sync CLI tool
+│   └── openlp-plugin/ # OpenLP plugin (Python)
 ├── packages/
 │   └── shared/        # Shared TypeScript types
 ├── docs/              # Project documentation
@@ -113,6 +115,7 @@ This project includes `.cursorrules` to help Cursor AI maintain proper context:
 - **[DOCKER_SETUP.md](docs/DOCKER_SETUP.md)** - Docker and Docker Compose setup guide
 - **[PROGRESS.md](docs/PROGRESS.md)** - Detailed progress tracking
 - **[QUICK_START.md](docs/QUICK_START.md)** - Quick start guide
+- **[OPENLP_PLUGIN.md](docs/OPENLP_PLUGIN.md)** - OpenLP plugin documentation
 
 ## 🛠️ Development
 
@@ -145,6 +148,7 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 - `apps/api/README.md`
 - `apps/web/README.md`
 - `apps/sync/README.md`
+- `apps/openlp-plugin/README.md` - OpenLP plugin documentation
 
 ## 🏗️ Architecture
 
@@ -170,14 +174,28 @@ Each app has its own scripts in its `package.json`. See individual READMEs:
 - **HTTP**: axios for API calls
 - **CLI**: commander.js
 
+### OpenLP Plugin (Python)
+
+- **Language**: Python 3.6+
+- **Framework**: OpenLP Plugin API
+- **UI**: PyQt5
+- **HTTP**: requests library
+
 ## 🔄 Sync Workflow
 
 1. Users edit songs in the web application
 2. Songs are saved to the backend MongoDB database
-3. Before services, run the sync tool on the church PC
-4. Sync tool fetches songs from backend API
-5. Sync tool updates OpenLP SQLite database
+3. Before services, sync songs to OpenLP using one of:
+   - **OpenLP Plugin**: Click "Synchronizuj" button in OpenLP (recommended)
+   - **CLI Tool**: Run sync command on church PC
+4. Sync fetches songs from backend API
+5. Sync updates OpenLP SQLite database
 6. OpenLP now has the latest songs for projection
+
+### Sync Options
+
+- **OpenLP Plugin** (Recommended): Native plugin with GUI button - see [OpenLP Plugin Documentation](docs/OPENLP_PLUGIN.md)
+- **CLI Tool**: Command-line tool for automated/scheduled syncs - see [Sync Tool Documentation](docs/SYNC_TOOL.md)
 
 ## 📋 Current Status
 
@@ -219,4 +237,4 @@ Built for churches using OpenLP projection software.
 
 ---
 
-**Last Updated**: 2025-01-22
+**Last Updated**: 2025-11-24

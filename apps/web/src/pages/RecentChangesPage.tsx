@@ -18,9 +18,15 @@ const recentChanges: ChangeItem[] = [
   {
     date: '2025-01-24',
     changes: [
+      'Zaimplementowano inteligentny system cache dla piosenek z weryfikacją wersji - cache jest sprawdzany tylko co 2 minuty zamiast przy każdej zmianie strony',
+      'Naprawiono problem z cache - wersja 0 jest teraz poprawnie rozpoznawana jako prawidłowa wersja',
+      'Zoptymalizowano SongDetailPage - teraz używa cache zamiast pobierania danych z API, co znacznie przyspiesza wyświetlanie',
+      'Dodano ochronę przed wielokrotnym sprawdzaniem wersji - wszystkie komponenty współdzielą jedno sprawdzenie wersji',
+      'Dodano automatyczną inkrementację wersji przy operacjach create/update/delete w API, co zapewnia aktualność cache',
       'Poprawiono układ na stronie szczegółów pieśni w widoku 1024px (węższa kolumna nawigacyjna, ograniczona szerokość kontenera, dodatkowe odstępy)',
       'Przełącznik normalny/pełny widok jest teraz widoczny dopiero od szerokości lg, więc przyciski mieszczą się na mniejszych ekranach',
       'Sekcje „Instrukcja użytkownika” i „Ostatnie zmiany” na stronie głównej przywrócono do kompaktowego stylu z dopasowanym tłem i cieniami w obu trybach',
+      'Skonfigurowano PWA (vite-plugin-pwa, manifest, rejestracja service workera), aby aplikacja działała offline',
     ],
   },
   {

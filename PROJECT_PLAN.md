@@ -44,11 +44,11 @@ This project creates a web-based song management system for churches using OpenL
 
 ## EPIC 2: Backend API & Database
 
-**Goal**: Build the NestJS REST API with PostgreSQL database as the single source of truth.
+**Goal**: Build the NestJS REST API with MongoDB (via Mongoose) as the single source of truth.
 
 ### Database Design
 
-**Song Model** (using Prisma):
+**Song Model** (Mongoose schema):
 
 - `id` (UUID, primary key)
 - `title` (string, required)
@@ -86,19 +86,19 @@ This project creates a web-based song management system for churches using OpenL
 1. **Initialize NestJS application (`apps/api`)**
    - Create NestJS project with CLI
    - Configure TypeScript and build settings
-   - Set up Prisma as ORM
+   - Install MongoDB driver + Mongoose as ODM
    - Configure environment variables
 
-2. **Set up Prisma schema and database**
-   - Define Prisma schema with Song, Verse, Tag models
-   - Configure PostgreSQL connection
-   - Set up Prisma client generation
-   - Create initial migration
+2. **Set up MongoDB & Mongoose**
+   - Define Mongoose schemas for Song, Verse (embedded), Tag, OpenLP mapping, User
+   - Configure MongoDB connection (local + Docker)
+   - Register schemas with `MongooseModule.forFeature`
+   - Add compound indexes for search/title lookups
 
-3. **Create Prisma module and service**
-   - Implement `PrismaModule` for dependency injection
-   - Create `PrismaService` with lifecycle hooks
-   - Add database connection handling
+3. **Create Database module and helpers**
+   - Implement `DatabaseModule` that bootstraps Mongoose
+   - Expose connection health info for `/health`
+   - Centralize Mongo connection settings (retry, debug logging)
 
 4. **Implement Song module structure**
    - Create `SongModule`
@@ -134,7 +134,7 @@ This project creates a web-based song management system for churches using OpenL
    - Implement global exception filter
    - Add validation pipes
    - Create custom error responses
-   - Handle Prisma errors (not found, unique constraints)
+   - Handle Mongoose errors (not found, validation, duplicate keys)
 
 10. **Create OpenLP import script (one-time migration)**
     - Create CLI script to read OpenLP SQLite database
@@ -530,7 +530,7 @@ Based on typical OpenLP SQLite structure:
    - Create multi-stage Dockerfile for NestJS backend
    - Create Dockerfile for React frontend (production build)
    - Create docker-compose.yml for local development with:
-     - PostgreSQL database service
+     - MongoDB database service
      - NestJS backend service
      - React frontend service
      - Volume mounts for development
@@ -544,8 +544,8 @@ Based on typical OpenLP SQLite structure:
 
 ## Assumptions & Decisions
 
-1. **ORM Choice**: Using **Prisma** (modern, type-safe, excellent DX)
-2. **Database**: **PostgreSQL** (production-ready, but can use SQLite for development)
+1. **ODM Choice**: Using **Mongoose** (battle-tested MongoDB ODM with schema hooks)
+2. **Database**: **MongoDB** (single source of truth, packaged via Docker or Atlas)
 3. **OpenLP Schema**: We'll inspect the actual OpenLP SQLite schema during implementation and adjust mapping accordingly
 4. **ID Strategy**: Backend uses UUIDs; OpenLP uses integers. We'll store backend UUID in OpenLP's `comments` field as JSON metadata, or maintain a separate mapping table
 5. **Sync Direction**: MVP is one-way (backend → OpenLP). Two-way sync can be added later

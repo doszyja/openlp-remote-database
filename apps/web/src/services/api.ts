@@ -4,6 +4,7 @@ import type {
   SongQueryDto,
   PaginatedResponseDto,
   SongResponseDto,
+  SongListCacheItem,
   AuditLog,
 } from '@openlp/shared';
 
@@ -31,6 +32,14 @@ async function request<T>(
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
   
+  // Log API requests (except version checks to reduce noise)
+  const isVersionCheck = endpoint.includes('/songs/version');
+  if (!isVersionCheck) {
+    console.log(`[API Request] ${options?.method || 'GET'} ${endpoint}`);
+  }
+  
+  const startTime = performance.now();
+  
   // Get auth token from localStorage
   const token = localStorage.getItem(STORAGE_KEY);
   
@@ -50,9 +59,13 @@ async function request<T>(
   };
 
   const response = await fetch(url, config);
+  const duration = performance.now() - startTime;
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (!isVersionCheck) {
+      console.error(`[API Request] ${options?.method || 'GET'} ${endpoint} failed (${response.status}) in ${duration.toFixed(2)}ms`);
+    }
     throw new ApiError(
       errorData.message || `HTTP ${response.status}`,
       response.status,
@@ -60,7 +73,12 @@ async function request<T>(
     );
   }
 
-  return response.json();
+  const data = await response.json();
+  if (!isVersionCheck) {
+    console.log(`[API Request] ${options?.method || 'GET'} ${endpoint} completed in ${duration.toFixed(2)}ms`);
+  }
+  
+  return data;
 }
 
 export const api = {
@@ -133,6 +151,14 @@ export const api = {
       }
       
       return response.blob();
+    },
+
+    getVersion: (): Promise<{ version: number }> => {
+      return request('/songs/version');
+    },
+
+    getAllForCache: (): Promise<{ version: number; songs: SongListCacheItem[] }> => {
+      return request('/songs/all');
     },
   },
   auditLogs: {
