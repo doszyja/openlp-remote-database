@@ -1,4 +1,4 @@
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -15,80 +15,23 @@ import {
   DialogActions,
   Switch,
   FormControlLabel,
-  TextField,
-  InputAdornment,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
-  MusicNote as MusicNoteIcon,
   Fullscreen as FullscreenIcon,
   ViewColumn as ViewColumnIcon,
   Slideshow as SlideshowIcon,
 } from '@mui/icons-material';
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { songsCache } from '../services/songs-cache';
-import type { SongListCacheItem } from '@openlp/shared';
-
-// Memoized search song list item to prevent unnecessary re-renders
-const SearchSongListItem = memo(
-  ({
-    song,
-    currentId,
-    onSongClick,
-  }: {
-    song: SongListCacheItem;
-    currentId: string | undefined;
-    onSongClick: () => void;
-  }) => {
-    const isSelected = song.id === currentId;
-
-    return (
-      <ListItem disablePadding sx={{ mb: 0.5 }} data-song-id={song.id}>
-        <ListItemButton
-          selected={isSelected}
-          onClick={onSongClick}
-          dense
-          component={Link}
-          to={`/songs/${song.id}`}
-          sx={{
-            py: 0.75,
-            px: 1,
-            borderRadius: 1,
-            textDecoration: 'none',
-            color: 'inherit',
-            '&.Mui-selected': {
-              fontWeight: 600,
-              '& .MuiListItemText-primary': {
-                fontWeight: 600,
-              },
-            },
-          }}
-        >
-          <ListItemText
-            primary={song.title}
-            primaryTypographyProps={{
-              fontSize: '0.875rem',
-              fontWeight: isSelected ? 600 : 400,
-            }}
-          />
-        </ListItemButton>
-      </ListItem>
-    );
-  }
-);
-
-SearchSongListItem.displayName = 'SearchSongListItem';
+import SongList from '../components/SongList';
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -99,7 +42,6 @@ export default function SongDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showLoading, setShowLoading] = useState(false);
 
   // Get all cached songs to ensure cache is loaded
@@ -146,34 +88,22 @@ export default function SongDetailPage() {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Debounce search input - faster for cached searches (200ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 200); // 200ms debounce for cached search (instant, no API calls)
-
-    return () => clearTimeout(timer);
-  }, [search]);
-
-
   // Use cached search for instant results when searching, otherwise show all songs
   const { results: searchResults, isLoading: isSearchLoading } =
-    useCachedSongSearch(debouncedSearch);
+    useCachedSongSearch(search);
 
   // Memoize search results to prevent unnecessary re-renders
-  // Always limit to 100 songs max (both for search and when no search)
+  // Show all songs (no limit) - same as SongListPage
   const allSearchSongs = useMemo(() => {
-    if (!debouncedSearch.trim()) {
-      // When no search, show first 100 songs
-      const songs = allCachedSongs || [];
-      return songs.slice(0, 100);
+    if (!search.trim()) {
+      // When no search, show all songs
+      return allCachedSongs || [];
     }
-    // When searching, limit to 100 results
-    const results = searchResults || [];
-    return results.slice(0, 100);
-  }, [debouncedSearch, searchResults, allCachedSongs]);
+    // When searching, show all results
+    return searchResults || [];
+  }, [search, searchResults, allCachedSongs]);
 
-  const isSearchLoadingState = debouncedSearch.trim() ? isSearchLoading : isCacheLoading;
+  const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
 
   const handleDelete = async () => {
     if (!id || deleteSong.isPending) return;
@@ -192,9 +122,6 @@ export default function SongDetailPage() {
     }
   };
 
-  const handleSearch = useCallback((value: string) => {
-    setSearch(value);
-  }, []);
 
   // Handle scroll position when navigating to a song
   const handleSongClick = useCallback(() => {
@@ -593,6 +520,16 @@ export default function SongDetailPage() {
     setIsFullscreen,
   ]);
 
+  // Calculate list height for SongDetailPage
+  const calculateListHeight = useCallback((viewportHeight: number) => {
+    // Account for header, search box, and padding
+    const headerHeight = 60;
+    const searchHeight = 120;
+    const padding = 40;
+    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
+    return Math.max(300, calculatedHeight);
+  }, []);
+
   // Memoize search column to prevent unnecessary re-renders
   const searchColumn = useMemo(
     () => (
@@ -602,29 +539,10 @@ export default function SongDetailPage() {
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
+          height: '100%',
           position: 'relative',
         }}
       >
-        {/* Loading overlay for search */}
-        {isSearchLoadingState && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-              zIndex: 1000,
-              borderRadius: 1,
-            }}
-          >
-            <CircularProgress size={24} />
-          </Box>
-        )}
         <Typography
           variant="h6"
           gutterBottom
@@ -632,69 +550,25 @@ export default function SongDetailPage() {
         >
           Szukaj Pieśni
         </Typography>
-        <TextField
-          fullWidth
-          placeholder="Szukaj pieśni..."
-          value={search}
-          onChange={e => handleSearch(e.target.value)}
-          size="small"
-          sx={{
-            mb: 1.5,
-            flexShrink: 0,
-            '& .MuiInputBase-input': {
-              fontSize: '16px', // Minimum 16px to prevent iOS zoom
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <MusicNoteIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Box
-          id="search-songs-list"
-          onWheel={e => {
-            // Prevent scroll from propagating to window when scrolling inside the list
-            e.stopPropagation();
-          }}
-          onScroll={e => {
-            // Prevent scroll from propagating to window
-            e.stopPropagation();
-          }}
-          sx={{
-            flex: 1,
-            overflowY: 'auto',
-            minHeight: 0,
-            maxHeight: { xs: 'calc(100vh - 200px)', md: 'calc(100vh - 240px)' },
-            '&::-webkit-scrollbar': { width: '8px' },
-            '&::-webkit-scrollbar-track': { background: '#f1f1f1' },
-            '&::-webkit-scrollbar-thumb': { background: '#888', borderRadius: '4px' },
-            '&::-webkit-scrollbar-thumb:hover': { background: '#555' },
-          }}
-        >
-          {allSearchSongs.length > 0 && (
-            <List dense sx={{ py: 0 }}>
-              {allSearchSongs.map(resultSong => (
-                <SearchSongListItem
-                  key={resultSong.id}
-                  song={resultSong}
-                  currentId={id}
-                  onSongClick={handleSongClick}
-                />
-              ))}
-            </List>
-          )}
-          {debouncedSearch && allSearchSongs.length === 0 && !isSearchLoadingState && (
-            <Alert severity="info" sx={{ mt: 1.5, py: 0.5 }}>
-              Nie znaleziono pieśni.
-            </Alert>
-          )}
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <SongList
+            songs={allSearchSongs}
+            onSongClick={(songId) => {
+              handleSongClick();
+              navigate(`/songs/${songId}`);
+            }}
+            currentSongId={id}
+            showSearch={true}
+            searchValue={search}
+            onSearchChange={setSearch}
+            isLoading={isSearchLoadingState}
+            emptyMessage="Nie znaleziono pieśni."
+            calculateHeight={calculateListHeight}
+          />
         </Box>
       </Paper>
     ),
-    [isSearchLoadingState, search, handleSearch, allSearchSongs, id, handleSongClick]
+    [isSearchLoadingState, search, allSearchSongs, id, handleSongClick, navigate, calculateListHeight]
   );
 
   return (
