@@ -1,6 +1,6 @@
 import { AppBar, Toolbar, Typography, Box, IconButton, Avatar, Menu, MenuItem, Divider, Button } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon, History as HistoryIcon, EventNote as EventNoteIcon, LiveTv as LiveTvIcon } from '@mui/icons-material';
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useCachedSongs } from '../hooks/useCachedSongs';
@@ -71,7 +71,7 @@ export default function Navbar() {
           height: { xs: 56, sm: 64 },
         }}
       >
-        {/* Left: Home */}
+        {/* Left: Home, Service Plans, and Live */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flex: 1 }}>
           {!isHomePage && (
             <IconButton
@@ -86,6 +86,28 @@ export default function Navbar() {
               <HomeIcon />
             </IconButton>
           )}
+          <IconButton
+            component={Link}
+            to="/service-plans"
+            size="medium"
+            sx={{
+              color: 'text.primary',
+            }}
+            aria-label="Plany Nabożeństw"
+          >
+            <EventNoteIcon />
+          </IconButton>
+          <IconButton
+            component={Link}
+            to="/live"
+            size="medium"
+            sx={{
+              color: 'text.primary',
+            }}
+            aria-label="Na żywo"
+          >
+            <LiveTvIcon />
+          </IconButton>
         </Box>
 
         {/* Right: User menu / Settings */}

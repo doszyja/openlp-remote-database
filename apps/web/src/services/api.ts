@@ -6,6 +6,11 @@ import type {
   SongResponseDto,
   SongListCacheItem,
   AuditLog,
+  ServicePlan,
+  CreateServicePlanDto,
+  UpdateServicePlanDto,
+  AddSongToPlanDto,
+  SetActiveSongDto,
 } from '@openlp/shared';
 
 // In development, use relative paths (via Vite proxy)
@@ -184,6 +189,59 @@ export const api = {
 
       const queryString = params.toString();
       return request(`/audit-logs${queryString ? `?${queryString}` : ''}`);
+    },
+  },
+  servicePlans: {
+    getAll: (): Promise<ServicePlan[]> => {
+      return request('/service-plans');
+    },
+
+    getById: (id: string): Promise<ServicePlan> => {
+      return request(`/service-plans/${id}`);
+    },
+
+    getActive: (): Promise<{ servicePlan: { id: string; name: string }; item: { id: string; songId: string; songTitle: string; order: number }; song: SongResponseDto } | null> => {
+      return request('/service-plans/active');
+    },
+
+    create: (data: CreateServicePlanDto): Promise<ServicePlan> => {
+      return request('/service-plans', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: (id: string, data: UpdateServicePlanDto): Promise<ServicePlan> => {
+      return request(`/service-plans/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: (id: string): Promise<void> => {
+      return request(`/service-plans/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    addSong: (id: string, data: AddSongToPlanDto): Promise<ServicePlan> => {
+      return request(`/service-plans/${id}/songs`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    removeSong: (planId: string, itemId: string): Promise<void> => {
+      return request(`/service-plans/${planId}/songs/${itemId}`, {
+        method: 'DELETE',
+      });
+    },
+
+    setActiveSong: (id: string, data: SetActiveSongDto): Promise<ServicePlan> => {
+      return request(`/service-plans/${id}/active`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
     },
   },
 };

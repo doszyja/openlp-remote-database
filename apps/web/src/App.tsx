@@ -9,6 +9,8 @@ import SongCreatePage from './pages/SongCreatePage';
 import SongEditPage from './pages/SongEditPage';
 import SongDetailPage from './pages/SongDetailPage';
 import PresentationPage from './pages/PresentationPage';
+import ServicePlanPage from './pages/ServicePlanPage';
+import LivePage from './pages/LivePage';
 import AuditLogPage from './pages/AuditLogPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AboutPage from './pages/AboutPage';
@@ -20,6 +22,7 @@ function App() {
     <Routes>
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/songs/:id/presentation" element={<PresentationPage />} />
+      <Route path="/live" element={<LivePage />} />
       <Route
         path="/*"
         element={
@@ -34,6 +37,8 @@ function App() {
               <Route path="/songs/new" element={<ProtectedRoute><SongCreatePage /></ProtectedRoute>} />
               <Route path="/songs/:id" element={<SongDetailPage />} />
               <Route path="/songs/:id/edit" element={<ProtectedRoute><SongEditPage /></ProtectedRoute>} />
+              <Route path="/service-plans" element={<ServicePlanPage />} />
+              <Route path="/service-plans/:id" element={<ServicePlanPage />} />
               <Route path="/audit-logs" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
             </Routes>
           </Layout>

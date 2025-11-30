@@ -543,13 +543,24 @@ export default function SongDetailPage() {
           position: 'relative',
         }}
       >
-        <Typography
-          variant="h6"
-          gutterBottom
-          sx={{ mb: 1, fontSize: { xs: '0.95rem', md: '1rem' } }}
-        >
-          Szukaj Pieśni
-        </Typography>
+        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography
+            variant="h6"
+            sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}
+          >
+            Szukaj Pieśni
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ 
+              fontSize: { xs: '0.7rem', md: '0.75rem' },
+              fontStyle: 'italic',
+            }}
+          >
+            Ctrl+F / Cmd+F
+          </Typography>
+        </Box>
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <SongList
             songs={allSearchSongs}

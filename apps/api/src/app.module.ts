@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { SongModule } from './songs/song.module';
+import { ServicePlanModule } from './service-plan/service-plan.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -43,6 +44,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     DatabaseModule,
     AuthModule,
     SongModule,
+    ServicePlanModule,
     AuditLogModule,
   ],
   controllers: [AppController],

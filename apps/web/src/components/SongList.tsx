@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { FixedSizeList } from 'react-window';
 import {
     Box,
@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { MusicNote as MusicNoteIcon } from '@mui/icons-material';
 import type { SongListCacheItem } from '@openlp/shared';
+import SongSearchModal from './SongSearchModal';
 
 export interface SongListProps {
     songs: SongListCacheItem[];
@@ -108,6 +109,8 @@ export default function SongList({
     calculateHeight,
 }: SongListProps) {
     const [listHeight, setListHeight] = useState(height || 600);
+    const [searchModalOpen, setSearchModalOpen] = useState(false);
+    const listRef = useRef<FixedSizeList>(null);
 
     // Calculate list height based on viewport if calculateHeight function is provided
     useEffect(() => {
@@ -130,6 +133,23 @@ export default function SongList({
             onSearchChange(e.target.value);
         }
     }, [onSearchChange]);
+
+    // Handle Ctrl+F / Cmd+F to open search modal
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                setSearchModalOpen(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleModalClose = useCallback(() => {
+        setSearchModalOpen(false);
+    }, []);
 
     const listData = useMemo(() => ({
         songs,
@@ -185,6 +205,7 @@ export default function SongList({
                     }}
                 >
                     <FixedSizeList
+                        ref={listRef}
                         height={listHeight}
                         itemCount={songs.length}
                         itemSize={itemSize}
@@ -195,6 +216,15 @@ export default function SongList({
                     </FixedSizeList>
                 </Box>
             )}
+
+            {/* Search Modal */}
+            <SongSearchModal
+                open={searchModalOpen}
+                onClose={handleModalClose}
+                songs={songs}
+                onSongClick={onSongClick}
+                currentSongId={currentSongId}
+            />
         </Box>
     );
 }
