@@ -2,9 +2,27 @@
 
 **Repository**: https://github.com/doszyja/openlp-remote-database
 
+## ⚠️ CRITICAL: Documentation as Source of Truth
+
+**The `docs/` folder is the SINGLE SOURCE OF TRUTH for this project.**
+
+### Documentation Priority Rules
+1. **ALWAYS** check `docs/` folder first before making any decisions
+2. **ALWAYS** reference documentation from `docs/` when answering questions
+3. **ALWAYS** update `docs/` when making architectural or design changes
+4. **ALWAYS** catalog and index all files in `docs/` directory
+5. Documentation in `docs/` takes precedence over code comments or other sources
+6. When documentation conflicts with code, documentation is authoritative
+
+### Automatic Documentation Indexing
+- All files in `docs/` directory MUST be automatically indexed and available in context
+- All markdown files (*.md) in `docs/` are considered active documentation
+- Documentation files should be read and referenced proactively, not reactively
+
 ## Context Management
 
 ### Always Include in Context
+- **The entire `docs/` folder** - This is the primary source of truth and MUST be indexed
 - **All markdown files (*.md)** in the repository should be automatically considered as context
 - Prioritize these files for context:
   1. `PROJECT_PLAN.md` - High-level project plan with epics
@@ -123,19 +141,38 @@ openlp-database/
 
 ---
 
-**Last Updated**: 2025-01-22
-**Purpose**: Ensure Cursor AI maintains proper context about the OpenLP Database Sync project
+**Last Updated**: 2025-01-23
+**Purpose**: Ensure Cursor AI maintains proper context about the OpenLP Database Sync project, with `docs/` folder as the single source of truth
 
-## Markdown Files Always in Context
+## Documentation Cataloging and Indexing
 
+### `docs/` Folder as Source of Truth
+The `docs/` folder MUST be:
+- **Always indexed** - All files in `docs/` should be cataloged and searchable
+- **Always referenced** - When answering questions, always check `docs/` first
+- **Always updated** - When making changes, update relevant docs in `docs/`
+- **Always authoritative** - Documentation in `docs/` overrides other sources
+
+### Documentation Files Structure
 All markdown files (*.md) in the repository are automatically included in context. This includes:
-- All files in the `docs/` directory
+- **ALL files in the `docs/` directory** (PRIMARY SOURCE OF TRUTH)
 - Root-level markdown files (README.md, PROJECT_PLAN.md, etc.)
 - Any markdown files in subdirectories
 
-The `.cursorrules` file itself ensures that when you work on this project, all documentation is automatically considered, maintaining proper context about:
-- Project architecture and decisions
-- Current progress and TODO status
-- Coding standards and guidelines
-- Technology stack and setup instructions
+### Automatic Context Inclusion
+The `.cursorrules` file ensures that when you work on this project:
+- All documentation in `docs/` is automatically cataloged and indexed
+- Documentation is proactively loaded into context, not just when referenced
+- The following information is always available:
+  - Project architecture and decisions (`docs/ARCHITECTURE.md`, `docs/ADRs.md`)
+  - Current progress and TODO status (`docs/DETAILED_TODO.md`, `docs/PROGRESS.md`)
+  - Coding standards and guidelines (`docs/PROJECT_RULES.md`)
+  - Technology stack and setup instructions (`docs/DOCKER_SETUP.md`, etc.)
+  - All other documentation files in `docs/`
+
+### Documentation Indexing Requirements
+- Index all `.md` files in `docs/` directory
+- Maintain searchable index of all documentation topics
+- Enable quick lookup of documentation by topic or keyword
+- Ensure documentation is always up-to-date and synchronized
 

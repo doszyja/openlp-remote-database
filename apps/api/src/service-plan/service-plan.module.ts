@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ServicePlanService } from './service-plan.service';
 import { ServicePlanController } from './service-plan.controller';
 import { ServicePlan, ServicePlanSchema } from '../schemas/service-plan.schema';
 import { Song, SongSchema } from '../schemas/song.schema';
+import { ServicePlanGateway } from './service-plan.gateway';
+import { WebSocketServerService } from './websocket-server.service';
 
 @Module({
   imports: [
@@ -13,8 +15,19 @@ import { Song, SongSchema } from '../schemas/song.schema';
     ]),
   ],
   controllers: [ServicePlanController],
-  providers: [ServicePlanService],
-  exports: [ServicePlanService],
+  providers: [
+    ServicePlanService,
+    WebSocketServerService,
+    {
+      provide: ServicePlanGateway,
+      useFactory: (service: ServicePlanService) => {
+        const gateway = new ServicePlanGateway(service);
+        return gateway;
+      },
+      inject: [ServicePlanService],
+    },
+  ],
+  exports: [ServicePlanService, ServicePlanGateway, WebSocketServerService],
 })
 export class ServicePlanModule {}
 

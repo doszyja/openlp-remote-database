@@ -15,6 +15,21 @@ export class OpenLPMapping {
   syncMetadata?: Record<string, any>;
 }
 
+@Schema({ _id: false })
+export class Verse {
+  @Prop({ required: true })
+  order: number; // verse_order from OpenLP - critical for preserving verse sequence
+
+  @Prop({ required: true })
+  content: string; // Verse text content
+
+  @Prop()
+  label?: string; // Optional label (e.g., "Verse 1", "Bridge", "Pre-Chorus")
+
+  @Prop()
+  originalLabel?: string; // Original identifier from XML/verse_order (e.g., "v1", "c1", "b1") - used to match verseOrder string
+}
+
 @Schema({ timestamps: true })
 export class Song {
   @Prop({ required: true, index: true })
@@ -26,11 +41,14 @@ export class Song {
   @Prop({ default: 'en', index: true })
   language: string;
 
-  @Prop()
-  chorus?: string;
+  @Prop({ required: true, type: [Verse] })
+  verses: Verse[]; // Array of verses with order preserved (includes chorus, bridge, etc. as verse objects with type labels)
 
-  @Prop({ required: true, type: String })
-  verses: string; // All verses stored as single string (can be split visually in frontend)
+  @Prop({ type: String })
+  verseOrder?: string; // verse_order string from OpenLP SQLite (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1") - 1:1 transparent with SQLite structure
+
+  @Prop({ type: String })
+  lyricsXml?: string; // Exact XML from SQLite lyrics column - 1:1 transparent with SQLite (preserves CDATA, type/label attributes, etc.)
 
   @Prop({ type: [{ type: String, ref: 'Tag' }] })
   tags: string[]; // Maps to OpenLP theme_name

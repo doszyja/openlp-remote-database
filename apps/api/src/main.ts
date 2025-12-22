@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as express from 'express';
+import { WebSocketServerService } from './service-plan/websocket-server.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -157,7 +158,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  const httpServer = await app.listen(port);
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+
+  // Initialize WebSocket server using the same HTTP server (upgrade requests)
+  const wsServer = app.get(WebSocketServerService);
+  wsServer.initialize(httpServer, '/ws/service-plans');
 }
 bootstrap();

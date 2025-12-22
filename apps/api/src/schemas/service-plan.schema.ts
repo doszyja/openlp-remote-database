@@ -19,6 +19,9 @@ export class ServicePlanItem {
 
   @Prop({ default: false })
   isActive?: boolean;
+
+  @Prop({ default: 0 })
+  activeVerseIndex?: number;
 }
 
 @Schema({ timestamps: true })

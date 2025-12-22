@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Typography,
   Box,
   Button,
   Stack,
   Paper,
-  Avatar,
   FormControlLabel,
   Switch,
+  AppBar,
+  Toolbar,
+  Avatar,
+  Menu,
+  MenuItem,
+  Divider,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   LibraryMusic as LibraryMusicIcon,
@@ -16,20 +23,73 @@ import {
   Help as HelpIcon,
   History as HistoryIcon,
   DeveloperMode as DeveloperModeIcon,
+  Logout as LogoutIcon,
+  Settings as SettingsIcon,
+  EventNote as EventNoteIcon,
+  LiveTv as LiveTvIcon,
+  ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
+import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
+import { useServicePlans } from '../hooks/useServicePlans';
+
+const ADMIN_ROLE_ID = '1161734352447746110';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user, hasEditPermission } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, user, logout, isLoading, hasEditPermission } = useAuth();
   const isDev = import.meta.env.DEV;
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const settingsDialogRef = useRef<SettingsDialogRef>(null);
+  const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
+  const { data: allPlans } = useServicePlans();
+  const isLivePage = location.pathname === '/live';
+  const isServicePlansPage = location.pathname.startsWith('/service-plans');
+  
+  // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
+  const [hasToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('auth_token');
+    }
+    return false;
+  });
   
   // Get dev user type preference from localStorage, default to 'regular'
   const [devUserType, setDevUserType] = useState<'admin' | 'regular'>(() => {
     const stored = localStorage.getItem('dev-user-type');
     return (stored === 'admin' || stored === 'regular') ? stored : 'regular';
   });
+
+  const handleDiscordLogin = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    window.location.href = `${apiUrl}/auth/discord`;
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setPlansMenuAnchorEl(null);
+  };
+
+  const handlePlansMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setPlansMenuAnchorEl(event.currentTarget);
+  };
+
+  const handlePlansMenuClose = () => {
+    setPlansMenuAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleMenuClose();
+    logout();
+  };
 
   const handleDevLogin = () => {
     const apiUrl = getApiUrlForOAuth();
@@ -58,6 +118,315 @@ export default function HomePage() {
         minHeight: 0, // Allow flexbox to shrink
       }}
     >
+      {/* Header */}
+      <AppBar
+        position="static"
+        elevation={0}
+        sx={{
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+          color: 'text.primary',
+        }}
+      >
+        <Toolbar
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            px: { xs: 1.5, sm: 2, md: 3 },
+            py: { xs: 1, sm: 1.5 },
+            gap: { xs: 1, sm: 2 },
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0, mr: { xs: 1, sm: 2 } }}>
+            <Typography
+              variant="h6"
+              component="h1"
+              sx={{
+                fontWeight: 300,
+                fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1rem', lg: '0.95rem' },
+                letterSpacing: { xs: 0.3, sm: 0.5, md: 0.6, lg: 0.5 },
+                color: 'text.primary',
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                lineHeight: 1.3,
+              }}
+            >
+              Pieśni Zborowe{' '}
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: 400,
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.85rem', sm: '0.95rem', md: '0.85rem', lg: '0.8rem' },
+                  letterSpacing: { xs: 0.2, sm: 0.3, md: 0.25 },
+                  display: { xs: 'block', sm: 'inline' },
+                  ml: { xs: 0, sm: 1 },
+                  mt: { xs: 0.25, sm: 0 },
+                }}
+              >
+                - Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
+              </Typography>
+            </Typography>
+          </Box>
+          
+          {/* User Dropdown */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}>
+            {isAuthenticated && user ? (
+              <>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: { xs: 0.75, sm: 1 },
+                    cursor: 'pointer',
+                    borderRadius: 1,
+                    px: { xs: 0.75, sm: 1 },
+                    py: { xs: 0.5, sm: 0.75 },
+                    userSelect: 'none',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                  onClick={handleMenuOpen}
+                >
+                  <Avatar
+                    src={
+                      user.avatar
+                        ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
+                        : undefined
+                    }
+                    sx={{
+                      width: { xs: 28, sm: 32 },
+                      height: { xs: 28, sm: 32 },
+                      cursor: 'pointer',
+                      bgcolor: !user.avatar ? 'action.selected' : undefined,
+                      color: !user.avatar ? 'text.primary' : undefined,
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      userSelect: 'none',
+                    }}
+                  >
+                    {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+                  </Avatar>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      display: { xs: 'none', sm: 'block' },
+                      fontWeight: 500,
+                      maxWidth: 100,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {user.username}
+                  </Typography>
+                </Box>
+
+                {/* User Menu */}
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                    },
+                  }}
+                >
+                  <MenuItem disabled>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, userSelect: 'none' }}>
+                      <Avatar
+                        src={
+                          user.avatar
+                            ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
+                            : undefined
+                        }
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          bgcolor: !user.avatar ? 'action.selected' : undefined,
+                          color: !user.avatar ? 'text.primary' : undefined,
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          userSelect: 'none',
+                        }}
+                      >
+                        {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+                      </Avatar>
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}>
+                        Zalogowano jako <strong style={{ fontWeight: 600, userSelect: 'none' }}>{user.username}</strong>
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem
+                    onClick={handlePlansMenuOpen}
+                    sx={{
+                      minHeight: 48,
+                      py: 1.25,
+                    }}
+                  >
+                    <EventNoteIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                    <ListItemText>Plany Nabożeństwa</ListItemText>
+                    <ArrowDropDownIcon sx={{ ml: 'auto', fontSize: 20 }} />
+                  </MenuItem>
+                  {/* Nested Menu for Plans */}
+                  <Menu
+                    anchorEl={plansMenuAnchorEl}
+                    open={Boolean(plansMenuAnchorEl)}
+                    onClose={handlePlansMenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        mt: 0.5,
+                        minWidth: 250,
+                        maxHeight: 400,
+                        overflow: 'auto',
+                      },
+                    }}
+                  >
+                    <MenuItem
+                      onClick={() => {
+                        handlePlansMenuClose();
+                        handleMenuClose();
+                        navigate('/service-plans');
+                      }}
+                      selected={isServicePlansPage}
+                      sx={{
+                        minHeight: 40,
+                        py: 0.75,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <ListItemText primary="Wszystkie plany" />
+                    </MenuItem>
+                    {allPlans && allPlans.length > 0 && <Divider />}
+                    {allPlans && allPlans.length > 0 ? (
+                      allPlans.map((plan) => (
+                        <MenuItem
+                          key={plan.id}
+                          onClick={() => {
+                            handlePlansMenuClose();
+                            handleMenuClose();
+                            navigate(`/service-plans/${plan.id}`);
+                          }}
+                          sx={{
+                            minHeight: 40,
+                            py: 0.75,
+                          }}
+                        >
+                          <ListItemText
+                            primary={plan.name}
+                            secondary={
+                              plan.date
+                                ? new Date(plan.date).toLocaleDateString('pl-PL')
+                                : `${plan.items.length} ${plan.items.length === 1 ? 'pieśń' : 'pieśni'}`
+                            }
+                          />
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem disabled sx={{ minHeight: 40, py: 0.75 }}>
+                        <ListItemText primary="Brak planów" secondary="Utwórz pierwszy plan" />
+                      </MenuItem>
+                    )}
+                  </Menu>
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      navigate('/live');
+                    }}
+                    selected={isLivePage}
+                    sx={{
+                      minHeight: 48,
+                      py: 1.25,
+                    }}
+                  >
+                    <LiveTvIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                    Na żywo
+                  </MenuItem>
+                  {isAdmin && (
+                    <MenuItem
+                      onClick={() => {
+                        handleMenuClose();
+                        navigate('/audit-logs');
+                      }}
+                      sx={{
+                        minHeight: 48,
+                        py: 1.25,
+                      }}
+                    >
+                      <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      Logi Audytu
+                    </MenuItem>
+                  )}
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      settingsDialogRef.current?.open();
+                    }}
+                    sx={{
+                      minHeight: 48,
+                      py: 1.25,
+                    }}
+                  >
+                    <SettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                    Ustawienia
+                  </MenuItem>
+                  <MenuItem
+                    onClick={handleLogout}
+                    sx={{
+                      minHeight: 48,
+                      py: 1.25,
+                    }}
+                  >
+                    <LogoutIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                    Wyloguj
+                  </MenuItem>
+                </Menu>
+
+                {/* Settings dialog - hidden but accessible via menu */}
+                <Box sx={{ display: 'none' }}>
+                  <SettingsDialog ref={settingsDialogRef} />
+                </Box>
+              </>
+            ) : !hasToken && !isLoading ? (
+              <Button
+                variant="contained"
+                onClick={handleDiscordLogin}
+                size="small"
+                sx={{
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
+                  py: { xs: 0.5, sm: 0.75 },
+                }}
+              >
+                Zaloguj
+              </Button>
+            ) : null}
+          </Box>
+        </Toolbar>
+      </AppBar>
+
       {/* Decorative elements */}
       <Box
         sx={{
@@ -91,65 +460,6 @@ export default function HomePage() {
           overflow: 'auto', // Allow scrolling if content is too large
         }}
       >
-        {/* Main heading */}
-        <Box sx={{ width: '100%', maxWidth: { md: 800, lg: 900 }, mb: { xs: 3, sm: 5, md: 6 }, textAlign: { xs: 'left', md: 'center' } }}>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              fontWeight: 300,
-              fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3.5rem' },
-              letterSpacing: { xs: 1, sm: 3, md: 4 },
-              color: 'text.primary',
-              mb: { xs: 1.5, sm: 2 },
-              fontFamily: '"Playfair Display", "Georgia", serif',
-            }}
-          >
-            Pieśni Zborowe
-          </Typography>
-
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 400,
-              color: 'text.secondary',
-              fontSize: { xs: '0.85rem', sm: '1rem', md: '1.1rem' },
-              letterSpacing: { xs: 0.5, sm: 1 },
-              mb: { xs: 2, sm: 3 },
-            }}
-          >
-            Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
-          </Typography>
-
-          {user && (
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={1.5}
-              sx={{
-                bgcolor: 'background.paper',
-                px: { xs: 2, sm: 2.5, md: 3 },
-                py: { xs: 1, sm: 1.25, md: 1.5 },
-                borderRadius: 2,
-                boxShadow: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                    : '0 4px 16px rgba(0, 0, 0, 0.08)',
-                display: 'inline-flex',
-              }}
-            >
-              {user.avatar && (
-                <Avatar
-                  src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`}
-                  sx={{ width: { xs: 28, sm: 30, md: 32 }, height: { xs: 28, sm: 30, md: 32 } }}
-                />
-              )}
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                Zalogowano jako <strong>{user.username}</strong>
-              </Typography>
-            </Box>
-          )}
-        </Box>
 
         {/* Action cards */}
         <Stack
@@ -161,6 +471,7 @@ export default function HomePage() {
         >
           <Paper
             elevation={0}
+            onClick={() => navigate('/songs')}
             sx={{
               width: '100%',
               p: { xs: 2.5, sm: 3.5, md: 4 },
@@ -173,6 +484,7 @@ export default function HomePage() {
               border: (theme) =>
                 theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
               transition: 'transform 0.2s, box-shadow 0.2s',
+              cursor: 'pointer',
               '&:hover': {
                 transform: { xs: 'none', sm: 'translateY(-4px)' },
                 boxShadow: (theme) =>
@@ -218,7 +530,10 @@ export default function HomePage() {
               variant="contained"
               size="large"
               fullWidth
-              onClick={() => navigate('/songs')}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/songs');
+              }}
               sx={{
                 py: { xs: 1.25, sm: 1.5 },
                 fontSize: { xs: '0.9rem', sm: '1rem' },
@@ -234,6 +549,7 @@ export default function HomePage() {
           {hasEditPermission && (
             <Paper
               elevation={0}
+              onClick={() => navigate('/songs/new')}
               sx={{
                 width: '100%',
                 p: { xs: 2.5, sm: 3.5, md: 4 },
@@ -246,6 +562,7 @@ export default function HomePage() {
                 border: (theme) =>
                   theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
+                cursor: 'pointer',
                 '&:hover': {
                   transform: { xs: 'none', sm: 'translateY(-4px)' },
                   boxShadow: (theme) =>
@@ -291,7 +608,10 @@ export default function HomePage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                onClick={() => navigate('/songs/new')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/songs/new');
+                }}
                 sx={{
                   py: { xs: 1.25, sm: 1.5 },
                   fontSize: { xs: '0.9rem', sm: '1rem' },
@@ -307,6 +627,7 @@ export default function HomePage() {
 
           {/* Help compact info */}
           <Box
+            onClick={() => navigate('/help')}
             sx={{
               width: '100%',
               display: 'flex',
@@ -315,13 +636,22 @@ export default function HomePage() {
               gap: { xs: 1.25, sm: 2 },
               p: { xs: 1.25, sm: 2 },
               borderRadius: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               border: (theme) =>
                 theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
               boxShadow: (theme) =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: { xs: 'none', sm: 'translateY(-2px)' },
+                boxShadow: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
+                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
+              },
             }}
           >
             <Box
@@ -362,7 +692,10 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={() => navigate('/help')}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/help');
+              }}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
@@ -376,6 +709,7 @@ export default function HomePage() {
 
           {/* Recent Changes compact info */}
           <Box
+            onClick={() => navigate('/recent-changes')}
             sx={{
               width: '100%',
               display: 'flex',
@@ -391,6 +725,15 @@ export default function HomePage() {
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: { xs: 'none', sm: 'translateY(-2px)' },
+                boxShadow: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
+                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
+              },
             }}
           >
             <Box
@@ -431,7 +774,10 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={() => navigate('/recent-changes')}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/recent-changes');
+              }}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,

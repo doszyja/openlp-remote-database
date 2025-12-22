@@ -10,11 +10,20 @@ import { useState, useEffect, useRef } from 'react';
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: song, isFetching, error } = useSong(id!);
+  // Always fetch fresh data from server when editing (forceRefresh = true)
+  const { data: song, isFetching, error, refetch } = useSong(id!, { forceRefresh: true });
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
   const [isFormDirty, setIsFormDirty] = useState(false);
   const navigateRef = useRef(navigate);
+  
+  // Force refetch on mount to ensure we have the latest data from server
+  useEffect(() => {
+    if (id) {
+      console.log('[SongEditPage] Forcing refetch of song data from server...');
+      refetch();
+    }
+  }, [id, refetch]);
   
   // Update navigate ref when it changes
   useEffect(() => {

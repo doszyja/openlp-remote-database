@@ -15,35 +15,48 @@ function escapeXml(text: string): string {
 }
 
 /**
- * Parse verses string and generate XML verse tags
- * Handles the verse order string format (e.g., "v1 c1 v2 c1")
+ * Parse verses (array or string) and generate XML verse tags
+ * Handles both new format (array of objects with order) and legacy format (string)
  */
-function parseVersesToXml(versesString: string | null | undefined, chorus?: string | null): string {
-  // Ensure versesString is a string
-  const verses = typeof versesString === 'string' ? versesString : '';
-  
-  if (!verses && !chorus) {
+function parseVersesToXml(verses: any): string {
+  if (!verses) {
     return '';
   }
 
   const parts: string[] = [];
 
-  // Add chorus if present
-  if (chorus && typeof chorus === 'string' && chorus.trim()) {
-    parts.push(`<verse label="c">${escapeXml(chorus.trim())}</verse>`);
+  // Handle new format: array of objects with order (chorus is included in verses array with type='chorus')
+  if (Array.isArray(verses) && verses.length > 0) {
+    // Sort by order to ensure correct sequence
+    const sortedVerses = [...verses].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    sortedVerses.forEach((verse) => {
+      if (!verse.content || !verse.content.trim()) return;
+      
+      // Determine label from verse.label or verse.order
+      let label = verse.label;
+      if (!label) {
+        // Generate label from order
+        label = `v${verse.order || 1}`;
+      } else {
+        // Normalize label (remove "Verse " prefix if present)
+        label = label.replace(/^verse\s+/i, 'v');
+      }
+      
+      parts.push(`<verse label="${label}">${escapeXml(verse.content.trim())}</verse>`);
+    });
   }
-
-  // Parse verses string - it should already be in XML format or plain text
-  if (verses && verses.trim()) {
+  // Handle legacy format: string
+  else if (typeof verses === 'string' && verses.trim()) {
+    const versesString = verses.trim();
+    
     // Check if it's already XML format
-    if (verses.trim().startsWith('<verse')) {
+    if (versesString.startsWith('<verse')) {
       // Already XML, use as-is (but ensure proper escaping)
-      // Extract verse tags and re-escape content
-      // Handle both single and double quotes in label attribute
       const verseRegex = /<verse\s+(?:label=["']([^"']+)["']|label=([^\s>]+))[^>]*>([\s\S]*?)<\/verse>/gi;
       let match;
-      while ((match = verseRegex.exec(verses)) !== null) {
-        const label = match[1] || match[2]; // Handle both quote styles
+      while ((match = verseRegex.exec(versesString)) !== null) {
+        const label = match[1] || match[2];
         let content = match[3];
         // Decode existing XML entities
         content = content
@@ -57,7 +70,7 @@ function parseVersesToXml(versesString: string | null | undefined, chorus?: stri
       }
     } else {
       // Plain text - split by double newlines to get individual verses
-      const verseBlocks = verses.split(/\n\n+/).filter(block => block.trim());
+      const verseBlocks = versesString.split(/\n\n+/).filter(block => block.trim());
       
       if (verseBlocks.length > 0) {
         verseBlocks.forEach((block, index) => {
@@ -66,7 +79,7 @@ function parseVersesToXml(versesString: string | null | undefined, chorus?: stri
         });
       } else {
         // Single verse, no double newlines
-        parts.push(`<verse label="v1">${escapeXml(verses.trim())}</verse>`);
+        parts.push(`<verse label="v1">${escapeXml(versesString)}</verse>`);
       }
     }
   }
@@ -76,20 +89,52 @@ function parseVersesToXml(versesString: string | null | undefined, chorus?: stri
 
 /**
  * Generate full OpenLP XML format for a song
+ * If lyricsXml is provided, use it directly (1:1 transparent with SQLite)
+ * Otherwise, generate XML from verses array/string
  */
 export function generateSongXml(song: {
   title: string;
   number?: string | null;
-  chorus?: string | null;
-  verses: string | null | undefined;
+  verses: any; // Can be array of objects with order, or string (legacy) - chorus is included in verses array with type='chorus'
+  lyricsXml?: string | null; // Exact XML from SQLite lyrics column (1:1 transparent)
   copyright?: string | null;
   comments?: string | null;
   ccliNumber?: string | null;
   tags?: Array<{ name: string }> | string[];
 }): string {
-  // Ensure verses is a string
-  const verses = typeof song.verses === 'string' ? song.verses : (song.verses || '');
-  const lyricsXml = parseVersesToXml(verses, song.chorus);
+  // PRIORITY 1: If lyricsXml exists, extract lyrics section from it (1:1 transparent with SQLite)
+  // This preserves exact XML structure, CDATA, type/label attributes, etc.
+  let lyricsXml: string;
+  if (song.lyricsXml && song.lyricsXml.trim()) {
+    const lyricsXmlContent = song.lyricsXml.trim();
+    
+    // Check if it's a full XML document with <song><lyrics>...</lyrics></song>
+    if (lyricsXmlContent.includes('<lyrics')) {
+      // Extract lyrics section from full XML document
+      const lyricsMatch = lyricsXmlContent.match(/<lyrics[^>]*>([\s\S]*?)<\/lyrics>/i);
+      if (lyricsMatch && lyricsMatch[1]) {
+        // Use extracted lyrics section (contains verse tags with CDATA, type/label attributes, etc.)
+        lyricsXml = lyricsMatch[1].trim();
+      } else {
+        // Try to extract everything after <lyrics> if no closing tag
+        const lyricsMatchOpen = lyricsXmlContent.match(/<lyrics[^>]*>([\s\S]*)/i);
+        if (lyricsMatchOpen && lyricsMatchOpen[1]) {
+          lyricsXml = lyricsMatchOpen[1].trim();
+        } else {
+          // Fallback: use entire content if it's just verse tags
+          lyricsXml = lyricsXmlContent;
+        }
+      }
+    } else {
+      // Already just the lyrics section (verse tags), use as-is
+      lyricsXml = lyricsXmlContent;
+    }
+  } else {
+    // PRIORITY 2: Generate XML from verses array/string (fallback)
+    // Chorus is included in verses array with type='chorus', so no need for separate chorus parameter
+    const verses = song.verses || (Array.isArray(song.verses) ? [] : '');
+    lyricsXml = parseVersesToXml(verses);
+  }
   
   // Get tags as comma-separated string
   let themeName = '';

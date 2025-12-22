@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ServicePlan, ServicePlanDocument } from '../schemas/service-plan.schema';
@@ -7,12 +7,21 @@ import { CreateServicePlanDto } from './dto/create-service-plan.dto';
 import { UpdateServicePlanDto } from './dto/update-service-plan.dto';
 import { AddSongToPlanDto } from './dto/add-song-to-plan.dto';
 import { SetActiveSongDto } from './dto/set-active-song.dto';
+import { SetActiveVerseDto } from './dto/set-active-verse.dto';
+import { ServicePlanGateway } from './service-plan.gateway';
+import { WebSocketServerService } from './websocket-server.service';
 
 @Injectable()
 export class ServicePlanService {
+  private readonly logger = new Logger(ServicePlanService.name);
+
   constructor(
     @InjectModel(ServicePlan.name) private servicePlanModel: Model<ServicePlanDocument>,
     @InjectModel(Song.name) private songModel: Model<SongDocument>,
+    @Inject(forwardRef(() => ServicePlanGateway))
+    private readonly servicePlanGateway: ServicePlanGateway,
+    @Inject(forwardRef(() => WebSocketServerService))
+    private readonly websocketServer: WebSocketServerService,
   ) {}
 
   private transformServicePlan(plan: ServicePlanDocument): any {
@@ -28,6 +37,7 @@ export class ServicePlanService {
         order: item.order,
         notes: item.notes,
         isActive: item.isActive || false,
+        activeVerseIndex: typeof item.activeVerseIndex === 'number' ? item.activeVerseIndex : 0,
       })),
       createdAt: planDoc.createdAt,
       updatedAt: planDoc.updatedAt,
@@ -41,6 +51,7 @@ export class ServicePlanService {
       order: item.order ?? index,
       notes: item.notes,
       isActive: false,
+      activeVerseIndex: 0,
     }));
 
     const servicePlan = await this.servicePlanModel.create({
@@ -49,7 +60,11 @@ export class ServicePlanService {
       items,
     });
 
-    return this.transformServicePlan(servicePlan);
+    const transformed = this.transformServicePlan(servicePlan);
+    // Broadcast in case someone is already listening for active changes (no active song yet,
+    // but plan list may change)
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
   }
 
   async findAll() {
@@ -93,11 +108,14 @@ export class ServicePlanService {
         order: item.order ?? index,
         notes: item.notes,
         isActive: item.isActive ?? false,
+        activeVerseIndex: item.activeVerseIndex ?? 0,
       }));
     }
 
     const saved = await servicePlan.save();
-    return this.transformServicePlan(saved);
+    const transformed = this.transformServicePlan(saved);
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
   }
 
   async addSong(id: string, addSongDto: AddSongToPlanDto) {
@@ -122,11 +140,14 @@ export class ServicePlanService {
       order: addSongDto.order ?? maxOrder + 1,
       notes: addSongDto.notes,
       isActive: false,
+      activeVerseIndex: 0,
     };
 
     servicePlan.items.push(newItem);
     const saved = await servicePlan.save();
-    return this.transformServicePlan(saved);
+    const transformed = this.transformServicePlan(saved);
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
   }
 
   async removeSong(planId: string, itemId: string) {
@@ -145,7 +166,9 @@ export class ServicePlanService {
 
     servicePlan.items.splice(itemIndex, 1);
     const saved = await servicePlan.save();
-    return this.transformServicePlan(saved);
+    const transformed = this.transformServicePlan(saved);
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
   }
 
   async setActiveSong(planId: string, setActiveDto: SetActiveSongDto) {
@@ -176,10 +199,36 @@ export class ServicePlanService {
         throw new NotFoundException(`Item with ID ${setActiveDto.itemId} not found in service plan`);
       }
       item.isActive = true;
+      // Reset verse index to first verse when activating a new song
+      item.activeVerseIndex = 0;
     }
 
     const saved = await servicePlan.save();
-    return this.transformServicePlan(saved);
+    const transformed = this.transformServicePlan(saved);
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
+  }
+
+  async setActiveVerse(planId: string, setActiveVerseDto: SetActiveVerseDto) {
+    const servicePlan = await this.servicePlanModel.findById(planId).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${planId} not found`);
+    }
+
+    const item = (servicePlan.items as any[]).find(
+      (i: any) => i._id?.toString() === setActiveVerseDto.itemId
+    );
+
+    if (!item) {
+      throw new NotFoundException(`Item with ID ${setActiveVerseDto.itemId} not found in service plan`);
+    }
+
+    item.activeVerseIndex = setActiveVerseDto.verseIndex;
+
+    const saved = await servicePlan.save();
+    const transformed = this.transformServicePlan(saved);
+    await this.websocketServer.broadcastActiveSong();
+    return transformed;
   }
 
   async getActiveSong() {
@@ -204,26 +253,56 @@ export class ServicePlanService {
 
     // Transform song to match expected format
     const songDoc = song as any;
+    
+    // Convert verses to string - handle both new format (array) and legacy format (string)
+    let versesString: string = '';
+    if (Array.isArray(song.verses) && song.verses.length > 0) {
+      // New format: array of objects with order - sort by order and join content
+      const sortedVerses = [...song.verses].sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+      versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+    } else if (typeof song.verses === 'string') {
+      // Legacy format: string
+      versesString = song.verses;
+    }
+    
+    // Debug: log verses info for troubleshooting
+    if (versesString) {
+      this.logger.debug(`Song ${song._id.toString()} (${song.title}) has verses: length=${versesString.length}, preview=${versesString.substring(0, 100)}`);
+    } else {
+      // Log as debug instead of warn - this is handled gracefully (empty string is returned)
+      this.logger.debug(`Song ${song._id.toString()} (${song.title}) has no verses (type: ${Array.isArray(song.verses) ? 'array' : typeof song.verses})`);
+    }
+    
     const transformedSong = {
       id: song._id.toString(),
       title: song.title,
-      number: song.number,
-      language: song.language,
-      chorus: song.chorus,
-      verses: song.verses || '',
-      tags: song.tags.map((tag: any) => ({
-        id: tag._id?.toString(),
-        name: tag.name,
-      })),
-      copyright: song.copyright,
-      comments: song.comments,
-      ccliNumber: song.ccliNumber,
-      searchTitle: song.searchTitle,
-      searchLyrics: song.searchLyrics,
-      openlpMapping: song.openlpMapping,
+      number: song.number ?? null,
+      language: song.language ?? 'en',
+      // Ensure verses string is always provided for live view (never null/undefined)
+      verses: versesString,
+      // Tags in Song schema są przechowywane jako string[] (nazwy tagów),
+      // ale frontend oczekuje obiektów { id, name }. Zmapujmy bezpiecznie.
+      tags: Array.isArray(song.tags)
+        ? song.tags.map((tag: any) =>
+            typeof tag === 'string'
+              ? { id: tag, name: tag }
+              : { id: tag._id?.toString(), name: tag.name }
+          )
+        : [],
+      copyright: song.copyright ?? null,
+      comments: song.comments ?? null,
+      ccliNumber: song.ccliNumber ?? null,
+      searchTitle: song.searchTitle ?? null,
+      searchLyrics: song.searchLyrics ?? null,
+      openlpMapping: song.openlpMapping ?? null,
       createdAt: songDoc.createdAt,
       updatedAt: songDoc.updatedAt,
     };
+
+    // Ensure activeVerseIndex is always a number (default to 0 if missing/invalid)
+    const activeVerseIndex = typeof activeItem.activeVerseIndex === 'number' && !isNaN(activeItem.activeVerseIndex)
+      ? activeItem.activeVerseIndex
+      : 0;
 
     return {
       servicePlan: {
@@ -234,7 +313,8 @@ export class ServicePlanService {
         id: activeItem._id?.toString(),
         songId: activeItem.songId,
         songTitle: activeItem.songTitle,
-        order: activeItem.order,
+        order: activeItem.order ?? 0,
+        activeVerseIndex: activeVerseIndex,
       },
       song: transformedSong,
     };
@@ -245,6 +325,7 @@ export class ServicePlanService {
     if (!result) {
       throw new NotFoundException(`Service plan with ID ${id} not found`);
     }
+    await this.websocketServer.broadcastActiveSong();
     return result;
   }
 }

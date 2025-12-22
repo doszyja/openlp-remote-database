@@ -12,11 +12,15 @@ import {
   FormControlLabel,
   Button,
   Divider,
+  Alert,
 } from '@mui/material';
-import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Settings as SettingsIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCachedSongs } from '../hooks/useCachedSongs';
+import { songsCache } from '../services/songs-cache';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNotification } from '../contexts/NotificationContext';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -25,6 +29,9 @@ export interface SettingsDialogRef {
 function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const { mode, toggleMode } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useNotification();
+  const [isClearingCache, setIsClearingCache] = useState(false);
   
   // Check if API is working using cached songs (no unnecessary requests)
   const { error: apiError } = useCachedSongs();
@@ -33,6 +40,34 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const handleDiscordLogin = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
     window.location.href = `${apiUrl}/auth/discord`;
+  };
+
+  const handleClearCache = async () => {
+    if (!window.confirm('Czy na pewno chcesz wyczyścić cache? Wszystkie zapisane pieśni zostaną usunięte z pamięci przeglądarki i będą pobrane ponownie z serwera.')) {
+      return;
+    }
+
+    setIsClearingCache(true);
+    try {
+      // Clear songs cache
+      songsCache.clearCache();
+      
+      // Clear React Query cache for songs
+      queryClient.invalidateQueries({ queryKey: ['cached-songs'] });
+      queryClient.invalidateQueries({ queryKey: ['songs'] });
+      queryClient.removeQueries({ queryKey: ['cached-songs'] });
+      queryClient.removeQueries({ queryKey: ['songs'] });
+      
+      showSuccess('Cache został wyczyszczony. Pieśni zostaną pobrane ponownie z serwera.');
+      
+      // Refresh cache immediately
+      await songsCache.refreshCache();
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
+      showError('Nie udało się wyczyścić cache. Spróbuj ponownie.');
+    } finally {
+      setIsClearingCache(false);
+    }
   };
 
 
@@ -119,6 +154,33 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
             }
             sx={{ width: '100%', alignItems: 'flex-start', m: 0 }}
           />
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+            Cache
+          </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" gutterBottom>
+              Cache przechowuje pieśni w pamięci przeglądarki, aby przyspieszyć wyszukiwanie i wyświetlanie.
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Jeśli masz problemy z wyświetlaniem pieśni lub chcesz pobrać najnowsze dane z serwera, możesz wyczyścić cache.
+            </Typography>
+          </Alert>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleClearCache}
+            disabled={isClearingCache}
+            fullWidth
+            sx={{
+              mt: 1,
+            }}
+          >
+            {isClearingCache ? 'Czyszczenie...' : 'Wyczyść Cache'}
+          </Button>
         </Box>
       </DialogContent>
       <DialogActions>

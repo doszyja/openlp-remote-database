@@ -107,7 +107,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
       }
 
       const parsedVerses = versesToParse && versesToParse.trim()
-        ? parseVerses(versesToParse)
+        ? parseVerses(versesToParse, song.verseOrder || null, (song as any).lyricsXml || null, (song as any).versesArray || null)
         : [{ order: 1, content: '', label: null, type: 'verse' as const }];
 
       // Extract unique source verses (deduplicate by label/type)
@@ -527,25 +527,6 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
               >
                 Refren
               </Button>
-              <Button
-                startIcon={<AddIcon />}
-                onClick={() => addVerse('bridge')}
-                variant="outlined"
-                size="small"
-                color="secondary"
-                sx={{
-                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
-                  color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
-                  '&:hover': {
-                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
-                    backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
-                  },
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  px: { xs: 1, sm: 1.5 },
-                }}
-              >
-                Mostek
-              </Button>
             </Stack>
           </Box>
 
@@ -638,8 +619,8 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                           required
                           fullWidth
                           multiline
-                          minRows={1}
-                          rows={rows}
+                          minRows={4}
+                          rows={Math.max(4, rows)}
                           placeholder="Wprowadź treść zwrotki..."
                           error={!!errors.sourceVerses?.[index]?.content}
                           helperText={errors.sourceVerses?.[index]?.content?.message}
@@ -650,7 +631,7 @@ export default function SongForm({ song, onSubmit, onCancel, isLoading, hideButt
                             },
                             '& .MuiInputBase-input': {
                               fontSize: '16px', // Minimum 16px to prevent iOS zoom
-                              minHeight: '3rem', // Minimum height for 2 lines
+                              minHeight: '6rem', // Higher text area for easier editing
                               lineHeight: 1.5,
                               paddingTop: '10px',
                               paddingBottom: '10px',

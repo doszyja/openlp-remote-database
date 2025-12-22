@@ -64,7 +64,8 @@ export default function Layout({ children }: LayoutProps) {
           }}
         />
       )}
-      {!isHomePage && !isErrorState && <Navbar />}
+      {!isHomePage && !isErrorState && !location.pathname.match(/^\/service-plans\/[^/]+$/) && <Navbar />}
+      {location.pathname.match(/^\/service-plans\/[^/]+$/) && <Navbar />}
       <Box
         component="main"
         sx={{

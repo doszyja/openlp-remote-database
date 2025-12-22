@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -11,6 +11,8 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Add as AddIcon, Download as DownloadIcon, ErrorOutline as ErrorOutlineIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
@@ -21,6 +23,9 @@ import SongList from '../components/SongList';
 
 export default function SongListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { hasEditPermission } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [search, setSearch] = useState('');
@@ -28,6 +33,7 @@ export default function SongListPage() {
   const [lastExportTime, setLastExportTime] = useState<number>(0);
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const exportZip = useExportZip();
+  const hasAutoNavigatedRef = useRef(false);
 
   // Use cached songs for both search and initial list (no API calls needed)
   const { songs: cachedSongs, isLoading: isCacheLoading, error, refetch: refetchCache } = useCachedSongs();
@@ -46,6 +52,35 @@ export default function SongListPage() {
     }
     return cachedSongs || [];
   }, [useCacheForSearch, searchResults, cachedSongs]);
+
+  // Get first song ID for auto-selection (only when not searching and songs are loaded)
+  const firstSongId = useMemo(() => {
+    if (useCacheForSearch || !displaySongs || displaySongs.length === 0) {
+      return undefined;
+    }
+    return displaySongs[0]?.id;
+  }, [useCacheForSearch, displaySongs]);
+
+  // Check if we should auto-navigate (before rendering to prevent visual jump)
+  // Don't auto-navigate on mobile - show list instead
+  const shouldAutoNavigate = useMemo(() => {
+    return !isMobile && // Don't auto-navigate on mobile
+           location.pathname === '/songs' && 
+           !hasAutoNavigatedRef.current && 
+           !isLoading && 
+           !useCacheForSearch && 
+           !!firstSongId;
+  }, [isMobile, location.pathname, isLoading, useCacheForSearch, firstSongId]);
+
+  // Auto-navigate to first song on initial load (only if we're on /songs exactly, not /songs/:id)
+  // Use useLayoutEffect to navigate synchronously before browser paints, preventing visual jump
+  useLayoutEffect(() => {
+    if (!shouldAutoNavigate) return;
+    
+    hasAutoNavigatedRef.current = true;
+    // Use replace: true to avoid adding to history and prevent visual jump
+    navigate(`/songs/${firstSongId}`, { replace: true });
+  }, [shouldAutoNavigate, firstSongId, navigate]);
 
   // Calculate list height based on viewport
   const calculateListHeight = useCallback((viewportHeight: number) => {
@@ -232,6 +267,11 @@ export default function SongListPage() {
     );
   }
 
+  // Don't render content if we're about to auto-navigate (prevents visual jump)
+  if (shouldAutoNavigate) {
+    return null;
+  }
+
   return (
     <Box sx={{ py: { xs: 1.5, sm: 2.5, md: 4 }, px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 }, position: 'relative', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, width: '100%' }}>
       {/* Skeleton loading for list items - only show after debounce delay */}
@@ -380,6 +420,7 @@ export default function SongListPage() {
         <SongList
           songs={displaySongs}
           onSongClick={(songId) => navigate(`/songs/${songId}`)}
+          currentSongId={firstSongId}
           showSearch={true}
           searchValue={search}
           onSearchChange={setSearch}

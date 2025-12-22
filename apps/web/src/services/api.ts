@@ -11,6 +11,7 @@ import type {
   UpdateServicePlanDto,
   AddSongToPlanDto,
   SetActiveSongDto,
+  SetActiveVerseDto,
 } from '@openlp/shared';
 
 // In development, use relative paths (via Vite proxy)
@@ -76,6 +77,11 @@ async function request<T>(
       response.status,
       errorData
     );
+  }
+
+  // 204/205 No Content – nie próbujemy parsować JSON-a
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T;
   }
 
   const data = await response.json();
@@ -200,7 +206,7 @@ export const api = {
       return request(`/service-plans/${id}`);
     },
 
-    getActive: (): Promise<{ servicePlan: { id: string; name: string }; item: { id: string; songId: string; songTitle: string; order: number }; song: SongResponseDto } | null> => {
+    getActive: (): Promise<{ servicePlan: { id: string; name: string }; item: { id: string; songId: string; songTitle: string; order: number; activeVerseIndex?: number }; song: SongResponseDto } | null> => {
       return request('/service-plans/active');
     },
 
@@ -239,6 +245,13 @@ export const api = {
 
     setActiveSong: (id: string, data: SetActiveSongDto): Promise<ServicePlan> => {
       return request(`/service-plans/${id}/active`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    setActiveVerse: (id: string, data: SetActiveVerseDto): Promise<ServicePlan> => {
+      return request(`/service-plans/${id}/active-verse`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });

@@ -40,13 +40,25 @@ export class SongService {
     const searchTitle = (songData.title || '').toLowerCase().trim();
     
     // Generate search_lyrics for OpenLP compatibility (lowercase verses for searching)
-    const searchLyrics = (verses || '').toLowerCase().trim();
+    // Convert verses array to string for search
+    const versesString = Array.isArray(verses) 
+      ? verses.map(v => v.content).join('\n\n')
+      : (verses || '');
+    const searchLyrics = versesString.toLowerCase().trim();
 
-    // Create song - verses is now a single string field
+    // Sort verses by order to ensure correct sequence
+    const sortedVerses = Array.isArray(verses) 
+      ? [...verses].sort((a, b) => a.order - b.order)
+      : [];
+
+    // Create song - verses is now an array of objects with order
+    // Note: verseOrder (string) and lyricsXml should be provided in songData if available from OpenLP
     const song = await this.songModel.create({
       ...songData,
       language: songData.language || 'en',
-      verses: verses || '', // Store as single string
+      verses: sortedVerses, // Store as array with order preserved
+      // verseOrder (string) is stored directly from OpenLP if provided in songData
+      // lyricsXml (string) is stored directly from SQLite lyrics column (1:1 transparent)
       tags: tagIds,
       searchTitle, // Auto-generate from title
       searchLyrics: songData.searchLyrics || searchLyrics, // Auto-generate from verses if not provided
@@ -87,7 +99,7 @@ export class SongService {
         { searchTitle: { $regex: searchLower, $options: 'i' } }, // Indexed field
         { title: { $regex: search, $options: 'i' } }, // Fallback to original
         { searchLyrics: { $regex: searchLower, $options: 'i' } }, // Indexed field (lowercase lyrics)
-        { verses: { $regex: search, $options: 'i' } }, // Fallback to original verses
+        { 'verses.content': { $regex: search, $options: 'i' } }, // Search in verse content
       ];
     }
 
@@ -107,27 +119,42 @@ export class SongService {
     ]);
 
     // Transform to match expected format
-    const transformedSongs = songs.map((song: any) => ({
-      id: song._id.toString(),
-      title: song.title,
-      number: song.number,
-      language: song.language,
-      chorus: song.chorus,
-      verses: song.verses || '', // Verses is now a single string
-      tags: song.tags.map((tag: any) => ({
-        id: tag._id.toString(),
-        name: tag.name,
-      })),
-      // OpenLP compatibility fields
-      copyright: song.copyright,
-      comments: song.comments,
-      ccliNumber: song.ccliNumber,
-      searchTitle: song.searchTitle,
-      searchLyrics: song.searchLyrics,
-      openlpMapping: song.openlpMapping,
-      createdAt: song.createdAt,
-      updatedAt: song.updatedAt,
-    }));
+    const transformedSongs = songs.map((song: any) => {
+      // Convert verses array to string for backward compatibility (frontend expects string)
+      // But preserve order from verse.order
+      let versesString = '';
+      if (Array.isArray(song.verses) && song.verses.length > 0) {
+        // Sort by order and join content
+        const sortedVerses = [...song.verses].sort((a: any, b: any) => a.order - b.order);
+        versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+      } else if (typeof song.verses === 'string') {
+        // Backward compatibility: if verses is still a string, use it
+        versesString = song.verses;
+      }
+
+      return {
+        id: song._id.toString(),
+        title: song.title,
+        number: song.number,
+        language: song.language,
+        verses: versesString, // Convert array to string for frontend compatibility
+        verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+        lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
+        tags: song.tags.map((tag: any) => ({
+          id: tag._id.toString(),
+          name: tag.name,
+        })),
+        // OpenLP compatibility fields
+        copyright: song.copyright,
+        comments: song.comments,
+        ccliNumber: song.ccliNumber,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        openlpMapping: song.openlpMapping,
+        createdAt: song.createdAt,
+        updatedAt: song.updatedAt,
+      };
+    });
 
     return {
       data: transformedSongs,
@@ -151,14 +178,34 @@ export class SongService {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
 
+    // Return verses as array with originalLabel (for frontend logic) and also as string (for backward compatibility)
+    let versesArray: Array<{ order: number; content: string; label?: string; originalLabel?: string }> = [];
+    let versesString = '';
+    if (Array.isArray(song.verses) && song.verses.length > 0) {
+      // Sort by order
+      const sortedVerses = [...song.verses].sort((a: any, b: any) => a.order - b.order);
+      versesArray = sortedVerses.map((v: any) => ({
+        order: v.order,
+        content: v.content,
+        label: v.label,
+        originalLabel: v.originalLabel, // Include originalLabel for frontend logic
+      }));
+      versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+    } else if (typeof song.verses === 'string') {
+      // Backward compatibility: if verses is still a string, use it
+      versesString = song.verses;
+    }
+
     // Transform to match expected format
     return {
       id: song._id.toString(),
       title: song.title,
       number: song.number,
       language: song.language,
-      chorus: song.chorus,
-      verses: song.verses || '', // Verses is now a single string
+      verses: versesString, // Keep as string for backward compatibility
+      versesArray: versesArray.length > 0 ? versesArray : undefined, // Add array with originalLabel for frontend logic
+      verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: song.tags.map((tag: any) => ({
         id: tag._id.toString(),
         name: tag.name,
@@ -191,11 +238,30 @@ export class SongService {
       updateData.searchTitle = songData.title.toLowerCase().trim();
     }
 
-    // Handle verses - now a single string field
+    // Handle verses - now an array of objects with order
     // Also regenerate search_lyrics when verses change
     if (verses !== undefined) {
-      updateData.verses = verses;
-      updateData.searchLyrics = verses.toLowerCase().trim();
+      if (Array.isArray(verses)) {
+        // Sort verses by order to ensure correct sequence
+        const sortedVerses = [...verses].sort((a, b) => a.order - b.order);
+        updateData.verses = sortedVerses;
+        // Extract verse_order array for direct storage
+        updateData.verseOrder = sortedVerses.map(v => v.order);
+        // Generate search_lyrics from verse content
+        const versesString = sortedVerses.map(v => v.content).join('\n\n');
+        updateData.searchLyrics = versesString.toLowerCase().trim();
+      } else {
+        // Backward compatibility: if verses is still a string, convert to array
+        // Split by double newlines and assign order based on position
+        const verseContents = (verses as string).split(/\n\n+/).filter(v => v.trim());
+        const convertedVerses = verseContents.map((content, index) => ({
+          order: index + 1,
+          content: content.trim(),
+        }));
+        updateData.verses = convertedVerses;
+        updateData.verseOrder = convertedVerses.map(v => v.order);
+        updateData.searchLyrics = (verses as string).toLowerCase().trim();
+      }
     }
 
     // Handle tags
@@ -331,7 +397,7 @@ export class SongService {
   async findAllForCache() {
     const songs = await this.songModel
       .find({ deletedAt: null })
-      .select('title number language tags searchTitle searchLyrics chorus verses')
+      .select('title number language tags searchTitle searchLyrics chorus verses verseOrder lyricsXml')
       .populate('tags', 'name')
       .sort({ title: 1 })
       .lean()
@@ -347,8 +413,17 @@ export class SongService {
         id: tag._id.toString(),
         name: tag.name,
       })),
-      chorus: song.chorus ?? null,
       verses: song.verses ?? null,
+      versesArray: Array.isArray(song.verses) && song.verses.length > 0
+        ? song.verses.map((v: any) => ({
+            order: v.order,
+            content: v.content,
+            label: v.label,
+            originalLabel: v.originalLabel, // Include originalLabel for frontend logic
+          }))
+        : undefined,
+      verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       searchTitle: song.searchTitle,
       searchLyrics: song.searchLyrics,
     }));
@@ -386,8 +461,8 @@ export class SongService {
       title: song.title || '',
       number: song.number || null,
       language: song.language || 'en',
-      chorus: song.chorus || null,
       verses: typeof song.verses === 'string' ? song.verses : (song.verses || ''),
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: (song.tags || []).map((tag: any) => ({
         id: tag._id?.toString() || tag.toString(),
         name: tag.name || tag,

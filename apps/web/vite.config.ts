@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { readFileSync } from 'fs';
 
 const manifestIcons = [
   {
@@ -35,10 +36,23 @@ const manifestIcons = [
   },
 ];
 
+// Read version from package.json
+const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, './package.json'), 'utf-8'));
+const appVersion = packageJson.version;
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    {
+      name: 'inject-version',
+      transformIndexHtml(html) {
+        return html.replace(
+          /<meta name="app-version" content="[^"]*" \/>/,
+          `<meta name="app-version" content="${appVersion}" />`
+        );
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
@@ -88,6 +102,20 @@ export default defineConfig({
         secure: false,
         // Don't rewrite the /api path
         // rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/ws': {
+        target: process.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000',
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            // Silently handle WebSocket proxy errors (ECONNRESET is common when client disconnects)
+            if (err.message !== 'read ECONNRESET' && err.message !== 'write ECONNRESET') {
+              console.error('WebSocket proxy error:', err);
+            }
+          });
+        },
       },
     },
   },

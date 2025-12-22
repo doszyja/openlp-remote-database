@@ -36,7 +36,10 @@ export function useCachedSongs() {
     refetchOnReconnect: false,
   });
 
-  // Check version on mount, but only if at least 2 minutes have passed since last check
+  // Track if this is the first page load (to force version check)
+  const isFirstLoadRef = useRef(true);
+  
+  // Check version on mount - ALWAYS check on first page load to fetch new songs
   // Use a ref to track if we've already initiated a check to prevent multiple simultaneous checks
   const versionCheckInitiatedRef = useRef(false);
   
@@ -55,16 +58,22 @@ export function useCachedSongs() {
         songsCache.getCachedSongs();
         const cachedVersion = songsCache.getCachedVersion();
         
+        // On first page load, ALWAYS check version (forceCheck = true)
+        // This ensures we fetch new songs immediately when page loads
+        const isFirstLoad = isFirstLoadRef.current;
+        isFirstLoadRef.current = false; // Mark as no longer first load
+        
         if (cachedVersion !== null) {
-          // We have cache, check version only if 2 minutes have passed since last check
-          // isCacheValid() will automatically skip if less than 2 minutes have passed
-          const isValid = await songsCache.isCacheValid();
+          // We have cache - check version (force check on first load, otherwise use 2-minute throttle)
+          const isValid = await songsCache.isCacheValid(isFirstLoad);
           if (!isValid) {
             console.log('[useCachedSongs] Version mismatch, refreshing cache...');
             // Version is invalid, refresh cache directly (will call /songs/all)
             await songsCache.refreshCache();
             const updatedSongs = songsCache.getCachedSongs() || [];
             queryClient.setQueryData(['cached-songs'], updatedSongs);
+          } else if (isFirstLoad) {
+            console.log('[useCachedSongs] First load: version check passed, cache is valid');
           }
         } else {
           // No cache, fetch everything (will call /songs/all which includes version)
@@ -82,7 +91,7 @@ export function useCachedSongs() {
       }
     };
     
-    // Execute immediately (but isCacheValid will skip if less than 2 minutes passed)
+    // Execute immediately - on first load this will force version check
     validateVersion();
   }, [queryClient]);
 

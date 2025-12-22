@@ -19,6 +19,10 @@ class ServicePlanItemDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  activeVerseIndex?: number;
 }
 
 export class CreateServicePlanDto {

@@ -1,4 +1,6 @@
-import { IsString, IsOptional, IsArray, IsNotEmpty, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsNotEmpty, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { VerseDto } from './verse.dto';
 
 export class CreateSongDto {
   @IsNotEmpty()
@@ -14,14 +16,11 @@ export class CreateSongDto {
   @IsString()
   language?: string;
 
-  @IsOptional()
-  @IsString()
-  chorus?: string | null;
-
   @IsNotEmpty()
-  @IsString()
-  @MinLength(1)
-  verses: string; // All verses as single string (frontend can split visually for editing)
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VerseDto)
+  verses: VerseDto[]; // Array of verses with order preserved (includes chorus, bridge, etc. as verse objects with type labels)
 
   @IsOptional()
   @IsArray()

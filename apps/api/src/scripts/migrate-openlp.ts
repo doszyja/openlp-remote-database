@@ -19,6 +19,7 @@ interface OpenLPSong {
   search_title?: string;
   search_lyrics?: string;
   last_modified?: string;
+  verse_order?: string; // String format: "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1" - defines verse sequence
 }
 
 interface OpenLPVerse {
@@ -57,41 +58,95 @@ async function migrateOpenLPToMongoDB() {
     let songsStmt;
     let openlpSongs: OpenLPSong[] = [];
     
+    // Check if verse_order column exists
+    let tableInfoStmt;
     if (tables.some(t => t.name === 'songs')) {
-      songsStmt = db.prepare(`
-        SELECT 
-          id,
-          title,
-          alternate_title,
-          lyrics,
-          copyright,
-          comments,
-          ccli_number,
-          theme_name,
-          search_title,
-          search_lyrics,
-          last_modified
-        FROM songs
-        ORDER BY id
-      `);
+      tableInfoStmt = db.prepare(`PRAGMA table_info(songs)`);
+    } else if (tables.some(t => t.name === 'song')) {
+      tableInfoStmt = db.prepare(`PRAGMA table_info(song)`);
+    }
+    
+    const tableInfo = tableInfoStmt ? tableInfoStmt.all() as Array<{ name: string; type: string }> : [];
+    const columnNames = tableInfo.map(col => col.name);
+    const hasVerseOrder = columnNames.includes('verse_order');
+    console.log('📋 Songs table columns:', columnNames.join(', '));
+    console.log(`ℹ️  Table has verse_order column: ${hasVerseOrder}`);
+
+    if (tables.some(t => t.name === 'songs')) {
+      if (hasVerseOrder) {
+        songsStmt = db.prepare(`
+          SELECT 
+            id,
+            title,
+            alternate_title,
+            lyrics,
+            copyright,
+            comments,
+            ccli_number,
+            theme_name,
+            search_title,
+            search_lyrics,
+            last_modified,
+            verse_order
+          FROM songs
+          ORDER BY id
+        `);
+      } else {
+        songsStmt = db.prepare(`
+          SELECT 
+            id,
+            title,
+            alternate_title,
+            lyrics,
+            copyright,
+            comments,
+            ccli_number,
+            theme_name,
+            search_title,
+            search_lyrics,
+            last_modified
+          FROM songs
+          ORDER BY id
+        `);
+      }
       openlpSongs = songsStmt.all() as OpenLPSong[];
     } else if (tables.some(t => t.name === 'song')) {
-      songsStmt = db.prepare(`
-        SELECT 
-          id,
-          title,
-          alternate_title,
-          lyrics,
-          copyright,
-          comments,
-          ccli_number,
-          theme_name,
-          search_title,
-          search_lyrics,
-          last_modified
-        FROM song
-        ORDER BY id
-      `);
+      if (hasVerseOrder) {
+        songsStmt = db.prepare(`
+          SELECT 
+            id,
+            title,
+            alternate_title,
+            lyrics,
+            copyright,
+            comments,
+            ccli_number,
+            theme_name,
+            search_title,
+            search_lyrics,
+            last_modified,
+            verse_order
+          FROM song
+          ORDER BY id
+        `);
+      } else {
+        songsStmt = db.prepare(`
+          SELECT 
+            id,
+            title,
+            alternate_title,
+            lyrics,
+            copyright,
+            comments,
+            ccli_number,
+            theme_name,
+            search_title,
+            search_lyrics,
+            last_modified
+          FROM song
+          ORDER BY id
+        `);
+      }
       openlpSongs = songsStmt.all() as OpenLPSong[];
     } else {
       console.error('❌ Could not find songs table. Available tables:', tables.map(t => t.name));
@@ -152,29 +207,39 @@ async function migrateOpenLPToMongoDB() {
           openlpVerses = versesStmt.all(openlpSong.id) as OpenLPVerse[];
         }
 
-        // Parse verses and chorus from OpenLP format
-        const verses: Array<{ order: number; content: string; label?: string }> = [];
-        let chorus: string | undefined;
+        // Parse verses from OpenLP format (including chorus and bridge - all go to verses array)
+        let verses: Array<{ order: number; content: string; label?: string; originalLabel?: string }> = [];
 
-        // PRIORITY: Always parse from lyrics XML field first (OpenLP stores everything there)
-        if (openlpSong.lyrics) {
+        // PRIORITY 1: Use verse_order string from songs table (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
+        // This is the most reliable source of truth for verse sequence
+        if (openlpSong.verse_order && openlpSong.verse_order.trim() && openlpSong.lyrics) {
           const lyricsText = openlpSong.lyrics.trim();
+          const verseOrderString = openlpSong.verse_order.trim();
           
-          // Check if lyrics are in XML format (OpenLP format)
+          // Check if lyrics are in XML format
           if (lyricsText.startsWith('<') && lyricsText.includes('</verse>')) {
-            // Parse XML format: <verse label="v1">text</verse>
             try {
-              // Use a more robust regex that handles multiline content and escaped characters
-              const verseRegex = /<verse\s+label="([^"]+)"[^>]*>([\s\S]*?)<\/verse>/gi;
+              // Parse XML to extract verses by label
+              // Handle both: <verse label="v1">content</verse> and <verse type="v" label="1">content</verse>
+              // Also handle CDATA: <verse type="v" label="1"><![CDATA[content]]></verse>
+              const verseRegex = /<verse\s+(?:type=["']([^"']+)["']\s+)?label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
               const verseMatches = Array.from(lyricsText.matchAll(verseRegex));
               
-              if (verseMatches.length > 0) {
-                // Sort by order if we can determine it from labels
-                const verseData = verseMatches.map((match) => {
-                  const label = match[1]?.trim() || '';
-                  let content = match[2]?.trim() || '';
-                  
-                  // Decode XML entities
+              // Create a map of label -> content from XML
+              const xmlContentMap = new Map<string, string>();
+              verseMatches.forEach((match) => {
+                const typeAttr = match[1]?.trim() || '';
+                const label = match[2]?.trim() || '';
+                let content = match[3]?.trim() || '';
+                
+                if (!content) return;
+                
+                // Extract CDATA if present: <![CDATA[content]]>
+                const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
+                if (cdataMatch && cdataMatch[1]) {
+                  content = cdataMatch[1].trim();
+                } else {
+                  // No CDATA, decode XML entities
                   content = content
                     .replace(/&amp;/g, '&')
                     .replace(/&lt;/g, '<')
@@ -183,102 +248,492 @@ async function migrateOpenLPToMongoDB() {
                     .replace(/&apos;/g, "'")
                     .replace(/&#39;/g, "'")
                     .replace(/&#x27;/g, "'");
-                  
-                  const labelLower = label.toLowerCase();
-                  
-                  // Extract order number from label (v1, v2, etc.)
-                  let order = 0;
+                }
+                
+                // Combine type and label if needed (e.g., type="v" label="1" -> "v1")
+                let finalLabel = label;
+                if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
+                  finalLabel = `${typeAttr}${label}`;
+                }
+                
+                const labelLower = finalLabel.toLowerCase();
+                xmlContentMap.set(labelLower, content);
+              });
+              
+              // IMPORTANT: verseOrder tells us HOW verses repeat, but we store each verse only ONCE in the database
+              // verseOrder: "v1 c1 v2 c1 v3 c1" means: display v1, then c1, then v2, then c1 again, etc.
+              // But in verses array, we store: [v1, c1, v2, v3] - each unique verse only once
+              
+              // First, build a map of all unique verses from XML (no duplicates)
+              const uniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; type: string }>();
+              
+              // Process all verses from XML to build unique map
+              verseMatches.forEach((match) => {
+                const typeAttr = match[1]?.trim() || '';
+                const label = match[2]?.trim() || '';
+                let content = match[3]?.trim() || '';
+                
+                if (!content) return;
+                
+                // Extract CDATA if present
+                const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
+                if (cdataMatch && cdataMatch[1]) {
+                  content = cdataMatch[1].trim();
+                } else {
+                  // No CDATA, decode XML entities
+                  content = content
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&apos;/g, "'")
+                    .replace(/&#39;/g, "'")
+                    .replace(/&#x27;/g, "'");
+                }
+                
+                // Combine type and label if needed (e.g., type="v" label="1" -> "v1")
+                let finalLabel = label;
+                if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
+                  finalLabel = `${typeAttr}${label}`;
+                }
+                
+                const labelLower = finalLabel.toLowerCase();
+                
+                // Store unique verse (if not already stored)
+                if (!uniqueVersesMap.has(labelLower)) {
+                  let verseLabelFormatted: string | undefined;
                   if (labelLower.startsWith('v')) {
-                    const numMatch = labelLower.match(/\d+/);
-                    order = numMatch ? parseInt(numMatch[0], 10) : 0;
+                    const verseNum = labelLower.match(/\d+/)?.[0];
+                    verseLabelFormatted = verseNum ? `Verse ${verseNum}` : 'Verse';
                   } else if (labelLower.startsWith('c')) {
-                    order = -1; // Chorus comes before verses
+                    const chorusNum = labelLower.match(/\d+/)?.[0];
+                    verseLabelFormatted = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
                   } else if (labelLower.startsWith('b')) {
-                    order = 999; // Bridge comes after verses
+                    const bridgeNum = labelLower.match(/\d+/)?.[0];
+                    verseLabelFormatted = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
                   } else if (labelLower.startsWith('p')) {
-                    order = -2; // Pre-chorus comes before chorus
+                    const preChorusNum = labelLower.match(/\d+/)?.[0];
+                    verseLabelFormatted = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                  } else if (labelLower.startsWith('t')) {
+                    const tagNum = labelLower.match(/\d+/)?.[0];
+                    verseLabelFormatted = tagNum ? `Tag ${tagNum}` : 'Tag';
                   }
                   
-                  return { label, labelLower, content, order };
-                });
+                  uniqueVersesMap.set(labelLower, {
+                    content,
+                    label: verseLabelFormatted || label,
+                    originalLabel: labelLower, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                    type: typeAttr || (labelLower.startsWith('v') ? 'v' : labelLower.startsWith('c') ? 'c' : labelLower.startsWith('b') ? 'b' : ''),
+                  });
+                }
+              });
+              
+              // Now build verses array from unique verses map, sorted by type and number
+              // This gives us: [Verse 1, Verse 2, Verse 3, Verse 4, Verse 5, Chorus 1] - each only once
+              const uniqueVersesArray: Array<{ order: number; content: string; label: string; originalLabel?: string }> = [];
+              let uniqueOrder = 1;
+              
+              // Sort unique verses: first all verses (v1, v2, v3...), then chorus (c1, c2...), then bridge, etc.
+              const sortedUniqueLabels = Array.from(uniqueVersesMap.keys()).sort((a, b) => {
+                const aType = a.charAt(0);
+                const bType = b.charAt(0);
+                const typeOrder: Record<string, number> = { 'v': 1, 'c': 2, 'b': 3, 'p': 4, 't': 5 };
+                if (typeOrder[aType] !== typeOrder[bType]) {
+                  return (typeOrder[aType] || 99) - (typeOrder[bType] || 99);
+                }
+                // Same type, sort by number
+                const aNum = parseInt(a.match(/\d+/)?.[0] || '0');
+                const bNum = parseInt(b.match(/\d+/)?.[0] || '0');
+                return aNum - bNum;
+              });
+              
+              for (const labelKey of sortedUniqueLabels) {
+                const verseData = uniqueVersesMap.get(labelKey);
+                if (verseData) {
+                  uniqueVersesArray.push({
+                    order: uniqueOrder++,
+                    content: verseData.content,
+                    label: verseData.label,
+                    originalLabel: verseData.originalLabel, // Include original identifier for verseOrder matching
+                  });
+                }
+              }
+              
+              verses = uniqueVersesArray;
+              
+              // If verse_order didn't match any verses, fall back to XML order (from fix-verse-order.ts)
+              if (verses.length === 0 && verseOrderString) {
+                console.warn(`⚠️  No verses matched verse_order for "${openlpSong.title}", using XML order`);
+                console.warn(`   Available labels in XML: ${Array.from(xmlContentMap.keys()).filter(k => !k.startsWith('c')).join(', ')}`);
+                console.warn(`   verse_order string: "${verseOrderString}"`);
                 
-                // Sort: pre-chorus, chorus, verses (by number), bridge
-                verseData.sort((a, b) => {
-                  if (a.order === b.order) return 0;
-                  if (a.order === -2) return -1; // Pre-chorus first
-                  if (b.order === -2) return 1;
-                  if (a.order === -1) return -1; // Chorus after pre-chorus
-                  if (b.order === -1) return 1;
-                  return a.order - b.order;
-                });
+                // IMPORTANT: Store each unique verse only ONCE (no duplicates)
+                const fallbackUniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; xmlIndex: number }>();
                 
-                let verseOrder = 1;
-                for (const verse of verseData) {
-                  if (!verse.content) continue;
+                // Use XML order (as they appear in XML)
+                verseMatches.forEach((match, xmlIndex) => {
+                  const typeAttr = match[1]?.trim() || '';
+                  const label = match[2]?.trim() || '';
+                  let content = match[3]?.trim() || '';
                   
-                  // Handle different verse types
-                  if (verse.labelLower.startsWith('c') || verse.labelLower === 'chorus' || verse.labelLower === 'c1' || verse.labelLower === 'c2') {
-                    chorus = verse.content;
+                  if (!content) return;
+                  
+                  // Extract CDATA if present
+                  const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
+                  if (cdataMatch && cdataMatch[1]) {
+                    content = cdataMatch[1].trim();
                   } else {
-                    // Determine verse label
-                    let verseLabel: string | undefined;
-                    if (verse.labelLower.startsWith('v') || verse.labelLower.match(/^verse\s*\d*/i)) {
-                      const verseNum = verse.labelLower.match(/\d+/)?.[0] || verseOrder.toString();
-                      verseLabel = `Verse ${verseNum}`;
-                    } else if (verse.labelLower.startsWith('b') || verse.labelLower === 'bridge') {
-                      verseLabel = 'Bridge';
-                    } else if (verse.labelLower.startsWith('p') || verse.labelLower === 'pre-chorus') {
-                      verseLabel = 'Pre-Chorus';
-                    } else if (verse.labelLower.startsWith('t') || verse.labelLower === 'tag') {
-                      verseLabel = 'Tag';
-                    } else {
-                      verseLabel = verse.label || undefined;
+                    // No CDATA, decode XML entities
+                    content = content
+                      .replace(/&amp;/g, '&')
+                      .replace(/&lt;/g, '<')
+                      .replace(/&gt;/g, '>')
+                      .replace(/&quot;/g, '"')
+                      .replace(/&apos;/g, "'")
+                      .replace(/&#39;/g, "'")
+                      .replace(/&#x27;/g, "'");
+                  }
+                  
+                  // Combine type and label if needed
+                  let finalLabel = label;
+                  if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
+                    finalLabel = `${typeAttr}${label}`;
+                  }
+                  
+                  const labelLower = finalLabel.toLowerCase();
+                  
+                  // Store unique verse only once (by label)
+                  if (!fallbackUniqueVersesMap.has(labelLower)) {
+                    let verseLabelFormatted: string | undefined;
+                    if (labelLower.startsWith('v')) {
+                      const verseNum = labelLower.match(/\d+/)?.[0] || xmlIndex.toString();
+                      verseLabelFormatted = `Verse ${verseNum}`;
+                    } else if (labelLower.startsWith('c')) {
+                      const chorusNum = labelLower.match(/\d+/)?.[0];
+                      verseLabelFormatted = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
+                    } else if (labelLower.startsWith('b')) {
+                      const bridgeNum = labelLower.match(/\d+/)?.[0];
+                      verseLabelFormatted = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
+                    } else if (labelLower.startsWith('p')) {
+                      const preChorusNum = labelLower.match(/\d+/)?.[0];
+                      verseLabelFormatted = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                    } else if (labelLower.startsWith('t')) {
+                      const tagNum = labelLower.match(/\d+/)?.[0];
+                      verseLabelFormatted = tagNum ? `Tag ${tagNum}` : 'Tag';
                     }
                     
+                    fallbackUniqueVersesMap.set(labelLower, {
+                      content,
+                      label: verseLabelFormatted || label,
+                      originalLabel: labelLower, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                      xmlIndex,
+                    });
+                  }
+                });
+                
+                // Convert map to array, sorted by XML order
+                const sortedFallbackLabels = Array.from(fallbackUniqueVersesMap.keys()).sort((a, b) => {
+                  const aData = fallbackUniqueVersesMap.get(a)!;
+                  const bData = fallbackUniqueVersesMap.get(b)!;
+                  return aData.xmlIndex - bData.xmlIndex;
+                });
+                
+                let fallbackOrder = 1;
+                for (const labelKey of sortedFallbackLabels) {
+                  const verseData = fallbackUniqueVersesMap.get(labelKey);
+                  if (verseData) {
                     verses.push({
-                      order: verseOrder++,
-                      content: verse.content,
-                      label: verseLabel,
+                      order: fallbackOrder++,
+                      content: verseData.content,
+                      label: verseData.label,
+                      originalLabel: verseData.originalLabel, // Include original identifier for verseOrder matching
+                    });
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn(`⚠️  Failed to parse verse_order for song "${openlpSong.title}": ${error}`);
+              // Fall through to other methods
+            }
+          }
+        }
+        
+        // PRIORITY 2: If verses table exists with verse_order, use it as source of truth for order
+        // Parse XML for content, but use verse_order from table for sorting
+        if (verses.length === 0 && openlpVerses.length > 0 && openlpSong.lyrics) {
+          const lyricsText = openlpSong.lyrics.trim();
+          
+          // Check if lyrics are in XML format (OpenLP format)
+          if (lyricsText.startsWith('<') && lyricsText.includes('</verse>')) {
+            try {
+              // Parse XML to get content
+              // Handle both: <verse label="v1">content</verse> and <verse type="v" label="1">content</verse>
+              // Also handle CDATA: <verse type="v" label="1"><![CDATA[content]]></verse>
+              const verseRegex = /<verse\s+(?:type=["']([^"']+)["']\s+)?label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
+              const verseMatches = Array.from(lyricsText.matchAll(verseRegex));
+              
+              // Create a map of label -> content from XML
+              const xmlContentMap = new Map<string, string>();
+              verseMatches.forEach((match) => {
+                const typeAttr = match[1]?.trim() || '';
+                const label = match[2]?.trim() || '';
+                let content = match[3]?.trim() || '';
+                
+                if (!content) return;
+                
+                // Extract CDATA if present: <![CDATA[content]]>
+                const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
+                if (cdataMatch && cdataMatch[1]) {
+                  content = cdataMatch[1].trim();
+                } else {
+                  // No CDATA, decode XML entities
+                  content = content
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&apos;/g, "'")
+                    .replace(/&#39;/g, "'")
+                    .replace(/&#x27;/g, "'");
+                }
+                
+                // Combine type and label if needed (e.g., type="v" label="1" -> "v1")
+                let finalLabel = label;
+                if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
+                  finalLabel = `${typeAttr}${label}`;
+                }
+                
+                xmlContentMap.set(finalLabel.toLowerCase(), content);
+              });
+              
+              // IMPORTANT: Store each unique verse only ONCE, even if it appears multiple times in verse_order
+              // Use a map to track unique verses by their label
+              const uniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; verseOrder: number }>();
+              
+              for (const verse of openlpVerses) {
+                const verseType = verse.verse_type.toLowerCase();
+                const verseLabel = verseType; // Use verse_type as label (v1, v2, c, b, etc.)
+                
+                // Get content from XML map if available, otherwise use verse_text
+                let content = xmlContentMap.get(verseLabel) || verse.verse_text.trim();
+                
+                if (!content) continue;
+                
+                // Store unique verse only once (by label)
+                if (!uniqueVersesMap.has(verseLabel)) {
+                  let label: string | undefined;
+                  if (verseType.startsWith('v')) {
+                    label = `Verse ${verse.verse_order}`;
+                  } else if (verseType.startsWith('c') || verseType === 'chorus') {
+                    const chorusNum = verseType.match(/\d+/)?.[0];
+                    label = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
+                  } else if (verseType.startsWith('b')) {
+                    const bridgeNum = verseType.match(/\d+/)?.[0];
+                    label = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
+                  } else if (verseType.startsWith('p')) {
+                    const preChorusNum = verseType.match(/\d+/)?.[0];
+                    label = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                  } else if (verseType.startsWith('t')) {
+                    const tagNum = verseType.match(/\d+/)?.[0];
+                    label = tagNum ? `Tag ${tagNum}` : 'Tag';
+                  }
+                  
+                  uniqueVersesMap.set(verseLabel, {
+                    content,
+                    label: label || verseLabel,
+                    originalLabel: verseLabel, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                    verseOrder: verse.verse_order,
+                  });
+                }
+              }
+              
+              // Convert map to array, sorted by type and verse_order
+              const sortedUniqueLabels = Array.from(uniqueVersesMap.keys()).sort((a, b) => {
+                const aData = uniqueVersesMap.get(a)!;
+                const bData = uniqueVersesMap.get(b)!;
+                return aData.verseOrder - bData.verseOrder;
+              });
+              
+              let uniqueOrder = 1;
+              for (const labelKey of sortedUniqueLabels) {
+                const verseData = uniqueVersesMap.get(labelKey);
+                if (verseData) {
+                  verses.push({
+                    order: uniqueOrder++,
+                    content: verseData.content,
+                    label: verseData.label,
+                    originalLabel: verseData.originalLabel, // Include original identifier for verseOrder matching
+                  });
+                }
+              }
+            } catch (error) {
+              console.warn(`⚠️  Failed to parse XML lyrics for song "${openlpSong.title}": ${error}`);
+              // Fall through to verses table only parsing
+            }
+          } else {
+            // Not XML format, use verses table directly
+            // IMPORTANT: Store each unique verse only ONCE
+            const uniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; verseOrder: number }>();
+            
+            for (const verse of openlpVerses) {
+              const verseType = verse.verse_type.toLowerCase();
+              
+              // Store unique verse only once (by verse_type)
+              if (!uniqueVersesMap.has(verseType)) {
+                let label: string | undefined;
+                if (verseType.startsWith('v')) {
+                  label = `Verse ${verse.verse_order}`;
+                } else if (verseType.startsWith('c') || verseType === 'chorus') {
+                  const chorusNum = verseType.match(/\d+/)?.[0];
+                  label = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
+                } else if (verseType.startsWith('b')) {
+                  const bridgeNum = verseType.match(/\d+/)?.[0];
+                  label = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
+                } else if (verseType.startsWith('p')) {
+                  const preChorusNum = verseType.match(/\d+/)?.[0];
+                  label = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                } else if (verseType.startsWith('t')) {
+                  const tagNum = verseType.match(/\d+/)?.[0];
+                  label = tagNum ? `Tag ${tagNum}` : 'Tag';
+                }
+                
+                uniqueVersesMap.set(verseType, {
+                  content: verse.verse_text.trim(),
+                  label: label || verseType,
+                  originalLabel: verseType, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                  verseOrder: verse.verse_order,
+                });
+              }
+            }
+            
+            // Convert map to array, sorted by verse_order
+            const sortedUniqueLabels = Array.from(uniqueVersesMap.keys()).sort((a, b) => {
+              const aData = uniqueVersesMap.get(a)!;
+              const bData = uniqueVersesMap.get(b)!;
+              return aData.verseOrder - bData.verseOrder;
+            });
+            
+            let uniqueOrder = 1;
+            for (const labelKey of sortedUniqueLabels) {
+              const verseData = uniqueVersesMap.get(labelKey);
+              if (verseData) {
+                verses.push({
+                  order: uniqueOrder++,
+                  content: verseData.content,
+                  label: verseData.label,
+                });
+              }
+            }
+          }
+        }
+        // PRIORITY 3: If no verse_order and no verses table, parse from XML lyrics (preserve XML order)
+        else if (verses.length === 0 && openlpSong.lyrics) {
+          const lyricsText = openlpSong.lyrics.trim();
+          
+          // Check if lyrics are in XML format (OpenLP format)
+          if (lyricsText.startsWith('<') && lyricsText.includes('</verse>')) {
+            try {
+              // Parse XML format: <verse label="v1">text</verse> or <verse type="v" label="1">text</verse>
+              // Also handle CDATA: <verse type="v" label="1"><![CDATA[content]]></verse>
+              const verseRegex = /<verse\s+(?:type=["']([^"']+)["']\s+)?label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
+              const verseMatches = Array.from(lyricsText.matchAll(verseRegex));
+              
+              if (verseMatches.length > 0) {
+                // IMPORTANT: Store each unique verse only ONCE (no duplicates)
+                const uniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; xmlIndex: number }>();
+                
+                // Process verses in the order they appear in XML
+                verseMatches.forEach((match, xmlIndex) => {
+                  const typeAttr = match[1]?.trim() || '';
+                  const label = match[2]?.trim() || '';
+                  let content = match[3]?.trim() || '';
+                  
+                  if (!content) return;
+                  
+                  // Extract CDATA if present: <![CDATA[content]]>
+                  const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
+                  if (cdataMatch && cdataMatch[1]) {
+                    content = cdataMatch[1].trim();
+                  } else {
+                    // No CDATA, decode XML entities
+                    content = content
+                      .replace(/&amp;/g, '&')
+                      .replace(/&lt;/g, '<')
+                      .replace(/&gt;/g, '>')
+                      .replace(/&quot;/g, '"')
+                      .replace(/&apos;/g, "'")
+                      .replace(/&#39;/g, "'")
+                      .replace(/&#x27;/g, "'");
+                  }
+                  
+                  // Combine type and label if needed (e.g., type="v" label="1" -> "v1")
+                  let finalLabel = label;
+                  if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
+                    finalLabel = `${typeAttr}${label}`;
+                  }
+                  
+                  const labelLower = finalLabel.toLowerCase();
+                  
+                  // Store unique verse only once (by label)
+                  if (!uniqueVersesMap.has(labelLower)) {
+                    let verseLabel: string | undefined;
+                    if (labelLower.startsWith('v') || labelLower.match(/^verse\s*\d*/i)) {
+                      const verseNum = labelLower.match(/\d+/)?.[0] || (xmlIndex + 1).toString();
+                      verseLabel = `Verse ${verseNum}`;
+                    } else if (labelLower.startsWith('c') || labelLower === 'chorus' || labelLower === 'c1' || labelLower === 'c2') {
+                      const chorusNum = labelLower.match(/\d+/)?.[0];
+                      verseLabel = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
+                    } else if (labelLower.startsWith('b') || labelLower === 'bridge') {
+                      const bridgeNum = labelLower.match(/\d+/)?.[0];
+                      verseLabel = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
+                    } else if (labelLower.startsWith('p') || labelLower === 'pre-chorus') {
+                      const preChorusNum = labelLower.match(/\d+/)?.[0];
+                      verseLabel = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                    } else if (labelLower.startsWith('t') || labelLower === 'tag') {
+                      const tagNum = labelLower.match(/\d+/)?.[0];
+                      verseLabel = tagNum ? `Tag ${tagNum}` : 'Tag';
+                    } else {
+                      verseLabel = label || undefined;
+                    }
+                    
+                    uniqueVersesMap.set(labelLower, {
+                      content,
+                      label: verseLabel || label,
+                      originalLabel: labelLower, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                      xmlIndex,
+                    });
+                  }
+                });
+                
+                // Convert map to array, sorted by XML order
+                const sortedUniqueLabels = Array.from(uniqueVersesMap.keys()).sort((a, b) => {
+                  const aData = uniqueVersesMap.get(a)!;
+                  const bData = uniqueVersesMap.get(b)!;
+                  return aData.xmlIndex - bData.xmlIndex;
+                });
+                
+                let uniqueOrder = 1;
+                for (const labelKey of sortedUniqueLabels) {
+                  const verseData = uniqueVersesMap.get(labelKey);
+                  if (verseData) {
+                    verses.push({
+                      order: uniqueOrder++,
+                      content: verseData.content,
+                      label: verseData.label,
                     });
                   }
                 }
               }
             } catch (error) {
               console.warn(`⚠️  Failed to parse XML lyrics for song "${openlpSong.title}": ${error}`);
-              // Fall through to verses table or plain text parsing
-            }
-          }
-        }
-
-        // Fallback: If no XML verses found, try verses table
-        if (verses.length === 0 && openlpVerses.length > 0) {
-          // Process verses from verses table
-          for (const verse of openlpVerses) {
-            const verseType = verse.verse_type.toLowerCase();
-            
-            if (verseType.startsWith('c') || verseType === 'chorus') {
-              // This is a chorus
-              chorus = verse.verse_text.trim();
-            } else {
-              // Regular verse
-              const label = verseType.startsWith('v') 
-                ? `Verse ${verse.verse_order}` 
-                : verseType.startsWith('b')
-                ? 'Bridge'
-                : undefined;
-              
-              verses.push({
-                order: verse.verse_order,
-                content: verse.verse_text.trim(),
-                label,
-              });
+              // Fall through to plain text parsing
             }
           }
         }
 
         // If still no verses found, try plain text format: [C], [V1], [V2], [B], etc.
         // Only try this if lyrics are NOT in XML format (already tried above)
-        if (verses.length === 0 && openlpSong.lyrics && !chorus) {
+        if (verses.length === 0 && openlpSong.lyrics) {
           const lyricsText = openlpSong.lyrics.trim();
           
           // Skip if it's XML format (already tried)
@@ -286,6 +741,8 @@ async function migrateOpenLPToMongoDB() {
             const verseRegex = /\[([CVB]\d*|Chorus|Verse\s*\d+|Bridge|Pre-Chorus|Tag)\]\s*\n?/gi;
             const parts = lyricsText.split(verseRegex).filter(p => p && p.trim());
             
+            // IMPORTANT: Store each unique verse only ONCE (no duplicates)
+            const plainTextUniqueVersesMap = new Map<string, { content: string; label: string; originalLabel: string; order: number }>();
             let currentVerseOrder = 1;
             let currentChorus: string | undefined;
             
@@ -296,31 +753,62 @@ async function migrateOpenLPToMongoDB() {
               if (!content) continue;
               
               const labelLower = label?.toLowerCase() || '';
-              if (labelLower.startsWith('c') || labelLower === 'chorus') {
-                currentChorus = content;
-              } else {
-                verses.push({
-                  order: currentVerseOrder++,
+              
+              // Store unique verse only once (by label)
+              if (!plainTextUniqueVersesMap.has(labelLower)) {
+                let verseLabel: string | undefined;
+                if (labelLower.startsWith('c') || labelLower === 'chorus') {
+                  const chorusNum = labelLower.match(/\d+/)?.[0];
+                  verseLabel = chorusNum ? `Chorus ${chorusNum}` : 'Chorus';
+                  // Also store first chorus in separate field for backward compatibility
+                  if (!currentChorus) {
+                    currentChorus = content;
+                  }
+                } else if (labelLower.startsWith('v') || labelLower.includes('verse')) {
+                  const verseNum = labelLower.match(/\d+/)?.[0] || currentVerseOrder.toString();
+                  verseLabel = `Verse ${verseNum}`;
+                } else if (labelLower.startsWith('b') || labelLower === 'bridge') {
+                  const bridgeNum = labelLower.match(/\d+/)?.[0];
+                  verseLabel = bridgeNum ? `Bridge ${bridgeNum}` : 'Bridge';
+                } else if (labelLower.includes('pre-chorus')) {
+                  const preChorusNum = labelLower.match(/\d+/)?.[0];
+                  verseLabel = preChorusNum ? `Pre-Chorus ${preChorusNum}` : 'Pre-Chorus';
+                } else if (labelLower === 'tag') {
+                  const tagNum = labelLower.match(/\d+/)?.[0];
+                  verseLabel = tagNum ? `Tag ${tagNum}` : 'Tag';
+                }
+                
+                plainTextUniqueVersesMap.set(labelLower, {
                   content,
-                  label: labelLower.startsWith('v') || labelLower.includes('verse')
-                    ? `Verse ${currentVerseOrder - 1}`
-                    : labelLower.startsWith('b') || labelLower === 'bridge'
-                    ? 'Bridge'
-                    : labelLower.includes('pre-chorus')
-                    ? 'Pre-Chorus'
-                    : labelLower === 'tag'
-                    ? 'Tag'
-                    : undefined,
+                  label: verseLabel || label,
+                  originalLabel: labelLower, // Store original identifier (e.g., "v1", "c1") for verseOrder matching
+                  order: currentVerseOrder++,
                 });
               }
             }
             
-            if (currentChorus) {
-              chorus = currentChorus;
+            // Convert map to array, sorted by order
+            const sortedPlainTextLabels = Array.from(plainTextUniqueVersesMap.keys()).sort((a, b) => {
+              const aData = plainTextUniqueVersesMap.get(a)!;
+              const bData = plainTextUniqueVersesMap.get(b)!;
+              return aData.order - bData.order;
+            });
+            
+            let uniqueOrder = 1;
+            for (const labelKey of sortedPlainTextLabels) {
+              const verseData = plainTextUniqueVersesMap.get(labelKey);
+              if (verseData) {
+                verses.push({
+                  order: uniqueOrder++,
+                  content: verseData.content,
+                  label: verseData.label,
+                  originalLabel: verseData.originalLabel, // Include original identifier for verseOrder matching
+                });
+              }
             }
             
             // If still no structured format found, split by double newlines or just newlines
-            if (verses.length === 0 && !chorus) {
+            if (verses.length === 0) {
               const lyricsLines = lyricsText.split(/\n\n+/).filter(line => line.trim());
               if (lyricsLines.length > 1) {
                 // Multiple paragraphs
@@ -366,33 +854,39 @@ async function migrateOpenLPToMongoDB() {
             .toLowerCase()
             .trim();
 
-        // Combine verses into single string (separated by double newlines)
-        // IMPORTANT: Preserve verse_order from verses table when available
-        // If we have structured verses, combine them in verse_order; otherwise use raw lyrics
-        let versesString: string;
-        if (verses.length > 0) {
-          // Sort by verse_order (from verses table) to preserve original order
-          // verse_order is critical information from OpenLP
-          versesString = verses
-            .sort((a, b) => a.order - b.order) // Sort by verse_order
-            .map(v => v.content.trim())
-            .filter(content => content.length > 0)
-            .join('\n\n');
-        } else {
-          // Fallback: use raw lyrics or empty string
-          versesString = openlpSong.lyrics?.trim() || '';
-        }
-        
-        // Generate search_lyrics for OpenLP compatibility (use existing or generate from verses)
+        // IMPORTANT: Preserve verse_order from SQLite - use verse_order string directly (1:1 transparent)
+        // Sort verses by order to ensure correct sequence
+        const sortedVerses = verses.length > 0
+          ? verses.sort((a, b) => a.order - b.order) // Sort by verse_order
+          : [];
+
+        // Get verse_order string directly from SQLite (1:1 transparent with SQLite structure)
+        // This is the source of truth for verse sequence (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
+        const verseOrderString = openlpSong.verse_order || undefined;
+
+        // Generate search_lyrics for OpenLP compatibility
+        // Convert verses array to string for search
+        const versesString = sortedVerses
+          .map(v => v.content.trim())
+          .filter(content => content.length > 0)
+          .join('\n\n');
         const searchLyrics = openlpSong.search_lyrics || versesString.toLowerCase().trim();
 
+        // IMPORTANT: Preserve exact XML from SQLite lyrics column (1:1 transparent)
+        // Store the raw XML exactly as it appears in SQLite (with CDATA, type/label attributes, etc.)
+        const lyricsXml = openlpSong.lyrics && openlpSong.lyrics.trim() 
+          ? openlpSong.lyrics.trim() 
+          : undefined;
+
         // Create song DTO with OpenLP compatibility fields
+        // verses is now an array of objects with order (verse_order from OpenLP)
         const createSongDto = {
           title: openlpSong.title || openlpSong.alternate_title || 'Untitled',
           number,
           language: 'en', // Default to English, can be detected later
-          chorus,
-          verses: versesString, // Single string field (preserves verse_order)
+          verses: sortedVerses, // Array of objects with order (includes chorus, bridge, etc. as verse objects with type labels)
+          verseOrder: verseOrderString, // verse_order string from SQLite (1:1 transparent: "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
+          lyricsXml, // Exact XML from SQLite lyrics column (1:1 transparent - preserves CDATA, type/label attributes, etc.)
           tags: tags.length > 0 ? tags : undefined,
           // OpenLP compatibility fields
           copyright: openlpSong.copyright || undefined,
@@ -421,7 +915,8 @@ async function migrateOpenLPToMongoDB() {
 
         // Create song in MongoDB
         await songService.create(createSongDto);
-        console.log(`✅ Imported: "${createSongDto.title}" (${verses.length} verses${chorus ? ', chorus' : ''})`);
+        const chorusCount = verses.filter(v => v.label?.toLowerCase().includes('chorus')).length;
+        console.log(`✅ Imported: "${createSongDto.title}" (${verses.length} verses${chorusCount > 0 ? `, ${chorusCount} chorus(es)` : ''})`);
         imported++;
 
       } catch (error: any) {

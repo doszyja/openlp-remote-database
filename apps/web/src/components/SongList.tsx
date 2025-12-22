@@ -36,6 +36,9 @@ const VirtualizedRow = memo(({ index, style, data }: {
         songs: SongListCacheItem[];
         onSongClick?: (songId: string) => void;
         currentSongId?: string;
+        selectedIndex: number;
+        onSelectIndex: (index: number) => void;
+        onFocusInput: () => void;
     };
 }) => {
     const song = data.songs[index];
@@ -46,15 +49,49 @@ const VirtualizedRow = memo(({ index, style, data }: {
         : song.title;
 
     const isSelected = song.id === data.currentSongId;
+    const isFocused = data.selectedIndex === index;
+    const buttonRef = useRef<HTMLDivElement>(null);
+
+    // Focus button when this item is selected
+    useEffect(() => {
+        if (isFocused && buttonRef.current) {
+            const focusableElement = buttonRef.current.querySelector('button') || buttonRef.current;
+            if (focusableElement && typeof (focusableElement as HTMLElement).focus === 'function') {
+                (focusableElement as HTMLElement).focus();
+            }
+        }
+    }, [isFocused]);
 
     const handleClick = useCallback(() => {
+        data.onSelectIndex(index);
         if (data.onSongClick) {
             data.onSongClick(song.id);
         }
-    }, [song.id, data]);
+    }, [song.id, data, index]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleClick();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (index < data.songs.length - 1) {
+                data.onSelectIndex(index + 1);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (index > 0) {
+                data.onSelectIndex(index - 1);
+            } else {
+                // Move back to input
+                data.onSelectIndex(-1);
+                data.onFocusInput();
+            }
+        }
+    }, [handleClick, index, data]);
 
     return (
-        <div style={style}>
+        <div style={style} data-song-index={index}>
             <ListItem
                 disablePadding
                 sx={{
@@ -64,14 +101,24 @@ const VirtualizedRow = memo(({ index, style, data }: {
                 }}
             >
                 <ListItemButton
+                    ref={buttonRef}
                     onClick={handleClick}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => data.onSelectIndex(index)}
                     selected={isSelected}
+                    tabIndex={isFocused ? 0 : -1}
                     sx={{
                         '&.Mui-selected': {
                             fontWeight: 600,
                             '& .MuiListItemText-primary': {
                                 fontWeight: 600,
                             },
+                        },
+                        '&:focus': {
+                            backgroundColor: (theme) => 
+                                theme.palette.mode === 'dark' 
+                                    ? 'rgba(255, 255, 255, 0.08)' 
+                                    : 'rgba(0, 0, 0, 0.04)',
                         },
                     }}
                 >
@@ -110,7 +157,9 @@ export default function SongList({
 }: SongListProps) {
     const [listHeight, setListHeight] = useState(height || 600);
     const [searchModalOpen, setSearchModalOpen] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1); // -1 means input is focused
     const listRef = useRef<FixedSizeList>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Calculate list height based on viewport if calculateHeight function is provided
     useEffect(() => {
@@ -132,7 +181,39 @@ export default function SongList({
         if (onSearchChange) {
             onSearchChange(e.target.value);
         }
+        setSelectedIndex(-1); // Reset selection when search changes
     }, [onSearchChange]);
+
+    const handleFocusInput = useCallback(() => {
+        searchInputRef.current?.focus();
+    }, []);
+
+    // Scroll to selected item when it changes
+    useEffect(() => {
+        if (selectedIndex >= 0 && selectedIndex < songs.length) {
+            listRef.current?.scrollToItem(selectedIndex, 'smart');
+        }
+    }, [selectedIndex, songs.length]);
+
+    const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (songs.length > 0) {
+                setSelectedIndex(0);
+            }
+        } else if (e.key === 'Enter' && songs.length > 0) {
+            e.preventDefault();
+            if (selectedIndex >= 0 && selectedIndex < songs.length) {
+                // Activate selected item
+                if (onSongClick) {
+                    onSongClick(songs[selectedIndex].id);
+                }
+            } else if (onSongClick) {
+                // Activate first item if nothing selected
+                onSongClick(songs[0].id);
+            }
+        }
+    }, [songs, selectedIndex, onSongClick]);
 
     // Handle Ctrl+F / Cmd+F to open search modal
     useEffect(() => {
@@ -155,17 +236,23 @@ export default function SongList({
         songs,
         onSongClick,
         currentSongId,
-    }), [songs, onSongClick, currentSongId]);
+        selectedIndex,
+        onSelectIndex: setSelectedIndex,
+        onFocusInput: handleFocusInput,
+    }), [songs, onSongClick, currentSongId, selectedIndex, handleFocusInput]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             {showSearch && (
                 <Box sx={{ mb: { xs: 1.5, sm: 2 }, flexShrink: 0 }}>
                     <TextField
+                        inputRef={searchInputRef}
                         fullWidth
                         placeholder="Szukaj pieśni..."
                         value={searchValue}
                         onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                        onFocus={() => setSelectedIndex(-1)}
                         size="small"
                         InputProps={{
                             startAdornment: (
@@ -202,6 +289,51 @@ export default function SongList({
                         flex: 1,
                         minHeight: 0,
                         overflow: 'hidden',
+                        // Custom scrollbar styles
+                        '& .react-window-scrollbar': {
+                            width: '8px !important',
+                            '& > div': {
+                                backgroundColor: (theme) =>
+                                    theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.2)'
+                                        : 'rgba(0, 0, 0, 0.2)',
+                                borderRadius: '4px',
+                                '&:hover': {
+                                    backgroundColor: (theme) =>
+                                        theme.palette.mode === 'dark'
+                                            ? 'rgba(255, 255, 255, 0.3)'
+                                            : 'rgba(0, 0, 0, 0.3)',
+                                },
+                            },
+                        },
+                        // Webkit scrollbar (Chrome, Safari, Edge)
+                        '& *::-webkit-scrollbar': {
+                            width: '8px',
+                        },
+                        '& *::-webkit-scrollbar-track': {
+                            background: 'transparent',
+                        },
+                        '& *::-webkit-scrollbar-thumb': {
+                            backgroundColor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.2)'
+                                    : 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '4px',
+                            '&:hover': {
+                                backgroundColor: (theme) =>
+                                    theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.3)'
+                                        : 'rgba(0, 0, 0, 0.3)',
+                            },
+                        },
+                        // Firefox scrollbar
+                        '& *': {
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.2) transparent'
+                                    : 'rgba(0, 0, 0, 0.2) transparent',
+                        },
                     }}
                 >
                     <FixedSizeList
