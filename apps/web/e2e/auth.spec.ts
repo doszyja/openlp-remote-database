@@ -24,4 +24,3 @@ test('shows a helpful error when Discord denies access', async ({ page }) => {
   await expect(alert).toContainText('Nie masz uprawnień');
   await expect(page).toHaveURL(/\/songs$/, { timeout: 6000 });
 });
-

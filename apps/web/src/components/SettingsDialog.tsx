@@ -14,7 +14,11 @@ import {
   Divider,
   Alert,
 } from '@mui/material';
-import { Settings as SettingsIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  Settings as SettingsIcon,
+  Close as CloseIcon,
+  Delete as DeleteIcon,
+} from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCachedSongs } from '../hooks/useCachedSongs';
@@ -32,7 +36,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useNotification();
   const [isClearingCache, setIsClearingCache] = useState(false);
-  
+
   // Check if API is working using cached songs (no unnecessary requests)
   const { error: apiError } = useCachedSongs();
   const isApiError = !!apiError;
@@ -43,7 +47,11 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   };
 
   const handleClearCache = async () => {
-    if (!window.confirm('Czy na pewno chcesz wyczyścić cache? Wszystkie zapisane pieśni zostaną usunięte z pamięci przeglądarki i będą pobrane ponownie z serwera.')) {
+    if (
+      !window.confirm(
+        'Czy na pewno chcesz wyczyścić cache? Wszystkie zapisane pieśni zostaną usunięte z pamięci przeglądarki i będą pobrane ponownie z serwera.'
+      )
+    ) {
       return;
     }
 
@@ -51,15 +59,15 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
     try {
       // Clear songs cache
       songsCache.clearCache();
-      
+
       // Clear React Query cache for songs
       queryClient.invalidateQueries({ queryKey: ['cached-songs'] });
       queryClient.invalidateQueries({ queryKey: ['songs'] });
       queryClient.removeQueries({ queryKey: ['cached-songs'] });
       queryClient.removeQueries({ queryKey: ['songs'] });
-      
+
       showSuccess('Cache został wyczyszczony. Pieśni zostaną pobrane ponownie z serwera.');
-      
+
       // Refresh cache immediately
       await songsCache.refreshCache();
     } catch (error) {
@@ -69,7 +77,6 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
       setIsClearingCache(false);
     }
   };
-
 
   return (
     <>
@@ -105,7 +112,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
                 onClick={handleDiscordLogin}
                 disabled={isApiError}
                 fullWidth
-                sx={{ 
+                sx={{
                   mt: 1,
                   color: 'primary.contrastText',
                   backgroundColor: 'primary.main',
@@ -162,10 +169,12 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
           </Typography>
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2" gutterBottom>
-              Cache przechowuje pieśni w pamięci przeglądarki, aby przyspieszyć wyszukiwanie i wyświetlanie.
+              Cache przechowuje pieśni w pamięci przeglądarki, aby przyspieszyć wyszukiwanie i
+              wyświetlanie.
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Jeśli masz problemy z wyświetlaniem pieśni lub chcesz pobrać najnowsze dane z serwera, możesz wyczyścić cache.
+              Jeśli masz problemy z wyświetlaniem pieśni lub chcesz pobrać najnowsze dane z serwera,
+              możesz wyczyścić cache.
             </Typography>
           </Alert>
           <Button
@@ -184,7 +193,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button 
+        <Button
           onClick={onClose}
           sx={{
             color: 'text.primary',
@@ -217,10 +226,10 @@ const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
           <SettingsIcon />
         </IconButton>
       </Tooltip>
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
@@ -238,4 +247,3 @@ const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
 SettingsDialog.displayName = 'SettingsDialog';
 
 export default SettingsDialog;
-

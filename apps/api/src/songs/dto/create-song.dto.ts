@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsArray, IsNotEmpty, MinLength, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNotEmpty,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { VerseDto } from './verse.dto';
 
@@ -44,4 +51,3 @@ export class CreateSongDto {
   @IsString()
   searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
 }
-

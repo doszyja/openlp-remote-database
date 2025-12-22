@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsInt, Min, IsArray, IsIn } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  IsArray,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QuerySongDto {
@@ -37,4 +44,3 @@ export class QuerySongDto {
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'asc';
 }
-

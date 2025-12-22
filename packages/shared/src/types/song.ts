@@ -1,6 +1,6 @@
 /**
  * Base song type matching MongoDB schema with OpenLP compatibility
- * 
+ *
  * Note: verses is stored as an array of verse objects (includes chorus, bridge, etc. as verse objects with type labels).
  * The verseOrder string dictates the display sequence and repetitions.
  * The lyricsXml field preserves the exact XML from SQLite for 1:1 transparency.

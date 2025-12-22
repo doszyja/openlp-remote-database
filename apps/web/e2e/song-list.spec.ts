@@ -63,4 +63,3 @@ test('allows editors to export songs when they have permissions', async ({ page 
   await expect(page.getByText('Eksport zakończony pomyślnie!')).toBeVisible();
   expect(songMock.getExportDownloadCount()).toBe(1);
 });
-

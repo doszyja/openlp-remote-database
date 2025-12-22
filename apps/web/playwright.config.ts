@@ -30,7 +30,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     cwd: dirname,
     timeout: 120 * 1000,
-    
   },
   projects: [
     {
@@ -40,4 +39,3 @@ export default defineConfig({
   ],
   workers: process.env.CI ? 2 : undefined,
 });
-

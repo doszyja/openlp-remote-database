@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { UserResponseDto } from '../auth/dto/user-response.dto';
@@ -37,7 +43,10 @@ export class AuditLogController {
       toDate?: Date;
     } = {};
 
-    if (action && Object.values(AuditLogAction).includes(action as AuditLogAction)) {
+    if (
+      action &&
+      Object.values(AuditLogAction).includes(action as AuditLogAction)
+    ) {
       filters.action = action as AuditLogAction;
     }
 
@@ -57,7 +66,10 @@ export class AuditLogController {
       filters.toDate = new Date(toDate);
     }
 
-    return this.auditLogService.findAll(pageNum, limitNum, Object.keys(filters).length > 0 ? filters : undefined);
+    return this.auditLogService.findAll(
+      pageNum,
+      limitNum,
+      Object.keys(filters).length > 0 ? filters : undefined,
+    );
   }
 }
-

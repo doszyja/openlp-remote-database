@@ -56,7 +56,7 @@ export function useCreateServicePlan() {
   const queryClient = useQueryClient();
 
   return useMutation<ServicePlan, Error, CreateServicePlanDto>({
-    mutationFn: (data) => api.servicePlans.create(data),
+    mutationFn: data => api.servicePlans.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-plans'] });
     },
@@ -68,7 +68,7 @@ export function useUpdateServicePlan() {
 
   return useMutation<ServicePlan, Error, { id: string; data: UpdateServicePlanDto }>({
     mutationFn: ({ id, data }) => api.servicePlans.update(id, data),
-    onSuccess: (data) => {
+    onSuccess: data => {
       queryClient.invalidateQueries({ queryKey: ['service-plans'] });
       queryClient.invalidateQueries({ queryKey: ['service-plan', data.id] });
       queryClient.invalidateQueries({ queryKey: ['service-plan', 'active'] });
@@ -80,7 +80,7 @@ export function useDeleteServicePlan() {
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, string>({
-    mutationFn: (id) => api.servicePlans.delete(id),
+    mutationFn: id => api.servicePlans.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-plans'] });
       queryClient.invalidateQueries({ queryKey: ['service-plan', 'active'] });
@@ -93,7 +93,7 @@ export function useAddSongToPlan() {
 
   return useMutation<ServicePlan, Error, { planId: string; data: AddSongToPlanDto }>({
     mutationFn: ({ planId, data }) => api.servicePlans.addSong(planId, data),
-    onSuccess: async (data) => {
+    onSuccess: async data => {
       queryClient.invalidateQueries({ queryKey: ['service-plans'] });
       queryClient.invalidateQueries({ queryKey: ['service-plan', data.id] });
       // Refresh songs cache to ensure newly added songs have verses
@@ -106,7 +106,7 @@ export function useAddSongToPlan() {
           queryClient.setQueryData(['cached-songs'], refreshedSongs);
           // Force refetch active queries to ensure all components get updated data
           // This works even with staleTime: Infinity because we're explicitly refetching
-          await queryClient.refetchQueries({ 
+          await queryClient.refetchQueries({
             queryKey: ['cached-songs'],
             type: 'active', // Only refetch active queries
           });
@@ -165,4 +165,3 @@ export function useSetActiveVerse() {
     },
   });
 }
-

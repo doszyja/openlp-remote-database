@@ -135,20 +135,20 @@ export class SongController {
     @Res() res: Response,
   ) {
     const archive = await this.songService.exportAllToZip();
-    
+
     const timestamp = new Date().toISOString().split('T')[0];
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="openlp-songs-${timestamp}.zip"`);
-    
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="openlp-songs-${timestamp}.zip"`,
+    );
+
     // Log audit trail for ZIP export
     const ipAddress = req.ip || req.socket.remoteAddress || undefined;
     const userAgent = req.get('user-agent') || undefined;
-    
-    this.auditLogService.log(
-      AuditLogAction.ZIP_EXPORT,
-      user.id,
-      user.username,
-      {
+
+    this.auditLogService
+      .log(AuditLogAction.ZIP_EXPORT, user.id, user.username, {
         discordId: user.discordId,
         metadata: {
           exportType: 'zip',
@@ -156,11 +156,13 @@ export class SongController {
         },
         ipAddress,
         userAgent,
-      },
-    ).catch(err => console.error('Failed to log ZIP export audit trail:', err));
-    
+      })
+      .catch((err) =>
+        console.error('Failed to log ZIP export audit trail:', err),
+      );
+
     archive.pipe(res);
-    
+
     // Handle archive errors
     archive.on('error', (err) => {
       console.error('Archive error:', err);
@@ -170,4 +172,3 @@ export class SongController {
     });
   }
 }
-

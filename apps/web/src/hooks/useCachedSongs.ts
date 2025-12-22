@@ -12,11 +12,15 @@ export function useCachedSongs() {
 
   // Get initial data from cache (synchronous, no requests)
   const initialDataRef = useRef<SongListCacheItem[] | undefined>(
-    songsCache.getCachedSongs() ?? undefined,
+    songsCache.getCachedSongs() ?? undefined
   );
 
-
-  const { data: songs, isLoading, error, refetch } = useQuery<SongListCacheItem[]>({
+  const {
+    data: songs,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<SongListCacheItem[]>({
     queryKey: ['cached-songs'],
     queryFn: async () => {
       // Only called if we don't have initial data
@@ -38,11 +42,11 @@ export function useCachedSongs() {
 
   // Track if this is the first page load (to force version check)
   const isFirstLoadRef = useRef(true);
-  
+
   // Check version on mount - ALWAYS check on first page load to fetch new songs
   // Use a ref to track if we've already initiated a check to prevent multiple simultaneous checks
   const versionCheckInitiatedRef = useRef(false);
-  
+
   useEffect(() => {
     // Skip if version check was already initiated by another component
     if (versionCheckInitiatedRef.current) {
@@ -53,16 +57,16 @@ export function useCachedSongs() {
       try {
         // Mark as initiated to prevent other components from checking
         versionCheckInitiatedRef.current = true;
-        
+
         // Ensure cache is loaded from localStorage if not in memory
         songsCache.getCachedSongs();
         const cachedVersion = songsCache.getCachedVersion();
-        
+
         // On first page load, ALWAYS check version (forceCheck = true)
         // This ensures we fetch new songs immediately when page loads
         const isFirstLoad = isFirstLoadRef.current;
         isFirstLoadRef.current = false; // Mark as no longer first load
-        
+
         if (cachedVersion !== null) {
           // We have cache - check version (force check on first load, otherwise use 2-minute throttle)
           const isValid = await songsCache.isCacheValid(isFirstLoad);
@@ -90,7 +94,7 @@ export function useCachedSongs() {
         }, 1000);
       }
     };
-    
+
     // Execute immediately - on first load this will force version check
     validateVersion();
   }, [queryClient]);
@@ -106,12 +110,15 @@ export function useCachedSongs() {
 /**
  * Hook to search songs using cached data
  */
-export function useCachedSongSearch(query: string, options?: {
-  language?: string;
-  tags?: string[];
-}) {
+export function useCachedSongSearch(
+  query: string,
+  options?: {
+    language?: string;
+    tags?: string[];
+  }
+) {
   const { songs, isLoading } = useCachedSongs();
-  
+
   // Use useMemo to prevent unnecessary recalculations and re-renders
   // Only recalculate when query or songs actually change
   const searchResults = useMemo(() => {
@@ -128,4 +135,3 @@ export function useCachedSongSearch(query: string, options?: {
     isLoading,
   };
 }
-

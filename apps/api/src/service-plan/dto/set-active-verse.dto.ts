@@ -8,5 +8,3 @@ export class SetActiveVerseDto {
   @Min(0)
   verseIndex: number;
 }
-
-

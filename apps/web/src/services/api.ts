@@ -16,9 +16,9 @@ import type {
 
 // In development, use relative paths (via Vite proxy)
 // In production, use full API URL
-const API_URL = import.meta.env.DEV 
-  ? '/api' 
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+const API_URL = import.meta.env.DEV
+  ? '/api'
+  : import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const STORAGE_KEY = 'auth_token';
 
 class ApiError extends Error {
@@ -32,33 +32,30 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  
+
   // Log API requests (except version checks to reduce noise)
   const isVersionCheck = endpoint.includes('/songs/version');
   if (!isVersionCheck) {
     console.log(`[API Request] ${options?.method || 'GET'} ${endpoint}`);
   }
-  
+
   const startTime = performance.now();
-  
+
   // Get auth token from localStorage
   const token = localStorage.getItem(STORAGE_KEY);
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
-  
+
   // Add Authorization header if token exists
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   const config: RequestInit = {
     headers,
     ...options,
@@ -70,13 +67,11 @@ async function request<T>(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     if (!isVersionCheck) {
-      console.error(`[API Request] ${options?.method || 'GET'} ${endpoint} failed (${response.status}) in ${duration.toFixed(2)}ms`);
+      console.error(
+        `[API Request] ${options?.method || 'GET'} ${endpoint} failed (${response.status}) in ${duration.toFixed(2)}ms`
+      );
     }
-    throw new ApiError(
-      errorData.message || `HTTP ${response.status}`,
-      response.status,
-      errorData
-    );
+    throw new ApiError(errorData.message || `HTTP ${response.status}`, response.status, errorData);
   }
 
   // 204/205 No Content – nie próbujemy parsować JSON-a
@@ -86,9 +81,11 @@ async function request<T>(
 
   const data = await response.json();
   if (!isVersionCheck) {
-    console.log(`[API Request] ${options?.method || 'GET'} ${endpoint} completed in ${duration.toFixed(2)}ms`);
+    console.log(
+      `[API Request] ${options?.method || 'GET'} ${endpoint} completed in ${duration.toFixed(2)}ms`
+    );
   }
-  
+
   return data;
 }
 
@@ -99,7 +96,7 @@ export const api = {
       if (query?.page) params.append('page', query.page.toString());
       if (query?.limit) params.append('limit', query.limit.toString());
       if (query?.language) params.append('language', query.language);
-      if (query?.tags) query.tags.forEach((tag) => params.append('tags', tag));
+      if (query?.tags) query.tags.forEach(tag => params.append('tags', tag));
       if (query?.search) params.append('search', query.search);
       if (query?.sortBy) params.append('sortBy', query.sortBy);
       if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
@@ -132,7 +129,10 @@ export const api = {
       });
     },
 
-    search: (query: string, options?: SongQueryDto): Promise<PaginatedResponseDto<SongResponseDto>> => {
+    search: (
+      query: string,
+      options?: SongQueryDto
+    ): Promise<PaginatedResponseDto<SongResponseDto>> => {
       const params = new URLSearchParams();
       params.append('q', query);
       if (options?.page) params.append('page', options.page.toString());
@@ -144,14 +144,14 @@ export const api = {
     exportZip: async (): Promise<Blob> => {
       const url = `${API_URL}/songs/export/zip`;
       const token = localStorage.getItem(STORAGE_KEY);
-      
+
       const headers: HeadersInit = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(url, { headers });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiError(
@@ -160,7 +160,7 @@ export const api = {
           errorData
         );
       }
-      
+
       return response.blob();
     },
 
@@ -183,7 +183,13 @@ export const api = {
         fromDate?: string;
         toDate?: string;
       }
-    ): Promise<{ data: AuditLog[]; total: number; page: number; limit: number; totalPages: number }> => {
+    ): Promise<{
+      data: AuditLog[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }> => {
       const params = new URLSearchParams();
       if (page) params.append('page', page.toString());
       if (limit) params.append('limit', limit.toString());
@@ -206,7 +212,17 @@ export const api = {
       return request(`/service-plans/${id}`);
     },
 
-    getActive: (): Promise<{ servicePlan: { id: string; name: string }; item: { id: string; songId: string; songTitle: string; order: number; activeVerseIndex?: number }; song: SongResponseDto } | null> => {
+    getActive: (): Promise<{
+      servicePlan: { id: string; name: string };
+      item: {
+        id: string;
+        songId: string;
+        songTitle: string;
+        order: number;
+        activeVerseIndex?: number;
+      };
+      song: SongResponseDto;
+    } | null> => {
       return request('/service-plans/active');
     },
 
@@ -260,4 +276,3 @@ export const api = {
 };
 
 export { ApiError };
-

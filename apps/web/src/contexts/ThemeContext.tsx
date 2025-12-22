@@ -136,9 +136,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 color: '#FFFFFF',
                 '&:hover': {
                   backgroundColor: mode === 'dark' ? '#0F1F3A' : '#0F1F3A',
-                  boxShadow: mode === 'dark' 
-                    ? '0px 2px 4px rgba(30, 58, 95, 0.3)'
-                    : '0px 2px 4px rgba(30, 58, 95, 0.2)',
+                  boxShadow:
+                    mode === 'dark'
+                      ? '0px 2px 4px rgba(30, 58, 95, 0.3)'
+                      : '0px 2px 4px rgba(30, 58, 95, 0.2)',
                 },
               },
               outlined: {
@@ -147,14 +148,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 borderWidth: 1,
                 '&:hover': {
                   borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : '#0F1F3A',
-                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
+                  backgroundColor:
+                    mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                   borderWidth: 1,
                 },
               },
               text: {
                 color: mode === 'dark' ? '#E8EAF6' : '#1E3A5F',
                 '&:hover': {
-                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
+                  backgroundColor:
+                    mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(30, 58, 95, 0.04)',
                 },
               },
             },
@@ -163,14 +166,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             styleOverrides: {
               root: {
                 borderRadius: 4,
-                boxShadow: mode === 'dark'
-                  ? '0px 1px 3px rgba(0,0,0,0.3)'
-                  : '0px 1px 3px rgba(0,0,0,0.12)',
+                boxShadow:
+                  mode === 'dark' ? '0px 1px 3px rgba(0,0,0,0.3)' : '0px 1px 3px rgba(0,0,0,0.12)',
                 transition: 'box-shadow 0.2s ease-in-out',
                 '&:hover': {
-                  boxShadow: mode === 'dark'
-                    ? '0px 2px 6px rgba(0,0,0,0.4)'
-                    : '0px 2px 6px rgba(0,0,0,0.16)',
+                  boxShadow:
+                    mode === 'dark'
+                      ? '0px 2px 6px rgba(0,0,0,0.4)'
+                      : '0px 2px 6px rgba(0,0,0,0.16)',
                 },
               },
             },
@@ -200,9 +203,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           MuiAppBar: {
             styleOverrides: {
               root: {
-                boxShadow: mode === 'dark'
-                  ? '0px 1px 2px rgba(0,0,0,0.3)'
-                  : '0px 1px 2px rgba(0,0,0,0.1)',
+                boxShadow:
+                  mode === 'dark' ? '0px 1px 2px rgba(0,0,0,0.3)' : '0px 1px 2px rgba(0,0,0,0.1)',
               },
             },
           },
@@ -219,7 +221,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleMode = () => {
-    setMode((prevMode) => {
+    setMode(prevMode => {
       const newMode = prevMode === 'light' ? 'dark' : 'light';
       localStorage.setItem(STORAGE_KEY, newMode);
       return newMode;
@@ -248,4 +250,3 @@ export function useTheme() {
   }
   return context;
 }
-

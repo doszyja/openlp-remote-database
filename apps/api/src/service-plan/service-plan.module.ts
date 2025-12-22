@@ -30,4 +30,3 @@ import { WebSocketServerService } from './websocket-server.service';
   exports: [ServicePlanService, ServicePlanGateway, WebSocketServerService],
 })
 export class ServicePlanModule {}
-

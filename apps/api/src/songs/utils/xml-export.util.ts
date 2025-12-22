@@ -28,11 +28,13 @@ function parseVersesToXml(verses: any): string {
   // Handle new format: array of objects with order (chorus is included in verses array with type='chorus')
   if (Array.isArray(verses) && verses.length > 0) {
     // Sort by order to ensure correct sequence
-    const sortedVerses = [...verses].sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+    const sortedVerses = [...verses].sort(
+      (a, b) => (a.order || 0) - (b.order || 0),
+    );
+
     sortedVerses.forEach((verse) => {
       if (!verse.content || !verse.content.trim()) return;
-      
+
       // Determine label from verse.label or verse.order
       let label = verse.label;
       if (!label) {
@@ -42,18 +44,21 @@ function parseVersesToXml(verses: any): string {
         // Normalize label (remove "Verse " prefix if present)
         label = label.replace(/^verse\s+/i, 'v');
       }
-      
-      parts.push(`<verse label="${label}">${escapeXml(verse.content.trim())}</verse>`);
+
+      parts.push(
+        `<verse label="${label}">${escapeXml(verse.content.trim())}</verse>`,
+      );
     });
   }
   // Handle legacy format: string
   else if (typeof verses === 'string' && verses.trim()) {
     const versesString = verses.trim();
-    
+
     // Check if it's already XML format
     if (versesString.startsWith('<verse')) {
       // Already XML, use as-is (but ensure proper escaping)
-      const verseRegex = /<verse\s+(?:label=["']([^"']+)["']|label=([^\s>]+))[^>]*>([\s\S]*?)<\/verse>/gi;
+      const verseRegex =
+        /<verse\s+(?:label=["']([^"']+)["']|label=([^\s>]+))[^>]*>([\s\S]*?)<\/verse>/gi;
       let match;
       while ((match = verseRegex.exec(versesString)) !== null) {
         const label = match[1] || match[2];
@@ -66,16 +71,22 @@ function parseVersesToXml(verses: any): string {
           .replace(/&quot;/g, '"')
           .replace(/&apos;/g, "'");
         // Re-escape for output
-        parts.push(`<verse label="${label}">${escapeXml(content.trim())}</verse>`);
+        parts.push(
+          `<verse label="${label}">${escapeXml(content.trim())}</verse>`,
+        );
       }
     } else {
       // Plain text - split by double newlines to get individual verses
-      const verseBlocks = versesString.split(/\n\n+/).filter(block => block.trim());
-      
+      const verseBlocks = versesString
+        .split(/\n\n+/)
+        .filter((block) => block.trim());
+
       if (verseBlocks.length > 0) {
         verseBlocks.forEach((block, index) => {
           const verseNum = index + 1;
-          parts.push(`<verse label="v${verseNum}">${escapeXml(block.trim())}</verse>`);
+          parts.push(
+            `<verse label="v${verseNum}">${escapeXml(block.trim())}</verse>`,
+          );
         });
       } else {
         // Single verse, no double newlines
@@ -107,17 +118,21 @@ export function generateSongXml(song: {
   let lyricsXml: string;
   if (song.lyricsXml && song.lyricsXml.trim()) {
     const lyricsXmlContent = song.lyricsXml.trim();
-    
+
     // Check if it's a full XML document with <song><lyrics>...</lyrics></song>
     if (lyricsXmlContent.includes('<lyrics')) {
       // Extract lyrics section from full XML document
-      const lyricsMatch = lyricsXmlContent.match(/<lyrics[^>]*>([\s\S]*?)<\/lyrics>/i);
+      const lyricsMatch = lyricsXmlContent.match(
+        /<lyrics[^>]*>([\s\S]*?)<\/lyrics>/i,
+      );
       if (lyricsMatch && lyricsMatch[1]) {
         // Use extracted lyrics section (contains verse tags with CDATA, type/label attributes, etc.)
         lyricsXml = lyricsMatch[1].trim();
       } else {
         // Try to extract everything after <lyrics> if no closing tag
-        const lyricsMatchOpen = lyricsXmlContent.match(/<lyrics[^>]*>([\s\S]*)/i);
+        const lyricsMatchOpen = lyricsXmlContent.match(
+          /<lyrics[^>]*>([\s\S]*)/i,
+        );
         if (lyricsMatchOpen && lyricsMatchOpen[1]) {
           lyricsXml = lyricsMatchOpen[1].trim();
         } else {
@@ -135,14 +150,14 @@ export function generateSongXml(song: {
     const verses = song.verses || (Array.isArray(song.verses) ? [] : '');
     lyricsXml = parseVersesToXml(verses);
   }
-  
+
   // Get tags as comma-separated string
   let themeName = '';
   if (song.tags && song.tags.length > 0) {
     if (typeof song.tags[0] === 'string') {
       themeName = song.tags.join(', ');
     } else {
-      themeName = song.tags.map(t => t.name).join(', ');
+      themeName = song.tags.map((t) => t.name).join(', ');
     }
   }
 
@@ -151,27 +166,29 @@ export function generateSongXml(song: {
   xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
   xmlParts.push('<song>');
   xmlParts.push(`  <title>${escapeXml(song.title)}</title>`);
-  
+
   if (song.number) {
-    xmlParts.push(`  <alternate_title>${escapeXml(song.number)}</alternate_title>`);
+    xmlParts.push(
+      `  <alternate_title>${escapeXml(song.number)}</alternate_title>`,
+    );
   }
-  
+
   if (song.ccliNumber) {
     xmlParts.push(`  <ccli_number>${escapeXml(song.ccliNumber)}</ccli_number>`);
   }
-  
+
   if (song.copyright) {
     xmlParts.push(`  <copyright>${escapeXml(song.copyright)}</copyright>`);
   }
-  
+
   if (song.comments) {
     xmlParts.push(`  <comments>${escapeXml(song.comments)}</comments>`);
   }
-  
+
   if (themeName) {
     xmlParts.push(`  <theme_name>${escapeXml(themeName)}</theme_name>`);
   }
-  
+
   xmlParts.push('  <lyrics>');
   xmlParts.push(`    ${lyricsXml}`);
   xmlParts.push('  </lyrics>');
@@ -190,20 +207,19 @@ export function sanitizeFilename(title: string): string {
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
-  
+
   // Remove leading/trailing dots and spaces (Windows doesn't allow these)
   sanitized = sanitized.replace(/^[.\s]+|[.\s]+$/g, '');
-  
+
   // Limit length (Windows has 255 char limit for filename)
   if (sanitized.length > 200) {
     sanitized = sanitized.substring(0, 200);
   }
-  
+
   // If empty after sanitization, use default
   if (!sanitized) {
     sanitized = 'song';
   }
-  
+
   return sanitized;
 }
-

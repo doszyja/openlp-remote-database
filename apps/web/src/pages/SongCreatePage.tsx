@@ -21,7 +21,8 @@ export default function SongCreatePage() {
       showSuccess('Pieśń została utworzona pomyślnie!');
       navigate(`/songs/${result.id}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Nie udało się utworzyć pieśni. Spróbuj ponownie.';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Nie udało się utworzyć pieśni. Spróbuj ponownie.';
       showError(errorMessage);
       console.error('Failed to create song:', error);
     }
@@ -47,4 +48,3 @@ export default function SongCreatePage() {
     </Container>
   );
 }
-

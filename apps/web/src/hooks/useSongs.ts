@@ -4,16 +4,25 @@ import type { SongQueryDto, PaginatedResponseDto, SongResponseDto } from '@openl
 
 export function useSongs(query?: SongQueryDto) {
   // Create a stable query key by serializing the query object
-  const queryKey = ['songs', query?.page || 1, query?.limit || 200, query?.search || '', query?.language || '', query?.sortBy || '', query?.sortOrder || ''];
-  
+  const queryKey = [
+    'songs',
+    query?.page || 1,
+    query?.limit || 200,
+    query?.search || '',
+    query?.language || '',
+    query?.sortBy || '',
+    query?.sortOrder || '',
+  ];
+
   // Check if this is a default query (no search, no filters, no custom sorting)
   // Default query = only page and limit (or no query at all)
-  const isDefaultQuery = !query?.search && 
-                         !query?.language && 
-                         !query?.sortBy && 
-                         !query?.tags?.length &&
-                         (!query || (query.page === 1 && query.limit === 200));
-  
+  const isDefaultQuery =
+    !query?.search &&
+    !query?.language &&
+    !query?.sortBy &&
+    !query?.tags?.length &&
+    (!query || (query.page === 1 && query.limit === 200));
+
   return useQuery<PaginatedResponseDto<SongResponseDto>>({
     queryKey,
     queryFn: () => api.songs.getAll(query),
@@ -23,4 +32,3 @@ export function useSongs(query?: SongQueryDto) {
     gcTime: isDefaultQuery ? 5 * 60 * 1000 : undefined,
   });
 }
-

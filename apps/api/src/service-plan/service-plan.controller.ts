@@ -56,7 +56,10 @@ export class ServicePlanController {
 
   @Patch(':id')
   @UseGuards(EditPermissionGuard)
-  update(@Param('id') id: string, @Body() updateServicePlanDto: UpdateServicePlanDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateServicePlanDto: UpdateServicePlanDto,
+  ) {
     return this.servicePlanService.update(id, updateServicePlanDto);
   }
 
@@ -76,13 +79,19 @@ export class ServicePlanController {
 
   @Patch(':id/active')
   @UseGuards(EditPermissionGuard)
-  setActiveSong(@Param('id') id: string, @Body() setActiveDto: SetActiveSongDto) {
+  setActiveSong(
+    @Param('id') id: string,
+    @Body() setActiveDto: SetActiveSongDto,
+  ) {
     return this.servicePlanService.setActiveSong(id, setActiveDto);
   }
 
   @Patch(':id/active-verse')
   @UseGuards(EditPermissionGuard)
-  setActiveVerse(@Param('id') id: string, @Body() setActiveVerseDto: SetActiveVerseDto) {
+  setActiveVerse(
+    @Param('id') id: string,
+    @Body() setActiveVerseDto: SetActiveVerseDto,
+  ) {
     return this.servicePlanService.setActiveVerse(id, setActiveVerseDto);
   }
 
@@ -93,4 +102,3 @@ export class ServicePlanController {
     return this.servicePlanService.delete(id);
   }
 }
-

@@ -1,21 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SongResponseDto } from '@openlp/shared';
 
-type ActiveSongPayload =
-  | {
-      servicePlan: { id: string; name: string } | null;
-      item:
-        | {
-            id: string;
-            songId: string;
-            songTitle: string;
-            order: number;
-            activeVerseIndex?: number;
-          }
-        | null;
-      song: SongResponseDto | null;
-    }
-  | null;
+type ActiveSongPayload = {
+  servicePlan: { id: string; name: string } | null;
+  item: {
+    id: string;
+    songId: string;
+    songTitle: string;
+    order: number;
+    activeVerseIndex?: number;
+  } | null;
+  song: SongResponseDto | null;
+} | null;
 
 interface UseActiveSongWsResult {
   data: ActiveSongPayload;
@@ -68,7 +64,7 @@ export function useActiveSongWs(): UseActiveSongWsResult {
         reconnectAttempts = 0; // Reset on successful connection
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         try {
           const message = JSON.parse(event.data);
           if (message.type === 'activeSong') {
@@ -79,13 +75,13 @@ export function useActiveSongWs(): UseActiveSongWsResult {
         }
       };
 
-      ws.onerror = (event) => {
+      ws.onerror = event => {
         if (isUnmounted) return;
         // Don't set error state for proxy errors (they're handled by reconnect)
         console.debug('WebSocket error (will attempt reconnect):', event);
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = event => {
         setIsConnected(false);
         if (isUnmounted) return;
 
@@ -114,7 +110,10 @@ export function useActiveSongWs(): UseActiveSongWsResult {
       if (wsRef.current) {
         wsRef.current.onclose = null;
         wsRef.current.onerror = null;
-        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        if (
+          wsRef.current.readyState === WebSocket.OPEN ||
+          wsRef.current.readyState === WebSocket.CONNECTING
+        ) {
           wsRef.current.close(1000, 'Component unmounted');
         }
       }
@@ -123,5 +122,3 @@ export function useActiveSongWs(): UseActiveSongWsResult {
 
   return { data, isConnected, error };
 }
-
-

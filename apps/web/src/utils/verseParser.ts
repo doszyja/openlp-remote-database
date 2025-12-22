@@ -43,19 +43,19 @@ function extractCDataContent(text: string): string {
   if (!text || !text.trim()) {
     return text;
   }
-  
+
   // Handle CDATA sections: <![CDATA[content]]>
   // Use matchAll to get all CDATA sections
   const cdataRegex = /<!\[CDATA\[([\s\S]*?)\]\]>/gi;
   const matches = Array.from(text.matchAll(cdataRegex));
-  
+
   if (matches.length > 0) {
     // If there are multiple CDATA sections, join them
     // Otherwise, return the content from the first (and usually only) CDATA section
     const extractedContent = matches.map(match => match[1]).join('\n\n');
     return extractedContent.trim();
   }
-  
+
   // No CDATA found, return text as-is (may contain escaped XML entities)
   return text;
 }
@@ -74,7 +74,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
   }
 
   const verses: ParsedVerse[] = [];
-  
+
   // Check if it's XML format
   const trimmed = xmlString.trim();
   if (!trimmed.startsWith('<') || !trimmed.includes('verse')) {
@@ -84,7 +84,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
 
   // Extract lyrics section if it's a full XML document
   let lyricsSection = trimmed;
-  
+
   // If it's a full XML document with <song><lyrics>...</lyrics></song>
   // Handle both <lyrics> and <lyrics /> (self-closing)
   if (trimmed.includes('<lyrics')) {
@@ -108,15 +108,17 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
   // Handle both type+label as separate attributes and label-only format
   let match: RegExpExecArray | null;
   let order = 1; // verse_order - increments based on sequence in XML
-  
+
   // PRIORITY 1: Match verses with both type and label attributes (in either order)
   // This matches SQLite format: <verse type="v" label="1"> or <verse label="1" type="v">
   // Must handle CDATA in content: <![CDATA[...]]>
-  const typeLabelRegex1 = /<verse[^>]*type=["']([^"']+)["'][^>]*label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
-  const typeLabelRegex2 = /<verse[^>]*label=["']([^"']+)["'][^>]*type=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
-  
+  const typeLabelRegex1 =
+    /<verse[^>]*type=["']([^"']+)["'][^>]*label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
+  const typeLabelRegex2 =
+    /<verse[^>]*label=["']([^"']+)["'][^>]*type=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
+
   const matches: Array<{ fullMatch: string; type?: string; label: string; content: string }> = [];
-  
+
   // Try type first, then label
   typeLabelRegex1.lastIndex = 0;
   while ((match = typeLabelRegex1.exec(lyricsSection)) !== null) {
@@ -127,7 +129,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
       content: match[3],
     });
   }
-  
+
   // Try label first, then type (swap the captures)
   typeLabelRegex2.lastIndex = 0;
   while ((match = typeLabelRegex2.exec(lyricsSection)) !== null) {
@@ -142,7 +144,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
       });
     }
   }
-  
+
   // If no matches with both type and label, try just label
   if (matches.length === 0) {
     const verseRegex = /<verse[^>]*label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
@@ -155,7 +157,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
       });
     }
   }
-  
+
   // If still no matches, try a more general pattern (verse tag without required attributes)
   if (matches.length === 0) {
     const generalVerseRegex = /<verse[^>]*>([\s\S]*?)<\/verse>/gi;
@@ -168,13 +170,13 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
       });
     }
   }
-  
+
   // Process each match
   for (const matchData of matches) {
     let label = matchData.label || '';
     let typeAttr = matchData.type || '';
     let content = matchData.content || '';
-    
+
     // If we have both type and label, combine them if label doesn't already start with type
     // Example: type="c" label="1" -> "c1"
     // Example: type="v" label="1" -> "v1"
@@ -182,20 +184,20 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
     if (typeAttr && label && !label.toLowerCase().startsWith(typeAttr.toLowerCase())) {
       label = `${typeAttr}${label}`;
     }
-    
+
     // If we don't have type but have label, try to extract type from label
     // Example: label="v1" -> type="verse"
     // Example: label="c1" -> type="chorus"
     if (!typeAttr && label) {
       typeAttr = label.charAt(0).toLowerCase();
     }
-    
+
     // If we still don't have type or label, try to extract from the full match
     if ((!typeAttr || !label) && matchData.fullMatch) {
       const attributesMatch = matchData.fullMatch.match(/<verse\s+([^>]+?)>/i);
       if (attributesMatch) {
         const attributes = attributesMatch[1];
-        
+
         // Extract label if we don't have it
         if (!label) {
           const labelMatch = attributes.match(/label=["']([^"']+)["']/i);
@@ -203,7 +205,7 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
             label = labelMatch[1];
           }
         }
-        
+
         // Extract type if we don't have it
         if (!typeAttr) {
           const typeMatch = attributes.match(/type=["']([^"']+)["']/i);
@@ -217,13 +219,13 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
         }
       }
     }
-    
+
     // Extract CDATA if present
     content = extractCDataContent(content);
-    
+
     // Unescape XML entities
     content = unescapeXml(content.trim());
-    
+
     // Determine verse type
     let verseType: ParsedVerse['type'] = 'verse';
     if (typeAttr) {
@@ -231,10 +233,10 @@ export function parseVersesFromXml(xmlString: string): ParsedVerse[] {
     } else if (label) {
       verseType = parseVerseType(label);
     }
-    
+
     // Store original label (e.g., "v1", "c1") for verseOrder matching
     const originalLabel = label ? label.toLowerCase() : undefined;
-    
+
     verses.push({
       order,
       content,
@@ -288,18 +290,27 @@ export function parseVersesFromString(versesString: string): ParsedVerse[] {
  * @param versesArray - Optional verses array from API with originalLabel - if provided, use this for logic (PRIORITY 1)
  */
 export function parseVerses(
-  versesInput: string | Array<{ order: number; content: string; label: string | null; originalLabel?: string }> | undefined | null,
+  versesInput:
+    | string
+    | Array<{ order: number; content: string; label: string | null; originalLabel?: string }>
+    | undefined
+    | null,
   verseOrder?: string | null,
   lyricsXml?: string | null,
-  versesArray?: Array<{ order: number; content: string; label?: string; originalLabel?: string }> | null
+  versesArray?: Array<{
+    order: number;
+    content: string;
+    label?: string;
+    originalLabel?: string;
+  }> | null
 ): ParsedVerse[] {
   // PRIORITY 0: If versesArray from API is provided, use it directly (has originalLabel from database)
   // This is the most reliable source - originalLabel comes directly from MongoDB
   if (versesArray && Array.isArray(versesArray) && versesArray.length > 0) {
-    const parsedFromArray: ParsedVerse[] = versesArray.map((v) => {
+    const parsedFromArray: ParsedVerse[] = versesArray.map(v => {
       // Use originalLabel for logic, but map to readable label for display
       const readableLabel = v.label || mapOriginalLabelToReadable(v.originalLabel);
-      
+
       return {
         order: v.order,
         content: v.content,
@@ -308,27 +319,30 @@ export function parseVerses(
         originalLabel: v.originalLabel, // Keep originalLabel for verseOrder matching
       };
     });
-    
+
     // Apply verseOrder if provided to reorder verses
     if (verseOrder && verseOrder.trim() && parsedFromArray.length > 0) {
       try {
         const reorderedVerses = parseVerseOrderString(verseOrder.trim(), parsedFromArray);
         return reorderedVerses;
       } catch (error) {
-        console.warn('[parseVerses] Failed to parse verseOrder from versesArray, using array order:', error);
+        console.warn(
+          '[parseVerses] Failed to parse verseOrder from versesArray, using array order:',
+          error
+        );
         return parsedFromArray.sort((a, b) => a.order - b.order);
       }
     }
-    
+
     return parsedFromArray.sort((a, b) => a.order - b.order);
   }
-  
+
   // PRIORITY 1: If lyricsXml is provided, use it directly (1:1 transparent with SQLite)
   // This preserves exact XML structure, CDATA, type/label attributes, etc.
   if (lyricsXml && lyricsXml.trim()) {
     const lyricsXmlContent = lyricsXml.trim();
     let parsedFromXml: ParsedVerse[] = [];
-    
+
     // Check if it's a full XML document with <song><lyrics>...</lyrics></song>
     if (lyricsXmlContent.includes('<lyrics')) {
       // Extract lyrics section from full XML document
@@ -347,7 +361,7 @@ export function parseVerses(
       // Already just the lyrics section (verse tags), parse directly
       parsedFromXml = parseVersesFromXml(lyricsXmlContent);
     }
-    
+
     // IMPORTANT: Apply verseOrder if provided to ensure correct sequence (1:1 transparent with SQLite)
     if (verseOrder && verseOrder.trim() && parsedFromXml.length > 0) {
       try {
@@ -355,16 +369,19 @@ export function parseVerses(
         const reorderedVerses = parseVerseOrderString(verseOrder.trim(), parsedFromXml);
         return reorderedVerses;
       } catch (error) {
-        console.warn('[parseVerses] Failed to parse verseOrder from lyricsXml, using XML order:', error);
+        console.warn(
+          '[parseVerses] Failed to parse verseOrder from lyricsXml, using XML order:',
+          error
+        );
         // Fall back to XML order if verseOrder parsing fails
         return parsedFromXml.sort((a, b) => a.order - b.order);
       }
     }
-    
+
     // No verseOrder provided, return parsed verses sorted by order
     return parsedFromXml.sort((a, b) => a.order - b.order);
   }
-  
+
   // PRIORITY 2: Use versesInput (fallback if lyricsXml not available)
   // Handle null, undefined
   if (!versesInput) {
@@ -463,11 +480,13 @@ function generateVerseLabel(type: ParsedVerse['type'], order: number): string {
  * Map originalLabel (e.g., "v1", "c1", "b1") to readable label (e.g., "Verse 1", "Chorus 1", "Bridge 1")
  * This is used for display purposes - frontend uses originalLabel for logic, but displays readable labels
  */
-export function mapOriginalLabelToReadable(originalLabel: string | undefined | null): string | null {
+export function mapOriginalLabelToReadable(
+  originalLabel: string | undefined | null
+): string | null {
   if (!originalLabel) return null;
-  
+
   const labelLower = originalLabel.toLowerCase().trim();
-  
+
   if (labelLower.startsWith('v')) {
     const num = labelLower.match(/\d+/)?.[0];
     return num ? `Verse ${num}` : 'Verse';
@@ -484,7 +503,7 @@ export function mapOriginalLabelToReadable(originalLabel: string | undefined | n
     const num = labelLower.match(/\d+/)?.[0];
     return num ? `Tag ${num}` : 'Tag';
   }
-  
+
   return originalLabel;
 }
 
@@ -492,7 +511,7 @@ export function mapOriginalLabelToReadable(originalLabel: string | undefined | n
  * Combine parsed verses back to XML format (OpenLP format)
  * IMPORTANT: Preserves verse_order by sorting by order before combining.
  * The sequence in the resulting XML corresponds to verse_order in OpenLP SQLite.
- * 
+ *
  * Format: <verse label="v1">content</verse><verse label="v2">content</verse>
  * (No wrapping in <lyrics> tags - OpenLP stores verses directly)
  */
@@ -511,7 +530,7 @@ export function combineVersesToXml(verses: ParsedVerse[]): string {
     let label: string;
     const verseType = v.type || 'verse';
     const prefix = getVerseTypePrefix(verseType);
-    
+
     // PRIORITY 1: Use originalLabel if available (e.g., "v1", "c1") - this is the source of truth
     if (v.originalLabel) {
       const originalLabelLower = v.originalLabel.toLowerCase();
@@ -550,7 +569,7 @@ export function combineVersesToXml(verses: ParsedVerse[]): string {
       // PRIORITY 3: No label or originalLabel, generate based on type and order
       label = generateVerseLabel(verseType, v.order);
     }
-    
+
     const escapedContent = escapeXml(v.content.trim());
     return `<verse label="${label}">${escapedContent}</verse>`;
   });
@@ -563,7 +582,7 @@ export function combineVersesToXml(verses: ParsedVerse[]): string {
  * Combine parsed verses back to plain string format (for storage)
  * IMPORTANT: Preserves verse_order by sorting by order before combining.
  * The sequence in the resulting string corresponds to verse_order in OpenLP.
- * 
+ *
  * @deprecated Use combineVersesToXml to preserve XML format
  */
 export function combineVersesToString(verses: ParsedVerse[]): string {
@@ -586,17 +605,23 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
       return readableLabel;
     }
   }
-  
+
   // PRIORITY 2: Use existing label if it's already readable
   if (verse.label) {
     const label = verse.label.toLowerCase();
     // If label is already readable (e.g., "Verse 1", "Chorus"), use it
-    if (label.includes('verse') || label.includes('chorus') || label.includes('bridge') || label.includes('pre-chorus') || label.includes('tag')) {
+    if (
+      label.includes('verse') ||
+      label.includes('chorus') ||
+      label.includes('bridge') ||
+      label.includes('pre-chorus') ||
+      label.includes('tag')
+    ) {
       return verse.label;
     }
     // Otherwise, try to convert OpenLP labels to readable format
     if (label.startsWith('v')) {
-      const num = label.slice(1) || (index + 1);
+      const num = label.slice(1) || index + 1;
       return `Verse ${num}`;
     }
     if (label.startsWith('c')) {
@@ -614,7 +639,7 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
     }
     return verse.label;
   }
-  
+
   // PRIORITY 3: Default labels based on type
   if (verse.type === 'chorus') {
     return 'Chorus';
@@ -628,7 +653,7 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
   if (verse.type === 'tag') {
     return 'Tag';
   }
-  
+
   return `Verse ${verse.order}`;
 }
 
@@ -637,12 +662,17 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
  */
 export function getVerseTypePrefix(type?: ParsedVerse['type']): string {
   switch (type) {
-    case 'chorus': return 'c';
-    case 'bridge': return 'b';
-    case 'pre-chorus': return 'p';
-    case 'tag': return 't';
+    case 'chorus':
+      return 'c';
+    case 'bridge':
+      return 'b';
+    case 'pre-chorus':
+      return 'p';
+    case 'tag':
+      return 't';
     case 'verse':
-    default: return 'v';
+    default:
+      return 'v';
   }
 }
 
@@ -656,7 +686,7 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
   return sortedVerses
     .map(v => {
       const prefix = getVerseTypePrefix(v.type);
-      
+
       // PRIORITY 1: Use originalLabel if available (e.g., "v1", "c1") - this is the source of truth
       if (v.originalLabel) {
         const originalLabelLower = v.originalLabel.toLowerCase();
@@ -673,7 +703,7 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
           return `${prefix}${numMatch[0]}`;
         }
       }
-      
+
       // PRIORITY 2: Extract number from label if available (e.g., "c1" -> "1", "v2" -> "2")
       // Otherwise use order
       let number: string | number;
@@ -697,7 +727,7 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
         // No label, use order (but for chorus, default to 1)
         number = v.type === 'chorus' ? '1' : v.order;
       }
-      
+
       return `${prefix}${number}`;
     })
     .join(' ');
@@ -707,18 +737,17 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
  * Parse verse order string like "v1 c1 v2 c1 v3 c1 v4 c1" and create verse list with repetitions
  * Returns verses with duplicates for repeated references, each with unique order
  */
-export function parseVerseOrderString(
-  orderString: string,
-  verses: ParsedVerse[]
-): ParsedVerse[] {
+export function parseVerseOrderString(orderString: string, verses: ParsedVerse[]): ParsedVerse[] {
   // Parse the order string: "v1 c1 v2 c1" -> [{type: 'verse', order: 1}, {type: 'chorus', order: 1}, ...]
   const orderPattern = /([vcbpt])(\d+)/gi;
   const matches = Array.from(orderString.matchAll(orderPattern));
-  
+
   if (matches.length === 0) {
     // Invalid format - check if there's any content
     if (orderString.trim().length > 0) {
-      throw new Error('Invalid verse order format. Expected format: v1 c1 v2 (v=verse, c=chorus, b=bridge, p=pre-chorus, t=tag)');
+      throw new Error(
+        'Invalid verse order format. Expected format: v1 c1 v2 (v=verse, c=chorus, b=bridge, p=pre-chorus, t=tag)'
+      );
     }
     // Empty string, return verses unchanged
     return verses;
@@ -726,11 +755,11 @@ export function parseVerseOrderString(
 
   // Map type prefix to verse type
   const typeMap: Record<string, ParsedVerse['type']> = {
-    'v': 'verse',
-    'c': 'chorus',
-    'b': 'bridge',
-    'p': 'pre-chorus',
-    't': 'tag',
+    v: 'verse',
+    c: 'chorus',
+    b: 'bridge',
+    p: 'pre-chorus',
+    t: 'tag',
   };
 
   // Create a map of original verses for quick lookup
@@ -739,25 +768,25 @@ export function parseVerseOrderString(
   const verseMap = new Map<string, ParsedVerse>();
   verses.forEach(verse => {
     const verseType = verse.type || 'verse';
-    
+
     // PRIORITY 1: If originalLabel exists, use it for direct matching (e.g., "v1", "c1")
     if (verse.originalLabel) {
       const originalLabelLower = verse.originalLabel.toLowerCase();
       // Direct match: "v1" from verseOrder matches verse with originalLabel="v1"
       verseMap.set(originalLabelLower, verse);
     }
-    
+
     // PRIORITY 2: Also index by type+order for fallback
     const keyByOrder = `${verseType}-${verse.order}`;
     if (!verseMap.has(keyByOrder)) {
       verseMap.set(keyByOrder, verse);
     }
-    
+
     // PRIORITY 3: Also index by label number if label exists (for backward compatibility)
     if (verse.label) {
       const labelLower = verse.label.toLowerCase();
       const prefix = getVerseTypePrefix(verseType);
-      
+
       // Extract number from label (e.g., "c1" -> "1", "v2" -> "2")
       let labelNum: string | null = null;
       if (labelLower.startsWith(prefix)) {
@@ -769,7 +798,7 @@ export function parseVerseOrderString(
           labelNum = numMatch[0];
         }
       }
-      
+
       if (labelNum) {
         const keyByLabel = `${verseType}-${labelNum}`;
         // Only set if not already set (prefer first match)
@@ -782,32 +811,32 @@ export function parseVerseOrderString(
 
   // Build new verse list based on order string, allowing duplicates
   const resultVerses: ParsedVerse[] = [];
-  
+
   matches.forEach((match, index) => {
     const typePrefix = match[1].toLowerCase();
     const labelNumber = match[2]; // Keep as string to match label numbers
     const verseType = typeMap[typePrefix] || 'verse';
     const newOrder = index + 1;
-    
+
     // Build the original identifier (e.g., "v1", "c1", "b1")
     const originalIdentifier = `${typePrefix}${labelNumber}`;
-    
+
     // PRIORITY 1: Try direct match using originalLabel (e.g., "v1" matches verse with originalLabel="v1")
     let originalVerse = verseMap.get(originalIdentifier);
-    
+
     // PRIORITY 2: If not found, try by type and label number (for backward compatibility)
     if (!originalVerse) {
       const keyByLabel = `${verseType}-${labelNumber}`;
       originalVerse = verseMap.get(keyByLabel);
     }
-    
+
     // PRIORITY 3: If still not found, try by order (for verses that don't have matching labels)
     if (!originalVerse) {
       const orderNum = parseInt(labelNumber, 10);
       const keyByOrder = `${verseType}-${orderNum}`;
       originalVerse = verseMap.get(keyByOrder);
     }
-    
+
     if (originalVerse) {
       // Create a copy with the new order (allows same verse to appear multiple times)
       resultVerses.push({
@@ -831,4 +860,3 @@ export function parseVerseOrderString(
 
   return resultVerses;
 }
-

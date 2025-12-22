@@ -15,8 +15,8 @@ describe('Migration Script - Verse Order Preservation', () => {
       // Simulate the sorting logic from migration script
       const sorted = verses.sort((a, b) => a.order - b.order);
       const combined = sorted
-        .map(v => v.content.trim())
-        .filter(content => content.length > 0)
+        .map((v) => v.content.trim())
+        .filter((content) => content.length > 0)
         .join('\n\n');
 
       expect(combined).toBe('First verse\n\nSecond verse\n\nThird verse');
@@ -34,7 +34,7 @@ describe('Migration Script - Verse Order Preservation', () => {
       ];
 
       // Convert to internal format preserving order
-      const verses = openlpVerses.map(v => ({
+      const verses = openlpVerses.map((v) => ({
         order: v.verse_order,
         content: v.verse_text.trim(),
         label: `Verse ${v.verse_order}`,
@@ -43,8 +43,8 @@ describe('Migration Script - Verse Order Preservation', () => {
       // Sort and combine
       const sorted = verses.sort((a, b) => a.order - b.order);
       const combined = sorted
-        .map(v => v.content.trim())
-        .filter(content => content.length > 0)
+        .map((v) => v.content.trim())
+        .filter((content) => content.length > 0)
         .join('\n\n');
 
       expect(combined).toBe('First verse\n\nThird verse\n\nFifth verse');
@@ -61,9 +61,7 @@ describe('Migration Script - Verse Order Preservation', () => {
       ];
 
       const sorted = verses.sort((a, b) => a.order - b.order);
-      const combined = sorted
-        .map(v => v.content.trim())
-        .join('\n\n');
+      const combined = sorted.map((v) => v.content.trim()).join('\n\n');
 
       expect(combined).toBe('Verse 2\n\nVerse 5\n\nVerse 10');
     });
@@ -90,7 +88,8 @@ describe('Migration Script - Verse Order Preservation', () => {
         search_title: 'custom search title',
       };
 
-      const searchTitle = openlpSong.search_title || openlpSong.title.toLowerCase().trim();
+      const searchTitle =
+        openlpSong.search_title || openlpSong.title.toLowerCase().trim();
 
       expect(searchTitle).toBe('custom search title');
     });
@@ -102,7 +101,8 @@ describe('Migration Script - Verse Order Preservation', () => {
       };
 
       const versesString = 'Combined verses';
-      const searchLyrics = openlpSong.search_lyrics || versesString.toLowerCase().trim();
+      const searchLyrics =
+        openlpSong.search_lyrics || versesString.toLowerCase().trim();
 
       expect(searchLyrics).toBe('custom search lyrics');
     });
@@ -117,8 +117,8 @@ describe('Migration Script - Verse Order Preservation', () => {
 
       const combined = verses
         .sort((a, b) => a.order - b.order)
-        .map(v => v.content.trim())
-        .filter(content => content.length > 0)
+        .map((v) => v.content.trim())
+        .filter((content) => content.length > 0)
         .join('\n\n');
 
       expect(combined).toBe('First\n\nSecond');
@@ -133,12 +133,11 @@ describe('Migration Script - Verse Order Preservation', () => {
 
       const combined = verses
         .sort((a, b) => a.order - b.order)
-        .map(v => v.content.trim())
-        .filter(content => content.length > 0)
+        .map((v) => v.content.trim())
+        .filter((content) => content.length > 0)
         .join('\n\n');
 
       expect(combined).toBe('First\n\nThird');
     });
   });
 });
-

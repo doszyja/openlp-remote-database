@@ -266,7 +266,9 @@ export default function Navbar() {
                       >
                         {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
                       </Avatar>
-                      <Typography variant="body2" sx={{ userSelect: 'none' }}>{user.username}</Typography>
+                      <Typography variant="body2" sx={{ userSelect: 'none' }}>
+                        {user.username}
+                      </Typography>
                     </Box>
                   </MenuItem>
                   <Divider />
@@ -568,7 +570,7 @@ export default function Navbar() {
                     </MenuItem>
                     {allPlans && allPlans.length > 0 && <Divider />}
                     {allPlans && allPlans.length > 0 ? (
-                      allPlans.map((plan) => (
+                      allPlans.map(plan => (
                         <MenuItem
                           key={plan.id}
                           onClick={() => {
@@ -762,8 +764,14 @@ export default function Navbar() {
                     >
                       {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
                     </Avatar>
-                    <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}>
-                      Zalogowano jako <strong style={{ fontWeight: 600, userSelect: 'none' }}>{user.username}</strong>
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}
+                    >
+                      Zalogowano jako{' '}
+                      <strong style={{ fontWeight: 600, userSelect: 'none' }}>
+                        {user.username}
+                      </strong>
                     </Typography>
                   </Box>
                 </MenuItem>
@@ -818,7 +826,7 @@ export default function Navbar() {
                   </MenuItem>
                   {allPlans && allPlans.length > 0 && <Divider />}
                   {allPlans && allPlans.length > 0 ? (
-                    allPlans.map((plan) => (
+                    allPlans.map(plan => (
                       <MenuItem
                         key={plan.id}
                         onClick={() => {

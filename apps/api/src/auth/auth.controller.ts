@@ -17,12 +17,12 @@ export class AuthController {
   async devLogin(@Req() req: Request, @Res() res: Response) {
     console.log('[devLogin] Dev login endpoint called');
     console.log('[devLogin] NODE_ENV:', process.env.NODE_ENV);
-    
+
     // Only allow in development mode
     if (process.env.NODE_ENV === 'production') {
       console.log('[devLogin] Blocked: Production mode');
-      return res.status(403).json({ 
-        message: 'Dev authentication is only available in development mode' 
+      return res.status(403).json({
+        message: 'Dev authentication is only available in development mode',
       });
     }
 
@@ -37,15 +37,25 @@ export class AuthController {
       const ipAddress = req.ip || req.socket.remoteAddress || undefined;
       const userAgent = req.get('user-agent') || undefined;
       console.log('[devLogin] Calling authService.devLogin');
-      const result = await this.authService.devLogin(ipAddress, userAgent, userType);
-      console.log('[devLogin] Login successful, redirecting to:', `${frontendUrl}/auth/callback?token=${result.access_token.substring(0, 20)}...`);
+      const result = await this.authService.devLogin(
+        ipAddress,
+        userAgent,
+        userType,
+      );
+      console.log(
+        '[devLogin] Login successful, redirecting to:',
+        `${frontendUrl}/auth/callback?token=${result.access_token.substring(0, 20)}...`,
+      );
 
       // Redirect to frontend with token
       res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
     } catch (error) {
       console.error('[devLogin] Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Dev authentication failed';
-      res.redirect(`${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Dev authentication failed';
+      res.redirect(
+        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+      );
     }
   }
 
@@ -70,7 +80,7 @@ export class AuthController {
       }
 
       const user = req.user as UserResponseDto & { accessToken: string };
-      
+
       // Validate user data
       if (!user || !user.id) {
         throw new Error('Authentication failed: Invalid user data');
@@ -89,10 +99,15 @@ export class AuthController {
       if (error instanceof Error) {
         // Handle specific error types
         if (error.message.includes('Invalid "code"')) {
-          errorMessage = 'Authentication code expired or already used. Please try logging in again.';
+          errorMessage =
+            'Authentication code expired or already used. Please try logging in again.';
         } else if (error.message.includes('rate limited')) {
-          errorMessage = 'Discord API is temporarily unavailable. Please try again in a few moments.';
-        } else if (error.message.includes('not authorized') || error.message.includes('missing role')) {
+          errorMessage =
+            'Discord API is temporarily unavailable. Please try again in a few moments.';
+        } else if (
+          error.message.includes('not authorized') ||
+          error.message.includes('missing role')
+        ) {
           errorMessage = 'missing_role';
         } else if (error.message.includes('Discord API error')) {
           errorMessage = 'Discord API error. Please try again later.';
@@ -102,7 +117,9 @@ export class AuthController {
       }
 
       console.error('Discord OAuth callback error:', error);
-      res.redirect(`${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`);
+      res.redirect(
+        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+      );
     }
   }
 
@@ -110,7 +127,9 @@ export class AuthController {
   // Security: Stricter rate limiting for auth endpoints to prevent brute force
   // Using 'strict' throttler: 100 requests per 15 minutes
   @Throttle({ strict: { limit: 100, ttl: 900000 } })
-  async getProfile(@CurrentUser() user: UserResponseDto): Promise<UserResponseDto> {
+  async getProfile(
+    @CurrentUser() user: UserResponseDto,
+  ): Promise<UserResponseDto> {
     return user;
   }
 
@@ -124,4 +143,3 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 }
-

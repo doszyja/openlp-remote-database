@@ -19,4 +19,3 @@ export interface AuditLog {
   createdAt: string;
   updatedAt: string;
 }
-

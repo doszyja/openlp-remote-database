@@ -72,8 +72,14 @@ describe('SongService', () => {
         updatedAt: new Date(),
       };
 
-      mockTagModel.findOne.mockResolvedValueOnce({ _id: 'tag1', name: 'worship' });
-      mockTagModel.findOne.mockResolvedValueOnce({ _id: 'tag2', name: 'classic' });
+      mockTagModel.findOne.mockResolvedValueOnce({
+        _id: 'tag1',
+        name: 'worship',
+      });
+      mockTagModel.findOne.mockResolvedValueOnce({
+        _id: 'tag2',
+        name: 'classic',
+      });
       mockSongModel.create.mockResolvedValue(mockCreatedSong);
       mockSongModel.findOne.mockResolvedValue({
         _id: '507f1f77bcf86cd799439011',
@@ -385,4 +391,3 @@ describe('SongService', () => {
     });
   });
 });
-

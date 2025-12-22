@@ -7,4 +7,3 @@ export class SetActiveSongDto {
   @IsBoolean()
   isActive: boolean;
 }
-

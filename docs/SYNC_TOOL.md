@@ -55,11 +55,13 @@ pnpm start sync
 ```
 
 Options:
+
 - `--dry-run` / `-d`: Perform a dry run without making changes
 - `--verbose` / `-v`: Enable verbose logging
 - `--force`: Force sync even if already synced
 
 Example:
+
 ```bash
 pnpm start sync --verbose
 pnpm start sync --dry-run
@@ -74,10 +76,12 @@ pnpm start sync-song <songId>
 ```
 
 Options:
+
 - `--dry-run` / `-d`: Perform a dry run
 - `--verbose` / `-v`: Enable verbose logging
 
 Example:
+
 ```bash
 pnpm start sync-song abc123 --verbose
 ```
@@ -91,6 +95,7 @@ pnpm start list
 ```
 
 Options:
+
 - `--verbose` / `-v`: Show detailed information
 
 ## How It Works
@@ -100,7 +105,7 @@ Options:
    - Combines verses and chorus into a single lyrics field
    - Formats verse labels (Verse 1, Chorus, Bridge, etc.)
    - Maps song metadata
-3. **Database Operations**: 
+3. **Database Operations**:
    - Creates new songs in OpenLP database
    - Updates existing songs (if OpenLP ID mapping exists)
    - Inserts verses with proper ordering
@@ -111,6 +116,7 @@ Options:
 The tool expects the following OpenLP database structure:
 
 ### `songs` table
+
 - `id` (INTEGER PRIMARY KEY)
 - `title` (TEXT)
 - `alternate_title` (TEXT, nullable) - Used for hymnbook number
@@ -119,6 +125,7 @@ The tool expects the following OpenLP database structure:
 - `last_modified` (TEXT) - ISO datetime
 
 ### `verses` table
+
 - `id` (INTEGER PRIMARY KEY)
 - `song_id` (INTEGER, FOREIGN KEY)
 - `verse_order` (INTEGER)
@@ -149,15 +156,18 @@ pnpm build
 ## Troubleshooting
 
 ### Database Locked Error
+
 - Make sure OpenLP is not running
 - Check file permissions on the database file
 
 ### API Connection Error
+
 - Verify `API_BASE_URL` is correct
 - Check if backend API is running
 - Verify network connectivity
 
 ### Type Errors
+
 - Run `pnpm build:shared` first to build shared types
 - Ensure all dependencies are installed
 
@@ -168,4 +178,3 @@ pnpm build
 - [ ] Incremental sync (only changed songs)
 - [ ] Backup before sync
 - [ ] Sync statistics and reporting
-

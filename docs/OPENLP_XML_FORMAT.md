@@ -28,6 +28,7 @@ OpenLP stores song lyrics in the `songs.lyrics` column as XML with `<verse>` tag
 ### XML Parsing
 
 The migration script:
+
 1. **Detects XML format** - Checks if lyrics start with `<` and contain `</verse>`
 2. **Extracts verses** - Uses regex to find all `<verse label="...">...</verse>` tags
 3. **Decodes XML entities** - Converts `&amp;`, `&lt;`, `&gt;`, etc. back to normal characters
@@ -104,7 +105,7 @@ Songs are stored in MongoDB with this structure:
 ✅ All verse types are supported (v, c, b, p, t)  
 ✅ Frontend can edit and save verses with labels  
 ✅ Backend preserves verse structure  
-✅ Sync tool converts web format → OpenLP format  
+✅ Sync tool converts web format → OpenLP format
 
 ## Testing
 
@@ -129,4 +130,3 @@ To validate songs in MongoDB Compass:
    - Chorus is stored within `verses` array as verse object with `type: "chorus"` and `originalLabel: "c1"` (or similar)
    - `verseOrder` string (e.g., "v1 c1 v2 c1") defines the display sequence and repetitions
    - `lyricsXml` contains exact XML from SQLite for 1:1 transparency
-

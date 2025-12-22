@@ -4,28 +4,29 @@ This document describes how MongoDB schema fields map to OpenLP database fields 
 
 ## Field Mapping Table
 
-| MongoDB Field | OpenLP Field | Notes |
-|--------------|-------------|-------|
-| `title` | `title` | Song title (required) |
-| `number` | `alternate_title` or `ccli_number` | Hymnbook number or CCLI number |
-| `language` | N/A | Not in OpenLP, but needed for our system |
-| `verses[]` | `lyrics` (XML) | Verses stored as XML in lyrics column (includes chorus, bridge, etc. with type labels) |
-| `verseOrder` | `verse_order` | Verse order string (e.g., "v1 c1 v2 c1") - 1:1 transparent with SQLite |
-| `lyricsXml` | `lyrics` | Exact XML from SQLite lyrics column - 1:1 transparent (preserves CDATA, attributes) |
-| `tags[]` | `theme_name` | Comma-separated themes in OpenLP |
-| `copyright` | `copyright` | Copyright information |
-| `comments` | `comments` | Comments/metadata field |
-| `ccliNumber` | `ccli_number` | CCLI license number |
-| `searchTitle` | `search_title` | Lowercase title for searching (auto-generated) |
-| `openlpMapping.openlpId` | `id` | OpenLP song ID |
-| `openlpMapping.lastSyncedAt` | `last_modified` | Last sync timestamp |
-| `createdAt` | N/A | MongoDB timestamp |
-| `updatedAt` | N/A | MongoDB timestamp |
-| `deletedAt` | N/A | Soft delete flag |
+| MongoDB Field                | OpenLP Field                       | Notes                                                                                  |
+| ---------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| `title`                      | `title`                            | Song title (required)                                                                  |
+| `number`                     | `alternate_title` or `ccli_number` | Hymnbook number or CCLI number                                                         |
+| `language`                   | N/A                                | Not in OpenLP, but needed for our system                                               |
+| `verses[]`                   | `lyrics` (XML)                     | Verses stored as XML in lyrics column (includes chorus, bridge, etc. with type labels) |
+| `verseOrder`                 | `verse_order`                      | Verse order string (e.g., "v1 c1 v2 c1") - 1:1 transparent with SQLite                 |
+| `lyricsXml`                  | `lyrics`                           | Exact XML from SQLite lyrics column - 1:1 transparent (preserves CDATA, attributes)    |
+| `tags[]`                     | `theme_name`                       | Comma-separated themes in OpenLP                                                       |
+| `copyright`                  | `copyright`                        | Copyright information                                                                  |
+| `comments`                   | `comments`                         | Comments/metadata field                                                                |
+| `ccliNumber`                 | `ccli_number`                      | CCLI license number                                                                    |
+| `searchTitle`                | `search_title`                     | Lowercase title for searching (auto-generated)                                         |
+| `openlpMapping.openlpId`     | `id`                               | OpenLP song ID                                                                         |
+| `openlpMapping.lastSyncedAt` | `last_modified`                    | Last sync timestamp                                                                    |
+| `createdAt`                  | N/A                                | MongoDB timestamp                                                                      |
+| `updatedAt`                  | N/A                                | MongoDB timestamp                                                                      |
+| `deletedAt`                  | N/A                                | Soft delete flag                                                                       |
 
 ## Verse Structure
 
 ### MongoDB Format
+
 ```typescript
 {
   order: number,
@@ -36,6 +37,7 @@ This document describes how MongoDB schema fields map to OpenLP database fields 
 ```
 
 ### OpenLP Format
+
 ```xml
 <verse label="v1">Verse content</verse>
 <verse label="c">Chorus content</verse>
@@ -71,6 +73,7 @@ This document describes how MongoDB schema fields map to OpenLP database fields 
 ## XML Lyrics Format
 
 ### From MongoDB to OpenLP
+
 ```typescript
 // MongoDB structure
 {
@@ -90,6 +93,7 @@ This document describes how MongoDB schema fields map to OpenLP database fields 
 ```
 
 ### From OpenLP to MongoDB
+
 ```xml
 <!-- OpenLP XML -->
 <verse label="v1">Verse 1</verse>
@@ -120,7 +124,7 @@ This document describes how MongoDB schema fields map to OpenLP database fields 
 ✅ Search title is auto-generated  
 ✅ Tags are properly converted (comma-separated ↔ array)  
 ✅ Copyright and comments are preserved  
-✅ CCLI number is handled correctly  
+✅ CCLI number is handled correctly
 
 ## MongoDB Compass Validation
 
@@ -140,4 +144,3 @@ To validate in MongoDB Compass:
    - `lyricsXml` (string | null) - exact XML from SQLite lyrics column
    - `tags` (array of tag IDs)
    - `openlpMapping` (object with openlpId, lastSyncedAt)
-

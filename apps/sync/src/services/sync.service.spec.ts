@@ -110,11 +110,9 @@ describe('SyncService', () => {
       ];
 
       mockApiClient.fetchAllSongs.mockResolvedValue(mockSongs);
-      mockOpenlpDb.upsertSong
-        .mockReturnValueOnce(1)
-        .mockImplementationOnce(() => {
-          throw new Error('Database error');
-        });
+      mockOpenlpDb.upsertSong.mockReturnValueOnce(1).mockImplementationOnce(() => {
+        throw new Error('Database error');
+      });
 
       const result = await syncService.syncAll({ verbose: false });
 
@@ -193,7 +191,7 @@ describe('SyncService', () => {
           searchTitle: 'test song',
           searchLyrics: 'verse 1\n\nverse 2\n\nverse 3',
         }),
-        undefined,
+        undefined
       );
     });
   });
@@ -226,7 +224,7 @@ describe('SyncService', () => {
       mockApiClient.getSongById.mockRejectedValue(new Error('Song not found'));
 
       await expect(syncService.syncSongById('invalid-id', { verbose: false })).rejects.toThrow(
-        'Song not found',
+        'Song not found'
       );
     });
 
@@ -253,4 +251,3 @@ describe('SyncService', () => {
     });
   });
 });
-

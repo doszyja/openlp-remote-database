@@ -3,11 +3,13 @@
 ## Krok 1: Utwórz folder wtyczek (jeśli nie istnieje)
 
 W PowerShell lub CMD:
+
 ```powershell
 mkdir "$env:APPDATA\OpenLP\plugins"
 ```
 
 Lub w Git Bash:
+
 ```bash
 mkdir -p "$APPDATA/OpenLP/plugins"
 ```
@@ -17,6 +19,7 @@ mkdir -p "$APPDATA/OpenLP/plugins"
 ### Opcja A: Użyj skryptu PowerShell (Zalecane)
 
 W PowerShell (uruchom jako administrator jeśli potrzeba):
+
 ```powershell
 cd apps/openlp-plugin
 .\install-plugin.ps1
@@ -25,11 +28,13 @@ cd apps/openlp-plugin
 ### Opcja B: Ręczne kopiowanie
 
 W PowerShell:
+
 ```powershell
 Copy-Item -Recurse "apps\openlp-plugin\openlp_sync_plugin" "$env:APPDATA\OpenLP\plugins\"
 ```
 
 W Git Bash:
+
 ```bash
 cp -r apps/openlp-plugin/openlp_sync_plugin "$APPDATA/OpenLP/plugins/"
 ```
@@ -50,5 +55,3 @@ cp -r apps/openlp-plugin/openlp_sync_plugin "$APPDATA/OpenLP/plugins/"
 ## Gotowe!
 
 Teraz możesz używać przycisku "Synchronizuj" w menu `Narzędzia` OpenLP.
-
-

@@ -581,8 +581,8 @@ export default function LivePage() {
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Pieśń ma pole <code>verses</code> (
-                  {typeof song.verses === 'string' ? (song.verses as string).length : 'nie string'} znaków), ale
-                  nie udało się sparsować treści.
+                  {typeof song.verses === 'string' ? (song.verses as string).length : 'nie string'}{' '}
+                  znaków), ale nie udało się sparsować treści.
                 </Typography>
                 {song.verses && typeof song.verses === 'string' && (
                   <details style={{ marginTop: '12px' }}>

@@ -109,12 +109,14 @@ This document records important architectural decisions made during the project.
 - ⚠️ Different query patterns than SQL
 
 **Migration Details**:
+
 - Replaced Prisma schemas with Mongoose schemas
 - Updated all services to use Mongoose models
 - Changed Docker configuration from PostgreSQL to MongoDB
 - Updated environment variables (DATABASE_URL format)
 
 **Alternatives Considered**:
+
 - Keep PostgreSQL/Prisma: Rejected - MongoDB better fits document structure
 - Use raw MongoDB driver: Rejected - Mongoose provides better TypeScript support
 

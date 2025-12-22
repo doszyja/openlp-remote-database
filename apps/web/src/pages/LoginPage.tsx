@@ -47,7 +47,8 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         bgcolor: '#f5f5f5',
-        backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(88, 101, 242, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(88, 101, 242, 0.05) 0%, transparent 50%)',
+        backgroundImage:
+          'radial-gradient(circle at 20% 50%, rgba(88, 101, 242, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(88, 101, 242, 0.05) 0%, transparent 50%)',
         px: 2,
       }}
     >
@@ -86,22 +87,8 @@ export default function LoginPage() {
                 strokeLinejoin="round"
                 fill="none"
               />
-              <circle
-                cx="6"
-                cy="18"
-                r="3"
-                stroke="#5865F2"
-                strokeWidth="2"
-                fill="none"
-              />
-              <circle
-                cx="18"
-                cy="16"
-                r="3"
-                stroke="#5865F2"
-                strokeWidth="2"
-                fill="none"
-              />
+              <circle cx="6" cy="18" r="3" stroke="#5865F2" strokeWidth="2" fill="none" />
+              <circle cx="18" cy="16" r="3" stroke="#5865F2" strokeWidth="2" fill="none" />
             </svg>
             <Typography
               variant="h3"
@@ -116,7 +103,7 @@ export default function LoginPage() {
               Pieśni Zborowe
             </Typography>
           </Box>
-          
+
           <Typography
             variant="body1"
             sx={{
@@ -254,7 +241,8 @@ export default function LoginPage() {
                   lineHeight: '20px',
                 }}
               >
-                A web-based platform for managing your song library and syncing with OpenLP presentation software. Create, edit, and organize your songs with ease.
+                A web-based platform for managing your song library and syncing with OpenLP
+                presentation software. Create, edit, and organize your songs with ease.
               </Typography>
             </Box>
           </Box>
@@ -312,7 +300,8 @@ export default function LoginPage() {
                   lineHeight: '20px',
                 }}
               >
-                You must be a member of the required Discord server with the required role to access this application.
+                You must be a member of the required Discord server with the required role to access
+                this application.
               </Typography>
             </Box>
           </Box>
@@ -321,4 +310,3 @@ export default function LoginPage() {
     </Box>
   );
 }
-

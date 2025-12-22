@@ -16,10 +16,11 @@ interface OpenLPSong {
 
 async function fixVerseOrder() {
   // Get SQLite file path from command line or use default
-  const sqlitePath = process.argv[2] || path.join(__dirname, '..', 'sqlite', 'songs.sqlite');
-  
+  const sqlitePath =
+    process.argv[2] || path.join(__dirname, '..', 'sqlite', 'songs.sqlite');
+
   console.log(`📂 Opening OpenLP database: ${sqlitePath}`);
-  
+
   if (!fs.existsSync(sqlitePath)) {
     console.error(`❌ SQLite file not found: ${sqlitePath}`);
     process.exit(1);
@@ -27,7 +28,7 @@ async function fixVerseOrder() {
 
   // Open SQLite database
   const db = new Database(sqlitePath, { readonly: true });
-  
+
   try {
     // Check what tables exist
     const tablesStmt = db.prepare(`
@@ -36,31 +37,37 @@ async function fixVerseOrder() {
       ORDER BY name
     `);
     const tables = tablesStmt.all() as Array<{ name: string }>;
-    console.log('📋 Available tables:', tables.map(t => t.name).join(', '));
+    console.log('📋 Available tables:', tables.map((t) => t.name).join(', '));
 
     // First, check the structure of the songs table to see if verse_order column exists
     let tableInfoStmt;
-    if (tables.some(t => t.name === 'songs')) {
+    if (tables.some((t) => t.name === 'songs')) {
       tableInfoStmt = db.prepare(`PRAGMA table_info(songs)`);
-    } else if (tables.some(t => t.name === 'song')) {
+    } else if (tables.some((t) => t.name === 'song')) {
       tableInfoStmt = db.prepare(`PRAGMA table_info(song)`);
     } else {
-      console.error('❌ Could not find songs table. Available tables:', tables.map(t => t.name));
+      console.error(
+        '❌ Could not find songs table. Available tables:',
+        tables.map((t) => t.name),
+      );
       process.exit(1);
     }
-    
-    const tableInfo = tableInfoStmt.all() as Array<{ name: string; type: string }>;
-    const columnNames = tableInfo.map(col => col.name);
+
+    const tableInfo = tableInfoStmt.all() as Array<{
+      name: string;
+      type: string;
+    }>;
+    const columnNames = tableInfo.map((col) => col.name);
     console.log('📋 Songs table columns:', columnNames.join(', '));
-    
+
     const hasVerseOrder = columnNames.includes('verse_order');
     console.log(`ℹ️  Table has verse_order column: ${hasVerseOrder}`);
 
     // Get all songs with their IDs and lyrics (XML format)
     let songsStmt;
     let openlpSongs: OpenLPSong[] = [];
-    
-    if (tables.some(t => t.name === 'songs')) {
+
+    if (tables.some((t) => t.name === 'songs')) {
       if (hasVerseOrder) {
         songsStmt = db.prepare(`
           SELECT id, title, lyrics, verse_order
@@ -75,7 +82,7 @@ async function fixVerseOrder() {
         `);
       }
       openlpSongs = songsStmt.all() as OpenLPSong[];
-    } else if (tables.some(t => t.name === 'song')) {
+    } else if (tables.some((t) => t.name === 'song')) {
       if (hasVerseOrder) {
         songsStmt = db.prepare(`
           SELECT id, title, lyrics, verse_order
@@ -91,10 +98,13 @@ async function fixVerseOrder() {
       }
       openlpSongs = songsStmt.all() as OpenLPSong[];
     } else {
-      console.error('❌ Could not find songs table. Available tables:', tables.map(t => t.name));
+      console.error(
+        '❌ Could not find songs table. Available tables:',
+        tables.map((t) => t.name),
+      );
       process.exit(1);
     }
-    
+
     console.log(`📊 Found ${openlpSongs.length} songs in OpenLP database`);
 
     // In OpenLP, verses are stored in the lyrics column as XML, not in a separate table
@@ -116,7 +126,9 @@ async function fixVerseOrder() {
       try {
         // Get lyrics from SQLite (contains XML with verses)
         if (!openlpSong.lyrics || !openlpSong.lyrics.trim()) {
-          console.log(`⏭️  Skipping "${openlpSong.title}" (no lyrics in SQLite)`);
+          console.log(
+            `⏭️  Skipping "${openlpSong.title}" (no lyrics in SQLite)`,
+          );
           skipped++;
           continue;
         }
@@ -130,7 +142,12 @@ async function fixVerseOrder() {
         // If not found by ID, try to match by title (case-insensitive)
         if (!mongoSong) {
           mongoSong = await songModel.findOne({
-            title: { $regex: new RegExp(`^${openlpSong.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            title: {
+              $regex: new RegExp(
+                `^${openlpSong.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+                'i',
+              ),
+            },
             deletedAt: null,
           });
         }
@@ -138,7 +155,9 @@ async function fixVerseOrder() {
         if (!mongoSong) {
           // Only log first few not found to avoid spam
           if (notFound < 5) {
-            console.log(`⚠️  Song not found in MongoDB: "${openlpSong.title}" (OpenLP ID: ${openlpSong.id})`);
+            console.log(
+              `⚠️  Song not found in MongoDB: "${openlpSong.title}" (OpenLP ID: ${openlpSong.id})`,
+            );
           }
           notFound++;
           continue;
@@ -146,12 +165,17 @@ async function fixVerseOrder() {
 
         // Parse verses from XML lyrics
         const lyricsText = openlpSong.lyrics.trim();
-        const versesMap = new Map<string, { content: string; label: string; isChorus: boolean }>();
+        const versesMap = new Map<
+          string,
+          { content: string; label: string; isChorus: boolean }
+        >();
         let chorus: string | undefined;
 
         // Check if lyrics are in XML format
         if (!lyricsText.startsWith('<') || !lyricsText.includes('</verse>')) {
-          console.log(`⚠️  Song "${openlpSong.title}" has non-XML lyrics format, skipping`);
+          console.log(
+            `⚠️  Song "${openlpSong.title}" has non-XML lyrics format, skipping`,
+          );
           skipped++;
           continue;
         }
@@ -159,7 +183,7 @@ async function fixVerseOrder() {
         // Parse XML to extract verses by label
         const verseRegex = /<verse\s+([^>]+)>([\s\S]*?)<\/verse>/gi;
         const verseMatches = Array.from(lyricsText.matchAll(verseRegex));
-        
+
         if (verseMatches.length === 0) {
           console.log(`⏭️  Skipping "${openlpSong.title}" (no verses in XML)`);
           skipped++;
@@ -171,9 +195,9 @@ async function fixVerseOrder() {
         verseMatches.forEach((match) => {
           const attributes = match[1] || '';
           let content = match[2]?.trim() || '';
-          
+
           if (!content) return;
-          
+
           // Decode XML entities
           content = content
             .replace(/&amp;/g, '&')
@@ -183,16 +207,17 @@ async function fixVerseOrder() {
             .replace(/&apos;/g, "'")
             .replace(/&#39;/g, "'")
             .replace(/&#x27;/g, "'");
-          
+
           // Extract label from attributes
           const labelMatch = attributes.match(/label=["']([^"']+)["']/i);
           const label = labelMatch ? labelMatch[1].trim() : '';
-          
+
           if (!label) return;
-          
+
           const labelLower = label.toLowerCase();
-          const isChorus = labelLower.startsWith('c') || labelLower === 'chorus';
-          
+          const isChorus =
+            labelLower.startsWith('c') || labelLower === 'chorus';
+
           if (isChorus) {
             // Store chorus separately
             chorus = content;
@@ -203,7 +228,7 @@ async function fixVerseOrder() {
               label,
               isChorus: false,
             });
-            
+
             // Also store variations for flexible matching
             // Extract number if present (e.g., "Verse 1" -> "v1", "verse1" -> "v1")
             const numberMatch = labelLower.match(/\d+/);
@@ -222,7 +247,9 @@ async function fixVerseOrder() {
         // Parse verse_order string (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
         // This defines the exact sequence of verses
         if (!openlpSong.verse_order || !openlpSong.verse_order.trim()) {
-          console.log(`⚠️  Song "${openlpSong.title}" has no verse_order, skipping`);
+          console.log(
+            `⚠️  Song "${openlpSong.title}" has no verse_order, skipping`,
+          );
           skipped++;
           continue;
         }
@@ -230,71 +257,86 @@ async function fixVerseOrder() {
         // Get verse_order string directly from SQLite (1:1 transparent with SQLite structure)
         const verseOrderString = openlpSong.verse_order.trim();
         // Split by spaces to get sequence: ["v1", "c1", "v2", "c1", ...]
-        const verseSequence = verseOrderString.split(/\s+/).filter(s => s.trim());
-        
+        const verseSequence = verseOrderString
+          .split(/\s+/)
+          .filter((s) => s.trim());
+
         // Build verses array in the order specified by verse_order string
-        const versesArray: Array<{ order: number; content: string; label: string; isChorus: boolean }> = [];
+        const versesArray: Array<{
+          order: number;
+          content: string;
+          label: string;
+          isChorus: boolean;
+        }> = [];
         let verseOrderCounter = 1; // Track order for non-chorus verses
-        
+
         for (const verseLabel of verseSequence) {
           const labelLower = verseLabel.toLowerCase();
-          
+
           // Skip chorus in verse_order (we handle it separately)
           if (labelLower.startsWith('c') || labelLower === 'chorus') {
             continue; // Chorus is already stored separately
           }
-          
-              // Find verse by label - try multiple variations
-              let verse = versesMap.get(labelLower);
-              
-              // If not found, try variations (v1 -> verse1, verse 1, Verse 1, etc.)
-              if (!verse) {
-                // Try with "verse" prefix
-                const variations = [
-                  labelLower.replace(/^v(\d+)$/, 'verse$1'), // v1 -> verse1
-                  labelLower.replace(/^v(\d+)$/, 'verse $1'), // v1 -> verse 1
-                  labelLower.replace(/^v(\d+)$/, 'Verse $1'), // v1 -> Verse 1
-                  labelLower.replace(/^v(\d+)$/, 'Verse$1'), // v1 -> Verse1
-                ];
-                
-                for (const variation of variations) {
-                  verse = versesMap.get(variation);
-                  if (verse) break;
+
+          // Find verse by label - try multiple variations
+          let verse = versesMap.get(labelLower);
+
+          // If not found, try variations (v1 -> verse1, verse 1, Verse 1, etc.)
+          if (!verse) {
+            // Try with "verse" prefix
+            const variations = [
+              labelLower.replace(/^v(\d+)$/, 'verse$1'), // v1 -> verse1
+              labelLower.replace(/^v(\d+)$/, 'verse $1'), // v1 -> verse 1
+              labelLower.replace(/^v(\d+)$/, 'Verse $1'), // v1 -> Verse 1
+              labelLower.replace(/^v(\d+)$/, 'Verse$1'), // v1 -> Verse1
+            ];
+
+            for (const variation of variations) {
+              verse = versesMap.get(variation);
+              if (verse) break;
+            }
+          }
+
+          // If still not found, try to find by number only (extract number from label)
+          if (!verse && labelLower.match(/^v\d+$/)) {
+            const verseNum = labelLower.match(/\d+/)?.[0];
+            if (verseNum) {
+              // Try to find any verse with this number in label
+              for (const [mapLabel, mapVerse] of versesMap.entries()) {
+                if (mapLabel.includes(verseNum) && !mapVerse.isChorus) {
+                  verse = mapVerse;
+                  break;
                 }
               }
-              
-              // If still not found, try to find by number only (extract number from label)
-              if (!verse && labelLower.match(/^v\d+$/)) {
-                const verseNum = labelLower.match(/\d+/)?.[0];
-                if (verseNum) {
-                  // Try to find any verse with this number in label
-                  for (const [mapLabel, mapVerse] of versesMap.entries()) {
-                    if (mapLabel.includes(verseNum) && !mapVerse.isChorus) {
-                      verse = mapVerse;
-                      break;
-                    }
-                  }
-                }
-              }
-              
-              if (verse) {
-                versesArray.push({
-                  order: verseOrderCounter++,
-                  content: verse.content,
-                  label: verse.label,
-                  isChorus: false,
-                });
-              } else {
-                console.warn(`⚠️  Verse label "${verseLabel}" not found in XML for song "${openlpSong.title}" (tried: ${labelLower}, variations)`);
-              }
+            }
+          }
+
+          if (verse) {
+            versesArray.push({
+              order: verseOrderCounter++,
+              content: verse.content,
+              label: verse.label,
+              isChorus: false,
+            });
+          } else {
+            console.warn(
+              `⚠️  Verse label "${verseLabel}" not found in XML for song "${openlpSong.title}" (tried: ${labelLower}, variations)`,
+            );
+          }
         }
-        
+
         // If verse_order didn't match any verses, fall back to XML order
         if (versesArray.length === 0) {
-          console.warn(`⚠️  No verses matched verse_order for "${openlpSong.title}", using XML order`);
-          console.warn(`   Available labels in XML: ${Array.from(versesMap.keys()).filter(k => !versesMap.get(k)?.isChorus).join(', ')}`);
+          console.warn(
+            `⚠️  No verses matched verse_order for "${openlpSong.title}", using XML order`,
+          );
+          console.warn(
+            `   Available labels in XML: ${Array.from(versesMap.keys())
+              .filter((k) => !versesMap.get(k)?.isChorus)
+              .join(', ')}`,
+          );
           console.warn(`   verse_order string: "${verseOrderString}"`);
-          
+
           // Use XML order (as they appear in XML)
           let xmlOrder = 1;
           verseMatches.forEach((match) => {
@@ -302,10 +344,11 @@ async function fixVerseOrder() {
             const labelMatch = attributes.match(/label=["']([^"']+)["']/i);
             const label = labelMatch ? labelMatch[1].trim() : '';
             if (!label) return;
-            
+
             const labelLower = label.toLowerCase();
-            const isChorus = labelLower.startsWith('c') || labelLower === 'chorus';
-            
+            const isChorus =
+              labelLower.startsWith('c') || labelLower === 'chorus';
+
             if (!isChorus) {
               const verse = versesMap.get(labelLower);
               if (verse) {
@@ -322,7 +365,7 @@ async function fixVerseOrder() {
 
         // Build verses array with order preserved (verse_order from SQLite XML order)
         // Verses are already sorted by order
-        const versesForMongo = versesArray.map(v => ({
+        const versesForMongo = versesArray.map((v) => ({
           order: v.order,
           content: v.content,
           label: v.label,
@@ -332,8 +375,8 @@ async function fixVerseOrder() {
 
         // Generate search_lyrics from verse content
         const versesString = versesForMongo
-          .map(v => v.content)
-          .filter(content => content.length > 0)
+          .map((v) => v.content)
+          .filter((content) => content.length > 0)
           .join('\n\n');
 
         // Update song in MongoDB
@@ -348,18 +391,21 @@ async function fixVerseOrder() {
           updateData.chorus = chorus;
         }
 
-        await songModel.updateOne(
-          { _id: mongoSong._id },
-          { $set: updateData }
-        );
+        await songModel.updateOne({ _id: mongoSong._id }, { $set: updateData });
 
         // Log order information for verification
-        const orderInfo = versesArray.map(v => `${v.label || 'v' + v.order}(order:${v.order})`).join(', ');
-        console.log(`✅ Updated: "${openlpSong.title}" (${versesArray.length} verses${chorus ? ', chorus' : ''}) [${orderInfo}]`);
+        const orderInfo = versesArray
+          .map((v) => `${v.label || 'v' + v.order}(order:${v.order})`)
+          .join(', ');
+        console.log(
+          `✅ Updated: "${openlpSong.title}" (${versesArray.length} verses${chorus ? ', chorus' : ''}) [${orderInfo}]`,
+        );
         updated++;
-
       } catch (error: any) {
-        console.error(`❌ Error updating song "${openlpSong.title}":`, error.message);
+        console.error(
+          `❌ Error updating song "${openlpSong.title}":`,
+          error.message,
+        );
         errors++;
       }
     }
@@ -373,10 +419,9 @@ async function fixVerseOrder() {
 
     await app.close();
     db.close();
-    
+
     console.log('\n✨ Verse order fix completed!');
     process.exit(0);
-
   } catch (error: any) {
     console.error('❌ Fix failed:', error);
     db.close();
@@ -389,4 +434,3 @@ fixVerseOrder().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
-

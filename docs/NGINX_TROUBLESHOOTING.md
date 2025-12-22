@@ -96,7 +96,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Increase timeout for long-running requests
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
@@ -122,7 +122,7 @@ server {
     # SSL certificates
     ssl_certificate /etc/letsencrypt/live/vps-7ac7feb6.vps.ovh.net/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/vps-7ac7feb6.vps.ovh.net/privkey.pem;
-    
+
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
@@ -159,7 +159,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Increase timeout for long-running requests
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
@@ -176,14 +176,16 @@ sudo nano /etc/nginx/sites-available/openlp-database
 ```
 
 2. **Update the `/api` location block** to use:
+
    ```nginx
    location /api {
        proxy_pass http://localhost:3000;
        # ... rest of config
    }
    ```
-   
+
    **NOT:**
+
    ```nginx
    location /api/ {
        proxy_pass http://localhost:3000/;  # This strips /api prefix - WRONG!
@@ -223,4 +225,3 @@ If you prefer to strip the prefix in nginx, you would need to:
 2. Use `location /api/ { proxy_pass http://localhost:3000/; }` in nginx
 
 But the recommended approach is to keep the prefix in NestJS and forward it through nginx.
-

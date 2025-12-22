@@ -5,6 +5,7 @@ This guide explains how to set up Discord OAuth authentication with server and r
 ## Overview
 
 The application uses Discord OAuth to authenticate users. Only users who are:
+
 1. Members of a specific Discord server (guild)
 2. Have a specific role in that server
 
@@ -131,6 +132,7 @@ VITE_API_URL=http://localhost:3000/api
 This error means the redirect URI in your Discord application settings doesn't match what the code is sending.
 
 **To fix:**
+
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Select your application
 3. Go to "OAuth2" → "General"

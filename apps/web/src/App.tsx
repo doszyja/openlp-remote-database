@@ -34,12 +34,33 @@ function App() {
               <Route path="/help" element={<HelpPage />} />
               <Route path="/recent-changes" element={<RecentChangesPage />} />
               <Route path="/songs" element={<SongListPage />} />
-              <Route path="/songs/new" element={<ProtectedRoute><SongCreatePage /></ProtectedRoute>} />
+              <Route
+                path="/songs/new"
+                element={
+                  <ProtectedRoute>
+                    <SongCreatePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/songs/:id" element={<SongDetailPage />} />
-              <Route path="/songs/:id/edit" element={<ProtectedRoute><SongEditPage /></ProtectedRoute>} />
+              <Route
+                path="/songs/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <SongEditPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/service-plans" element={<ServicePlanPage />} />
               <Route path="/service-plans/:id" element={<ServicePlanPage />} />
-              <Route path="/audit-logs" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
+              <Route
+                path="/audit-logs"
+                element={
+                  <AdminRoute>
+                    <AuditLogPage />
+                  </AdminRoute>
+                }
+              />
             </Routes>
           </Layout>
         }
@@ -49,4 +70,3 @@ function App() {
 }
 
 export default App;
-

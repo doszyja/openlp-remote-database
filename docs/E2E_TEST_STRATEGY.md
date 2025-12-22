@@ -17,17 +17,17 @@ This document captures the end-to-end testing approach for the React frontend, b
 
 ## Scenario Coverage
 
-| Feature / Risk | Spec | Notes |
-| --- | --- | --- |
-| Anonymous browsing & search | `song-list.spec.ts` | Verifies default feed, search debounce, and absence of edit controls when `hasEditPermission` is false. |
-| Pagination & load-more UX | `song-list.spec.ts` | Confirms incremental data loading and detection of terminal pages. |
-| API failure recovery | `song-list.spec.ts` | Ensures the full-screen error overlay (see `docs/PROJECT_RULES.md` error UX) can recover via retry. |
-| Export ZIP guardrails | `song-list.spec.ts` | Checks that only editors see the export button and that the success toast fires after a mocked blob download. |
-| Song creation | `song-crud.spec.ts` | Walks through the SongForm, verse handling, and success navigation. Asserts payloads to keep XML generation stable. |
-| Song editing | `song-crud.spec.ts` | Exercises dirty-state protection and update requests. |
-| Song deletion | `song-crud.spec.ts` | Validates confirmation dialog + navigation back to the list. |
-| Discord callback success | `auth.spec.ts` | Verifies token persistence + privilege-gated UI after `/auth/callback?token=...`. |
-| Discord callback failure | `auth.spec.ts` | Confirms Polish error messaging for missing roles and auto-redirect back to `/songs`. |
+| Feature / Risk              | Spec                | Notes                                                                                                               |
+| --------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Anonymous browsing & search | `song-list.spec.ts` | Verifies default feed, search debounce, and absence of edit controls when `hasEditPermission` is false.             |
+| Pagination & load-more UX   | `song-list.spec.ts` | Confirms incremental data loading and detection of terminal pages.                                                  |
+| API failure recovery        | `song-list.spec.ts` | Ensures the full-screen error overlay (see `docs/PROJECT_RULES.md` error UX) can recover via retry.                 |
+| Export ZIP guardrails       | `song-list.spec.ts` | Checks that only editors see the export button and that the success toast fires after a mocked blob download.       |
+| Song creation               | `song-crud.spec.ts` | Walks through the SongForm, verse handling, and success navigation. Asserts payloads to keep XML generation stable. |
+| Song editing                | `song-crud.spec.ts` | Exercises dirty-state protection and update requests.                                                               |
+| Song deletion               | `song-crud.spec.ts` | Validates confirmation dialog + navigation back to the list.                                                        |
+| Discord callback success    | `auth.spec.ts`      | Verifies token persistence + privilege-gated UI after `/auth/callback?token=...`.                                   |
+| Discord callback failure    | `auth.spec.ts`      | Confirms Polish error messaging for missing roles and auto-redirect back to `/songs`.                               |
 
 ## Running the Suite
 
@@ -58,4 +58,3 @@ This balance keeps tests fast and hermetic while honoring the Mongo-as-source-of
 - Cover OpenLP presentation mode and offline banner work (`Task 3.14`) when implemented.
 
 Please update this document whenever scenarios are added or assumptions change so Cursor stays aligned with the latest QA strategy.
-

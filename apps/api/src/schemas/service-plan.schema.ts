@@ -39,4 +39,3 @@ export class ServicePlan {
 export const ServicePlanSchema = SchemaFactory.createForClass(ServicePlan);
 ServicePlanSchema.index({ date: 1 });
 ServicePlanSchema.index({ createdAt: -1 });
-

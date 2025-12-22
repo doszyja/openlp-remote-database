@@ -48,7 +48,7 @@ export default function HomePage() {
   const { data: allPlans } = useServicePlans();
   const isLivePage = location.pathname === '/live';
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
-  
+
   // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
   const [hasToken] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -56,11 +56,11 @@ export default function HomePage() {
     }
     return false;
   });
-  
+
   // Get dev user type preference from localStorage, default to 'regular'
   const [devUserType, setDevUserType] = useState<'admin' | 'regular'>(() => {
     const stored = localStorage.getItem('dev-user-type');
-    return (stored === 'admin' || stored === 'regular') ? stored : 'regular';
+    return stored === 'admin' || stored === 'regular' ? stored : 'regular';
   });
 
   const handleDiscordLogin = () => {
@@ -109,7 +109,7 @@ export default function HomePage() {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        background: (theme) =>
+        background: theme =>
           theme.palette.mode === 'dark'
             ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
             : '#ffffff',
@@ -169,9 +169,11 @@ export default function HomePage() {
               </Typography>
             </Typography>
           </Box>
-          
+
           {/* User Dropdown */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}>
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
+          >
             {isAuthenticated && user ? (
               <>
                 <Box
@@ -265,8 +267,14 @@ export default function HomePage() {
                       >
                         {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
                       </Avatar>
-                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}>
-                        Zalogowano jako <strong style={{ fontWeight: 600, userSelect: 'none' }}>{user.username}</strong>
+                      <Typography
+                        variant="caption"
+                        sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}
+                      >
+                        Zalogowano jako{' '}
+                        <strong style={{ fontWeight: 600, userSelect: 'none' }}>
+                          {user.username}
+                        </strong>
                       </Typography>
                     </Box>
                   </MenuItem>
@@ -321,7 +329,7 @@ export default function HomePage() {
                     </MenuItem>
                     {allPlans && allPlans.length > 0 && <Divider />}
                     {allPlans && allPlans.length > 0 ? (
-                      allPlans.map((plan) => (
+                      allPlans.map(plan => (
                         <MenuItem
                           key={plan.id}
                           onClick={() => {
@@ -435,8 +443,8 @@ export default function HomePage() {
           left: 0,
           right: 0,
           bottom: 0,
-          opacity: (theme) => theme.palette.mode === 'dark' ? 0.02 : 0,
-          backgroundImage: (theme) =>
+          opacity: theme => (theme.palette.mode === 'dark' ? 0.02 : 0),
+          backgroundImage: theme =>
             theme.palette.mode === 'dark'
               ? 'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)'
               : 'none',
@@ -460,7 +468,6 @@ export default function HomePage() {
           overflow: 'auto', // Allow scrolling if content is too large
         }}
       >
-
         {/* Action cards */}
         <Stack
           spacing={2.5}
@@ -477,17 +484,19 @@ export default function HomePage() {
               p: { xs: 2.5, sm: 3.5, md: 4 },
               borderRadius: 3,
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                   : '0 8px 32px rgba(0, 0, 0, 0.1)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               transition: 'transform 0.2s, box-shadow 0.2s',
               cursor: 'pointer',
               '&:hover': {
                 transform: { xs: 'none', sm: 'translateY(-4px)' },
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 12px 40px rgba(0, 0, 0, 0.4)'
                     : '0 12px 40px rgba(0, 0, 0, 0.15)',
@@ -521,7 +530,11 @@ export default function HomePage() {
                 >
                   Przeglądaj Pieśni
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                >
                   Przeglądaj i wyszukuj pieśni zborowe w bibliotece
                 </Typography>
               </Box>
@@ -530,7 +543,7 @@ export default function HomePage() {
               variant="contained"
               size="large"
               fullWidth
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 navigate('/songs');
               }}
@@ -555,17 +568,19 @@ export default function HomePage() {
                 p: { xs: 2.5, sm: 3.5, md: 4 },
                 borderRadius: 3,
                 bgcolor: 'background.paper',
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                     : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: (theme) =>
-                  theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+                border: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(0, 0, 0, 0.05)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 cursor: 'pointer',
                 '&:hover': {
                   transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: (theme) =>
+                  boxShadow: theme =>
                     theme.palette.mode === 'dark'
                       ? '0 12px 40px rgba(0, 0, 0, 0.4)'
                       : '0 12px 40px rgba(0, 0, 0, 0.15)',
@@ -599,7 +614,11 @@ export default function HomePage() {
                   >
                     Dodaj Nową Pieśń
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                  >
                     Dodaj nową pieśń do biblioteki zborowej
                   </Typography>
                 </Box>
@@ -608,7 +627,7 @@ export default function HomePage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   navigate('/songs/new');
                 }}
@@ -636,10 +655,13 @@ export default function HomePage() {
               gap: { xs: 1.25, sm: 2 },
               p: { xs: 1.25, sm: 2 },
               borderRadius: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: (theme) =>
+              bgcolor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
@@ -647,7 +669,7 @@ export default function HomePage() {
               transition: 'transform 0.2s, box-shadow 0.2s',
               '&:hover': {
                 transform: { xs: 'none', sm: 'translateY(-2px)' },
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 6px 20px rgba(0, 0, 0, 0.3)'
                     : '0 6px 20px rgba(0, 0, 0, 0.12)',
@@ -692,7 +714,7 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 navigate('/help');
               }}
@@ -718,10 +740,13 @@ export default function HomePage() {
               gap: { xs: 1.25, sm: 2 },
               p: { xs: 1.25, sm: 2 },
               borderRadius: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: (theme) =>
+              bgcolor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
@@ -729,7 +754,7 @@ export default function HomePage() {
               transition: 'transform 0.2s, box-shadow 0.2s',
               '&:hover': {
                 transform: { xs: 'none', sm: 'translateY(-2px)' },
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 6px 20px rgba(0, 0, 0, 0.3)'
                     : '0 6px 20px rgba(0, 0, 0, 0.12)',
@@ -774,7 +799,7 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 navigate('/recent-changes');
               }}
@@ -798,16 +823,18 @@ export default function HomePage() {
                 p: { xs: 2.5, sm: 3.5, md: 4 },
                 borderRadius: 3,
                 bgcolor: 'background.paper',
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                     : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: (theme) =>
-                  theme.palette.mode === 'dark' ? '1px solid rgba(250, 166, 26, 0.3)' : '1px solid rgba(250, 166, 26, 0.2)',
+                border: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '1px solid rgba(250, 166, 26, 0.3)'
+                    : '1px solid rgba(250, 166, 26, 0.2)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: (theme) =>
+                  boxShadow: theme =>
                     theme.palette.mode === 'dark'
                       ? '0 12px 40px rgba(250, 166, 26, 0.2)'
                       : '0 12px 40px rgba(250, 166, 26, 0.15)',
@@ -841,7 +868,11 @@ export default function HomePage() {
                   >
                     Dev Login
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                  >
                     Szybkie logowanie deweloperskie bez Discord OAuth
                   </Typography>
                 </Box>
@@ -867,9 +898,13 @@ export default function HomePage() {
                       <Typography variant="body2" fontWeight={500}>
                         Tryb Administratora
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                        {devUserType === 'admin' 
-                          ? 'Pełny dostęp (edycja, usuwanie, logi audytu)' 
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mt: 0.25 }}
+                      >
+                        {devUserType === 'admin'
+                          ? 'Pełny dostęp (edycja, usuwanie, logi audytu)'
                           : 'Ograniczony dostęp (tylko przeglądanie)'}
                       </Typography>
                     </Box>
@@ -905,4 +940,3 @@ export default function HomePage() {
     </Box>
   );
 }
-

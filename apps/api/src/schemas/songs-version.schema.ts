@@ -20,4 +20,3 @@ export const SongsVersionSchema = SchemaFactory.createForClass(SongsVersion);
 
 // Ensure only one document exists
 SongsVersionSchema.index({ version: 1 }, { unique: false });
-

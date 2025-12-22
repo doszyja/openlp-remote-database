@@ -38,16 +38,16 @@ export class SongService {
 
     // Generate search_title for OpenLP compatibility (lowercase title for searching)
     const searchTitle = (songData.title || '').toLowerCase().trim();
-    
+
     // Generate search_lyrics for OpenLP compatibility (lowercase verses for searching)
     // Convert verses array to string for search
-    const versesString = Array.isArray(verses) 
-      ? verses.map(v => v.content).join('\n\n')
-      : (verses || '');
+    const versesString = Array.isArray(verses)
+      ? verses.map((v) => v.content).join('\n\n')
+      : verses || '';
     const searchLyrics = versesString.toLowerCase().trim();
 
     // Sort verses by order to ensure correct sequence
-    const sortedVerses = Array.isArray(verses) 
+    const sortedVerses = Array.isArray(verses)
       ? [...verses].sort((a, b) => a.order - b.order)
       : [];
 
@@ -65,15 +65,23 @@ export class SongService {
     });
 
     // Increment version when song is created
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     return this.findOne(song._id.toString());
   }
 
   async findAll(query: QuerySongDto) {
-    const { page = 1, limit = 150, language, tags, search, sortBy = 'title', sortOrder = 'asc' } = query;
+    const {
+      page = 1,
+      limit = 150,
+      language,
+      tags,
+      search,
+      sortBy = 'title',
+      sortOrder = 'asc',
+    } = query;
     const skip = (page - 1) * limit;
 
     const filter: any = {
@@ -125,7 +133,9 @@ export class SongService {
       let versesString = '';
       if (Array.isArray(song.verses) && song.verses.length > 0) {
         // Sort by order and join content
-        const sortedVerses = [...song.verses].sort((a: any, b: any) => a.order - b.order);
+        const sortedVerses = [...song.verses].sort(
+          (a: any, b: any) => a.order - b.order,
+        );
         versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
       } else if (typeof song.verses === 'string') {
         // Backward compatibility: if verses is still a string, use it
@@ -179,11 +189,18 @@ export class SongService {
     }
 
     // Return verses as array with originalLabel (for frontend logic) and also as string (for backward compatibility)
-    let versesArray: Array<{ order: number; content: string; label?: string; originalLabel?: string }> = [];
+    let versesArray: Array<{
+      order: number;
+      content: string;
+      label?: string;
+      originalLabel?: string;
+    }> = [];
     let versesString = '';
     if (Array.isArray(song.verses) && song.verses.length > 0) {
       // Sort by order
-      const sortedVerses = [...song.verses].sort((a: any, b: any) => a.order - b.order);
+      const sortedVerses = [...song.verses].sort(
+        (a: any, b: any) => a.order - b.order,
+      );
       versesArray = sortedVerses.map((v: any) => ({
         order: v.order,
         content: v.content,
@@ -222,7 +239,15 @@ export class SongService {
     };
   }
 
-  async update(id: string, updateSongDto: UpdateSongDto, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string) {
+  async update(
+    id: string,
+    updateSongDto: UpdateSongDto,
+    userId?: string,
+    username?: string,
+    discordId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     const { verses, tags, ...songData } = updateSongDto;
 
     // Check if song exists
@@ -246,20 +271,22 @@ export class SongService {
         const sortedVerses = [...verses].sort((a, b) => a.order - b.order);
         updateData.verses = sortedVerses;
         // Extract verse_order array for direct storage
-        updateData.verseOrder = sortedVerses.map(v => v.order);
+        updateData.verseOrder = sortedVerses.map((v) => v.order);
         // Generate search_lyrics from verse content
-        const versesString = sortedVerses.map(v => v.content).join('\n\n');
+        const versesString = sortedVerses.map((v) => v.content).join('\n\n');
         updateData.searchLyrics = versesString.toLowerCase().trim();
       } else {
         // Backward compatibility: if verses is still a string, convert to array
         // Split by double newlines and assign order based on position
-        const verseContents = (verses as string).split(/\n\n+/).filter(v => v.trim());
+        const verseContents = (verses as string)
+          .split(/\n\n+/)
+          .filter((v) => v.trim());
         const convertedVerses = verseContents.map((content, index) => ({
           order: index + 1,
           content: content.trim(),
         }));
         updateData.verses = convertedVerses;
-        updateData.verseOrder = convertedVerses.map(v => v.order);
+        updateData.verseOrder = convertedVerses.map((v) => v.order);
         updateData.searchLyrics = (verses as string).toLowerCase().trim();
       }
     }
@@ -279,27 +306,32 @@ export class SongService {
 
     // Track changes for audit log
     const changes: Record<string, any> = {};
-    
+
     // Check each field in updateData
     Object.keys(updateData).forEach((key) => {
       // Skip internal fields
       if (key === 'searchTitle' || key === 'searchLyrics') {
         return;
       }
-      
+
       const oldValue = (existing as any)[key];
       const newValue = updateData[key];
-      
+
       // Compare values (handle arrays and objects)
       let hasChanged = false;
       if (Array.isArray(oldValue) && Array.isArray(newValue)) {
         hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
-      } else if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue !== null && newValue !== null) {
+      } else if (
+        typeof oldValue === 'object' &&
+        typeof newValue === 'object' &&
+        oldValue !== null &&
+        newValue !== null
+      ) {
         hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
       } else {
         hasChanged = oldValue !== newValue;
       }
-      
+
       if (hasChanged) {
         changes[key] = {
           old: oldValue ?? null,
@@ -312,13 +344,17 @@ export class SongService {
     if (tags !== undefined) {
       // Get old tag names
       const oldTags = existing.tags as any[];
-      const oldTagNames = oldTags && oldTags.length > 0
-        ? oldTags.map((tag: any) => (tag.name || tag.toString())).sort().join(', ')
-        : '';
-      
+      const oldTagNames =
+        oldTags && oldTags.length > 0
+          ? oldTags
+              .map((tag: any) => tag.name || tag.toString())
+              .sort()
+              .join(', ')
+          : '';
+
       // Get new tag names (they're already names in the DTO)
       const newTagNames = tags.length > 0 ? tags.sort().join(', ') : '';
-      
+
       if (oldTagNames !== newTagNames) {
         changes.tags = {
           old: oldTagNames || '(brak)',
@@ -331,63 +367,61 @@ export class SongService {
     await this.songModel.updateOne({ _id: id }, updateData);
 
     // Increment version when song is updated
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
     if (userId && username) {
-      await this.auditLogService.log(
-        AuditLogAction.SONG_EDIT,
-        userId,
-        username,
-        {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_EDIT, userId, username, {
           discordId,
           songId: id,
           songTitle: updateData.title || existing.title,
           metadata: Object.keys(changes).length > 0 ? changes : undefined,
           ipAddress,
           userAgent,
-        },
-      ).catch(err => console.error('Failed to log audit trail:', err));
+        })
+        .catch((err) => console.error('Failed to log audit trail:', err));
     }
 
     return this.findOne(id);
   }
 
-  async remove(id: string, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async remove(
+    id: string,
+    userId?: string,
+    username?: string,
+    discordId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
     // Get song before deletion for audit log
     const song = await this.songModel.findOne({ _id: id, deletedAt: null });
-    
+
     if (!song) {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
 
     // Soft delete
-    await this.songModel.updateOne(
-      { _id: id },
-      { deletedAt: new Date() },
-    );
+    await this.songModel.updateOne({ _id: id }, { deletedAt: new Date() });
 
     // Increment version when song is deleted
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
     if (userId && username) {
-      await this.auditLogService.log(
-        AuditLogAction.SONG_DELETE,
-        userId,
-        username,
-        {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_DELETE, userId, username, {
           discordId,
           songId: id,
           songTitle: song.title,
           ipAddress,
           userAgent,
-        },
-      ).catch(err => console.error('Failed to log audit trail:', err));
+        })
+        .catch((err) => console.error('Failed to log audit trail:', err));
     }
   }
 
@@ -397,7 +431,9 @@ export class SongService {
   async findAllForCache() {
     const songs = await this.songModel
       .find({ deletedAt: null })
-      .select('title number language tags searchTitle searchLyrics chorus verses verseOrder lyricsXml')
+      .select(
+        'title number language tags searchTitle searchLyrics chorus verses verseOrder lyricsXml',
+      )
       .populate('tags', 'name')
       .sort({ title: 1 })
       .lean()
@@ -414,14 +450,15 @@ export class SongService {
         name: tag.name,
       })),
       verses: song.verses ?? null,
-      versesArray: Array.isArray(song.verses) && song.verses.length > 0
-        ? song.verses.map((v: any) => ({
-            order: v.order,
-            content: v.content,
-            label: v.label,
-            originalLabel: v.originalLabel, // Include originalLabel for frontend logic
-          }))
-        : undefined,
+      versesArray:
+        Array.isArray(song.verses) && song.verses.length > 0
+          ? song.verses.map((v: any) => ({
+              order: v.order,
+              content: v.content,
+              label: v.label,
+              originalLabel: v.originalLabel, // Include originalLabel for frontend logic
+            }))
+          : undefined,
       verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
       lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       searchTitle: song.searchTitle,
@@ -461,7 +498,7 @@ export class SongService {
       title: song.title || '',
       number: song.number || null,
       language: song.language || 'en',
-      verses: typeof song.verses === 'string' ? song.verses : (song.verses || ''),
+      verses: typeof song.verses === 'string' ? song.verses : song.verses || '',
       lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: (song.tags || []).map((tag: any) => ({
         id: tag._id?.toString() || tag.toString(),

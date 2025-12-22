@@ -48,4 +48,3 @@ export interface SetActiveVerseDto {
   itemId: string;
   verseIndex: number;
 }
-

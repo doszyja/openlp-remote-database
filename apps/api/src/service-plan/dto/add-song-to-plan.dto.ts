@@ -12,4 +12,3 @@ export class AddSongToPlanDto {
   @IsOptional()
   notes?: string;
 }
-

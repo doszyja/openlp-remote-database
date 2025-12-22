@@ -38,7 +38,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { songsCache } from '../services/songs-cache';
 import SongList from '../components/SongList';
-import { useActiveSong, useServicePlans, useServicePlan, useSetActiveSong } from '../hooks/useServicePlans';
+import {
+  useActiveSong,
+  useServicePlans,
+  useServicePlan,
+  useSetActiveSong,
+} from '../hooks/useServicePlans';
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -56,27 +61,29 @@ export default function SongDetailPage() {
 
   // Get all cached songs to ensure cache is loaded
   const { songs: allCachedSongs, isLoading: isCacheLoading } = useCachedSongs();
-  
+
   // Service plan hooks - only enabled for authenticated users
   const { data: allPlans } = useServicePlans();
   const { data: activeSongData } = useActiveSong(isAuthenticated); // Wywołuj endpoint tylko dla zalogowanych użytkowników
-  const { data: servicePlan } = useServicePlan(isAuthenticated && selectedPlanId ? selectedPlanId : '');
+  const { data: servicePlan } = useServicePlan(
+    isAuthenticated && selectedPlanId ? selectedPlanId : ''
+  );
   const setActiveSong = useSetActiveSong();
-  
+
   // Disable service view if user is not authenticated
   useEffect(() => {
     if (!isAuthenticated && isServiceView) {
       setIsServiceView(false);
     }
   }, [isAuthenticated, isServiceView]);
-  
+
   // Auto-select plan if there's an active song
   useEffect(() => {
     if (isAuthenticated && activeSongData?.servicePlan?.id && !selectedPlanId) {
       setSelectedPlanId(activeSongData.servicePlan.id);
     }
   }, [isAuthenticated, activeSongData, selectedPlanId]);
-  
+
   // Get song from cache
   const song = useMemo(() => {
     if (!id) return null;
@@ -86,7 +93,12 @@ export default function SongDetailPage() {
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {
     if (!song) return [];
-    return parseVerses(song.verses, (song as any).verseOrder || null, (song as any).lyricsXml || null, (song as any).versesArray || null);
+    return parseVerses(
+      song.verses,
+      (song as any).verseOrder || null,
+      (song as any).lyricsXml || null,
+      (song as any).versesArray || null
+    );
   }, [song]);
 
   // Loading state: show loading only if cache is loading and we don't have the song
@@ -125,8 +137,7 @@ export default function SongDetailPage() {
   }, [id]);
 
   // Use cached search for instant results when searching, otherwise show all songs
-  const { results: searchResults, isLoading: isSearchLoading } =
-    useCachedSongSearch(search);
+  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
 
   // Memoize search results to prevent unnecessary re-renders
   // Show all songs (no limit) - same as SongListPage
@@ -157,7 +168,6 @@ export default function SongDetailPage() {
       setDeleteDialogOpen(false);
     }
   };
-
 
   // Handle scroll position when navigating to a song
   const handleSongClick = useCallback(() => {
@@ -496,7 +506,12 @@ export default function SongDetailPage() {
   const activeSong = isAuthenticated ? activeSongData?.song : null;
   const activeSongVerses = useMemo(() => {
     if (!isAuthenticated || !activeSong) return [];
-    const parsed = parseVerses(activeSong.verses, activeSong.verseOrder || null, (activeSong as any).lyricsXml || null, (activeSong as any).versesArray || null).filter(v => v.content && v.content.trim());
+    const parsed = parseVerses(
+      activeSong.verses,
+      activeSong.verseOrder || null,
+      (activeSong as any).lyricsXml || null,
+      (activeSong as any).versesArray || null
+    ).filter(v => v.content && v.content.trim());
     const allContent = parsed.map((v, idx) => ({
       type: v.type || 'verse',
       content: v.content,
@@ -527,18 +542,21 @@ export default function SongDetailPage() {
   }, [currentVerseIndex]);
 
   // Handle setting active song
-  const handleSetActive = useCallback(async (itemId: string) => {
-    if (!selectedPlanId) return;
-    try {
-      await setActiveSong.mutateAsync({
-        planId: selectedPlanId,
-        data: { itemId, isActive: true },
-      });
-      showSuccess('Pieśń została ustawiona jako aktywna!');
-    } catch (error) {
-      showError('Nie udało się ustawić pieśni jako aktywnej.');
-    }
-  }, [selectedPlanId, setActiveSong, showSuccess, showError]);
+  const handleSetActive = useCallback(
+    async (itemId: string) => {
+      if (!selectedPlanId) return;
+      try {
+        await setActiveSong.mutateAsync({
+          planId: selectedPlanId,
+          data: { itemId, isActive: true },
+        });
+        showSuccess('Pieśń została ustawiona jako aktywna!');
+      } catch (error) {
+        showError('Nie udało się ustawić pieśni jako aktywnej.');
+      }
+    },
+    [selectedPlanId, setActiveSong, showSuccess, showError]
+  );
 
   // Keyboard navigation for verse switching in service view (only for authenticated users)
   useEffect(() => {
@@ -582,16 +600,13 @@ export default function SongDetailPage() {
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography
-            variant="h6"
-            sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}
-          >
+          <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
             Szukaj Pieśni
           </Typography>
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ 
+            sx={{
               fontSize: { xs: '0.7rem', md: '0.75rem' },
               fontStyle: 'italic',
             }}
@@ -602,7 +617,7 @@ export default function SongDetailPage() {
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <SongList
             songs={allSearchSongs}
-            onSongClick={(songId) => {
+            onSongClick={songId => {
               handleSongClick();
               navigate(`/songs/${songId}`);
             }}
@@ -617,7 +632,15 @@ export default function SongDetailPage() {
         </Box>
       </Paper>
     ),
-    [isSearchLoadingState, search, allSearchSongs, id, handleSongClick, navigate, calculateListHeight]
+    [
+      isSearchLoadingState,
+      search,
+      allSearchSongs,
+      id,
+      handleSongClick,
+      navigate,
+      calculateListHeight,
+    ]
   );
 
   // Service view: Plan songs column
@@ -634,10 +657,7 @@ export default function SongDetailPage() {
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography
-            variant="h6"
-            sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}
-          >
+          <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
             Plan Nabożeństwa
           </Typography>
           {allPlans && allPlans.length > 0 && (
@@ -645,10 +665,10 @@ export default function SongDetailPage() {
               <InputLabel>Wybierz plan</InputLabel>
               <Select
                 value={selectedPlanId || ''}
-                onChange={(e) => setSelectedPlanId(e.target.value)}
+                onChange={e => setSelectedPlanId(e.target.value)}
                 label="Wybierz plan"
               >
-                {allPlans.map((plan) => (
+                {allPlans.map(plan => (
                   <MenuItem key={plan.id} value={plan.id}>
                     {plan.name}
                   </MenuItem>
@@ -668,13 +688,13 @@ export default function SongDetailPage() {
             </Alert>
           ) : (
             <List dense>
-              {planSongs.map((item) => (
+              {planSongs.map(item => (
                 <ListItem
                   key={item.id}
                   disablePadding
                   sx={{
                     mb: 0.5,
-                    border: (theme) =>
+                    border: theme =>
                       item.isActive
                         ? `2px solid ${theme.palette.primary.main}`
                         : `1px solid ${theme.palette.divider}`,
@@ -715,33 +735,8 @@ export default function SongDetailPage() {
   );
 
   // Service view: Active song display column
-  const activeSongColumn = useMemo(
-    () => {
-      if (!activeSong || activeSongVerses.length === 0) {
-        return (
-          <Paper
-            sx={{
-              p: { xs: 2, md: 3 },
-              display: 'flex',
-              flexDirection: 'column',
-              width: '100%',
-              height: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Alert severity="info">
-              {!activeSong ? 'Brak aktywnej pieśni' : 'Brak zwrotek w pieśni'}
-            </Alert>
-          </Paper>
-        );
-      }
-
-      const currentVerse = activeSongVerses[currentVerseIndex];
-      const displayTitle = activeSong.number
-        ? `${activeSong.title} (${activeSong.number})`
-        : activeSong.title;
-
+  const activeSongColumn = useMemo(() => {
+    if (!activeSong || activeSongVerses.length === 0) {
       return (
         <Paper
           sx={{
@@ -750,104 +745,129 @@ export default function SongDetailPage() {
             flexDirection: 'column',
             width: '100%',
             height: '100%',
-            position: 'relative',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="h5"
-              component="h1"
-              sx={{
-                fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
-                fontWeight: 600,
-                mb: 0.5,
-              }}
-            >
-              {displayTitle}
-            </Typography>
-            {activeSongData?.servicePlan && (
-              <Typography variant="caption" color="text.secondary">
-                {activeSongData.servicePlan.name}
-              </Typography>
-            )}
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: 0,
-            }}
-          >
-            <Box
-              sx={{
-                width: '100%',
-                textAlign: 'center',
-                mb: 2,
-              }}
-            >
-              {currentVerse?.label && (
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    mb: 1,
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                  }}
-                >
-                  {currentVerse.label}
-                </Typography>
-              )}
-              <Typography
-                variant="body1"
-                sx={{
-                  whiteSpace: 'pre-line',
-                  lineHeight: 1.8,
-                  fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
-                }}
-              >
-                {currentVerse?.content}
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mt: 2,
-              pt: 2,
-              borderTop: 1,
-              borderColor: 'divider',
-            }}
-          >
-            <IconButton
-              onClick={handlePreviousVerse}
-              disabled={currentVerseIndex === 0}
-              size="large"
-            >
-              <NavigateBeforeIcon />
-            </IconButton>
-            <Typography variant="body2" color="text.secondary">
-              {currentVerseIndex + 1} / {activeSongVerses.length}
-            </Typography>
-            <IconButton
-              onClick={handleNextVerse}
-              disabled={currentVerseIndex >= activeSongVerses.length - 1}
-              size="large"
-            >
-              <NavigateNextIcon />
-            </IconButton>
-          </Box>
+          <Alert severity="info">
+            {!activeSong ? 'Brak aktywnej pieśni' : 'Brak zwrotek w pieśni'}
+          </Alert>
         </Paper>
       );
-    },
-    [activeSong, activeSongVerses, currentVerseIndex, handleNextVerse, handlePreviousVerse, activeSongData]
-  );
+    }
+
+    const currentVerse = activeSongVerses[currentVerseIndex];
+    const displayTitle = activeSong.number
+      ? `${activeSong.title} (${activeSong.number})`
+      : activeSong.title;
+
+    return (
+      <Paper
+        sx={{
+          p: { xs: 2, md: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+              fontWeight: 600,
+              mb: 0.5,
+            }}
+          >
+            {displayTitle}
+          </Typography>
+          {activeSongData?.servicePlan && (
+            <Typography variant="caption" color="text.secondary">
+              {activeSongData.servicePlan.name}
+            </Typography>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 0,
+          }}
+        >
+          <Box
+            sx={{
+              width: '100%',
+              textAlign: 'center',
+              mb: 2,
+            }}
+          >
+            {currentVerse?.label && (
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mb: 1,
+                  color: 'text.secondary',
+                  fontWeight: 600,
+                }}
+              >
+                {currentVerse.label}
+              </Typography>
+            )}
+            <Typography
+              variant="body1"
+              sx={{
+                whiteSpace: 'pre-line',
+                lineHeight: 1.8,
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+              }}
+            >
+              {currentVerse?.content}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mt: 2,
+            pt: 2,
+            borderTop: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <IconButton onClick={handlePreviousVerse} disabled={currentVerseIndex === 0} size="large">
+            <NavigateBeforeIcon />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary">
+            {currentVerseIndex + 1} / {activeSongVerses.length}
+          </Typography>
+          <IconButton
+            onClick={handleNextVerse}
+            disabled={currentVerseIndex >= activeSongVerses.length - 1}
+            size="large"
+          >
+            <NavigateNextIcon />
+          </IconButton>
+        </Box>
+      </Paper>
+    );
+  }, [
+    activeSong,
+    activeSongVerses,
+    currentVerseIndex,
+    handleNextVerse,
+    handlePreviousVerse,
+    activeSongData,
+  ]);
 
   return (
     <Box
@@ -948,7 +968,15 @@ export default function SongDetailPage() {
               flexDirection: 'column',
             }}
           >
-            <Box sx={{ width: { md: '240px', lg: '320px' }, position: 'sticky', top: 20, height: '100%', minHeight: '100%' }}>
+            <Box
+              sx={{
+                width: { md: '240px', lg: '320px' },
+                position: 'sticky',
+                top: 20,
+                height: '100%',
+                minHeight: '100%',
+              }}
+            >
               {searchColumn}
             </Box>
           </Box>

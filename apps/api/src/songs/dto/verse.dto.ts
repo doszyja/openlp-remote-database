@@ -12,4 +12,3 @@ export class VerseDto {
   @IsString()
   label?: string; // Optional label (e.g., "Verse 1", "Bridge", "Pre-Chorus")
 }
-

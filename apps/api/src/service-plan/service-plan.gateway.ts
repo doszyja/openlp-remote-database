@@ -11,7 +11,9 @@ import { ServicePlanService } from './service-plan.service';
   path: '/ws/service-plans',
 })
 @Injectable()
-export class ServicePlanGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ServicePlanGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: any;
 
@@ -51,5 +53,3 @@ export class ServicePlanGateway implements OnGatewayConnection, OnGatewayDisconn
     }
   }
 }
-
-

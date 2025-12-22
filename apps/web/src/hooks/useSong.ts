@@ -12,4 +12,3 @@ export function useSong(id: string, options?: { forceRefresh?: boolean }) {
     refetchOnMount: options?.forceRefresh ? true : undefined, // Always refetch on mount if forceRefresh
   });
 }
-

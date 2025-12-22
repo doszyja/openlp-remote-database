@@ -15,4 +15,3 @@ import { AuditLogController } from './audit-log.controller';
   exports: [AuditLogService],
 })
 export class AuditLogModule {}
-

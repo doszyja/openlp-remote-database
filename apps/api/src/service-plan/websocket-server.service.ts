@@ -1,4 +1,11 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server as HttpServer } from 'http';
 import { ServicePlanService } from './service-plan.service';
@@ -19,14 +26,16 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
   }
 
   initialize(httpServer: HttpServer, path: string = '/ws/service-plans') {
-    this.wss = new WebSocketServer({ 
+    this.wss = new WebSocketServer({
       server: httpServer,
       path,
     });
 
     this.wss.on('connection', async (ws: WebSocket) => {
       this.clients.add(ws);
-      this.logger.debug(`Client connected. Total clients: ${this.clients.size}`);
+      this.logger.debug(
+        `Client connected. Total clients: ${this.clients.size}`,
+      );
 
       // Send current active song on connection
       try {
@@ -38,7 +47,9 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
 
       ws.on('close', () => {
         this.clients.delete(ws);
-        this.logger.debug(`Client disconnected. Total clients: ${this.clients.size}`);
+        this.logger.debug(
+          `Client disconnected. Total clients: ${this.clients.size}`,
+        );
       });
 
       ws.on('error', (error) => {
@@ -47,7 +58,8 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
     });
 
     const address = httpServer.address();
-    const port = typeof address === 'string' ? address : address?.port || 'unknown';
+    const port =
+      typeof address === 'string' ? address : address?.port || 'unknown';
     this.logger.log(`WebSocket server started on port ${port}, path: ${path}`);
   }
 
@@ -59,7 +71,7 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
     try {
       const active = await this.servicePlanService.getActiveSong();
       const message = JSON.stringify({ type: 'activeSong', payload: active });
-      
+
       this.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(message);
@@ -68,7 +80,9 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
         }
       });
 
-      this.logger.debug(`Broadcasted active song to ${this.clients.size} clients`);
+      this.logger.debug(
+        `Broadcasted active song to ${this.clients.size} clients`,
+      );
     } catch (error) {
       this.logger.error('Error broadcasting active song', error as Error);
     }
@@ -85,4 +99,3 @@ export class WebSocketServerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 }
-
