@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsArray, IsNotEmpty, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNotEmpty,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { VerseDto } from './verse.dto';
 
 export class CreateSongDto {
   @IsNotEmpty()
@@ -14,14 +23,15 @@ export class CreateSongDto {
   @IsString()
   language?: string;
 
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VerseDto)
+  verses: VerseDto[]; // Array of verses with order preserved (includes chorus, bridge, etc. as verse objects with type labels)
+
   @IsOptional()
   @IsString()
-  chorus?: string | null;
-
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(1)
-  verses: string; // All verses as single string (frontend can split visually for editing)
+  verseOrder?: string | null; // verse_order string from OpenLP SQLite (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
 
   @IsOptional()
   @IsArray()
@@ -44,5 +54,8 @@ export class CreateSongDto {
   @IsOptional()
   @IsString()
   searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
-}
 
+  @IsOptional()
+  @IsString()
+  lyricsXml?: string | null; // Exact XML from SQLite lyrics column - 1:1 transparent with SQLite (preserves CDATA, type/label attributes, etc.)
+}

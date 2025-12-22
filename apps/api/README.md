@@ -31,6 +31,7 @@ pnpm lint
 ## Environment Variables
 
 Create `.env` file (see `.env.example`):
+
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/openlp_db
 PORT=3000

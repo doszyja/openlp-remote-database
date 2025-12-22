@@ -28,7 +28,7 @@ export default function HelpPage() {
         minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
-        background: (theme) =>
+        background: theme =>
           theme.palette.mode === 'dark'
             ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
             : 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 30%, #f0f2f5 60%, #e8ecf1 100%)',
@@ -46,8 +46,9 @@ export default function HelpPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          opacity: (theme) => theme.palette.mode === 'dark' ? 0.02 : 0.015,
-          backgroundImage: 'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)',
+          opacity: theme => (theme.palette.mode === 'dark' ? 0.02 : 0.015),
+          backgroundImage:
+            'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)',
           pointerEvents: 'none',
         }}
       />
@@ -97,18 +98,30 @@ export default function HelpPage() {
             sx={{
               p: { xs: 3, sm: 4 },
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               borderRadius: 2,
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <SearchIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
+              <SearchIcon
+                sx={{
+                  fontSize: { xs: 20, sm: 28, md: 32 },
+                  color: theme =>
+                    theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                }}
+              />
+              <Typography
+                variant="h5"
+                component="h2"
+                sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}
+              >
                 Przeglądanie i Wyszukiwanie Pieśni
               </Typography>
             </Box>
@@ -119,7 +132,13 @@ export default function HelpPage() {
             <List>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <LibraryMusicIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <LibraryMusicIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Lista pieśni"
@@ -128,7 +147,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <SearchIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <SearchIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Wyszukiwanie"
@@ -137,7 +162,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <VisibilityIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <VisibilityIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Szczegóły pieśni"
@@ -153,18 +184,30 @@ export default function HelpPage() {
             sx={{
               p: { xs: 3, sm: 4 },
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               borderRadius: 2,
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <LockIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
+              <LockIcon
+                sx={{
+                  fontSize: { xs: 20, sm: 28, md: 32 },
+                  color: theme =>
+                    theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                }}
+              />
+              <Typography
+                variant="h5"
+                component="h2"
+                sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}
+              >
                 Edycja i Zarządzanie Pieśniami
               </Typography>
             </Box>
@@ -175,7 +218,13 @@ export default function HelpPage() {
             <List>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <LockIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <LockIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Logowanie"
@@ -184,7 +233,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <AddIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <AddIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Dodawanie nowych pieśni"
@@ -193,7 +248,12 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon>
-                  <EditIcon sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <EditIcon
+                    sx={{
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Edycja pieśni"
@@ -202,7 +262,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <DeleteIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <DeleteIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Usuwanie pieśni"
@@ -218,18 +284,30 @@ export default function HelpPage() {
             sx={{
               p: { xs: 3, sm: 4 },
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               borderRadius: 2,
             }}
           >
             <Box display="flex" alignItems="center" gap={2} mb={2}>
-              <DownloadIcon sx={{ fontSize: { xs: 20, sm: 28, md: 32 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
-              <Typography variant="h5" component="h2" sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}>
+              <DownloadIcon
+                sx={{
+                  fontSize: { xs: 20, sm: 28, md: 32 },
+                  color: theme =>
+                    theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                }}
+              />
+              <Typography
+                variant="h5"
+                component="h2"
+                sx={{ fontWeight: 500, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' } }}
+              >
                 Funkcje Zaawansowane
               </Typography>
             </Box>
@@ -237,7 +315,13 @@ export default function HelpPage() {
             <List>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <DownloadIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <DownloadIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Eksport do ZIP"
@@ -246,7 +330,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <EditIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <EditIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Kolejność zwrotek"
@@ -255,7 +345,13 @@ export default function HelpPage() {
               </ListItem>
               <ListItem>
                 <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
-                  <HistoryIcon sx={{ fontSize: { xs: 18, sm: 24 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+                  <HistoryIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 24 },
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                    }}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary="Historia zmian (tylko dla administratorów)"
@@ -271,12 +367,14 @@ export default function HelpPage() {
             sx={{
               p: { xs: 3, sm: 4 },
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               borderRadius: 2,
             }}
           >
@@ -318,12 +416,14 @@ export default function HelpPage() {
             sx={{
               p: { xs: 3, sm: 4 },
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               borderRadius: 2,
             }}
           >
@@ -360,4 +460,3 @@ export default function HelpPage() {
     </Box>
   );
 }
-

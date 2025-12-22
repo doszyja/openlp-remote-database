@@ -72,7 +72,7 @@ describe('ApiClientService', () => {
           headers: expect.objectContaining({
             Authorization: 'Bearer test-api-key',
           }),
-        }),
+        })
       );
     });
   });
@@ -368,4 +368,3 @@ describe('ApiClientService', () => {
     });
   });
 });
-

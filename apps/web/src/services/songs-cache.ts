@@ -38,7 +38,12 @@ class SongsCacheService {
             songs: JSON.parse(stored),
             timestamp: Date.now(),
           };
-          console.log('[Songs Cache] Loaded from localStorage:', this.cache.songs.length, 'songs, version', this.cache.version);
+          console.log(
+            '[Songs Cache] Loaded from localStorage:',
+            this.cache.songs.length,
+            'songs, version',
+            this.cache.version
+          );
         } catch (e) {
           console.error('[Songs Cache] Failed to parse cached songs:', e);
           this.clearCache();
@@ -56,7 +61,7 @@ class SongsCacheService {
     if (this.cache !== null) {
       return this.cache.version ?? null;
     }
-    
+
     // Try to get version from localStorage
     const storedVersion = localStorage.getItem(VERSION_KEY);
     if (storedVersion !== null) {
@@ -65,7 +70,7 @@ class SongsCacheService {
         return version; // Return 0 if version is 0, don't treat it as falsy
       }
     }
-    
+
     return null;
   }
 
@@ -76,7 +81,7 @@ class SongsCacheService {
     if (this.lastVersionCheckTimestamp !== null) {
       return this.lastVersionCheckTimestamp;
     }
-    
+
     // Try to get from localStorage
     const stored = localStorage.getItem(VERSION_CHECK_TIMESTAMP_KEY);
     if (stored) {
@@ -86,7 +91,7 @@ class SongsCacheService {
         return timestamp;
       }
     }
-    
+
     return null;
   }
 
@@ -112,7 +117,7 @@ class SongsCacheService {
       // Never checked, should check
       return true;
     }
-    
+
     const timeSinceLastCheck = Date.now() - lastCheck;
     return timeSinceLastCheck >= VERSION_CHECK_INTERVAL;
   }
@@ -136,13 +141,15 @@ class SongsCacheService {
         console.log('[Songs Cache] Waiting for pending version check from another component...');
         return this.pendingVersionCheck;
       }
-      
+
       const lastCheck = this.getLastVersionCheckTimestamp();
       const timeSinceLastCheck = lastCheck ? Date.now() - lastCheck : 0;
       const minutesSinceLastCheck = Math.floor(timeSinceLastCheck / 60000);
       // Don't log for every component - only log once
       if (!this.pendingVersionCheck) {
-        console.log(`[Songs Cache] Skipping version check (last check ${minutesSinceLastCheck} minutes ago, need 2 minutes)`);
+        console.log(
+          `[Songs Cache] Skipping version check (last check ${minutesSinceLastCheck} minutes ago, need 2 minutes)`
+        );
       }
       // Assume cache is valid if we're not checking (optimistic)
       return true;
@@ -160,11 +167,13 @@ class SongsCacheService {
         console.log('[Songs Cache] Fetching version from /songs/version endpoint...');
         const { version } = await api.songs.getVersion();
         const isValid = version === cachedVersion;
-        console.log(`[Songs Cache] Version check: cached=${cachedVersion}, server=${version}, valid=${isValid}`);
-        
+        console.log(
+          `[Songs Cache] Version check: cached=${cachedVersion}, server=${version}, valid=${isValid}`
+        );
+
         // Save timestamp of this check
         this.saveLastVersionCheckTimestamp();
-        
+
         return isValid;
       } catch (error) {
         console.error('[Songs Cache] Failed to check cache version:', error);
@@ -183,7 +192,7 @@ class SongsCacheService {
       // Version was already checked, just return
       return;
     }
-    
+
     const isValid = await this.isCacheValid();
     if (!isValid) {
       console.log('[Songs Cache] Version mismatch detected, refreshing cache...');
@@ -208,15 +217,17 @@ class SongsCacheService {
         const startTime = performance.now();
         const { version, songs } = await api.songs.getAllForCache();
         const duration = performance.now() - startTime;
-        
+
         this.cache = {
           version,
           songs,
           timestamp: Date.now(),
         };
-        
-        console.log(`[Songs Cache] Cache refreshed: ${songs.length} songs, version ${version}, took ${duration.toFixed(2)}ms`);
-        
+
+        console.log(
+          `[Songs Cache] Cache refreshed: ${songs.length} songs, version ${version}, took ${duration.toFixed(2)}ms`
+        );
+
         // Also store in localStorage as backup
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(songs));
@@ -245,7 +256,12 @@ class SongsCacheService {
   async ensureValidCache(skipVersionCheck = false): Promise<SongListCacheItem[]> {
     // If we have cache in memory, return it immediately without any requests
     if (this.cache && this.cache.songs.length > 0) {
-      console.log('[Songs Cache] Using cached songs from memory:', this.cache.songs.length, 'songs, version', this.cache.version);
+      console.log(
+        '[Songs Cache] Using cached songs from memory:',
+        this.cache.songs.length,
+        'songs, version',
+        this.cache.version
+      );
       await this.validateCacheAndRefreshIfNeeded(skipVersionCheck);
       return this.cache.songs;
     }
@@ -264,7 +280,12 @@ class SongsCacheService {
             songs: parsedSongs,
             timestamp: Date.now(),
           };
-          console.log('[Songs Cache] Restored from localStorage:', parsedSongs.length, 'songs, version', version);
+          console.log(
+            '[Songs Cache] Restored from localStorage:',
+            parsedSongs.length,
+            'songs, version',
+            version
+          );
           await this.validateCacheAndRefreshIfNeeded(skipVersionCheck);
           return this.cache.songs;
         }
@@ -302,10 +323,13 @@ class SongsCacheService {
   /**
    * Search songs in cache
    */
-  searchInCache(query: string, options?: {
-    language?: string;
-    tags?: string[];
-  }): SongListCacheItem[] {
+  searchInCache(
+    query: string,
+    options?: {
+      language?: string;
+      tags?: string[];
+    }
+  ): SongListCacheItem[] {
     const songs = this.getCachedSongs();
     if (!songs) {
       console.log('[Songs Cache] Search: No cache available');
@@ -314,23 +338,24 @@ class SongsCacheService {
 
     const startTime = performance.now();
     const lowerQuery = query.toLowerCase();
-    let results = songs.filter((song) => {
+    const results = songs.filter(song => {
       // Search in both title and lyrics content
       // Use searchTitle/searchLyrics (indexed, lowercase) for faster matching
-      const matchesTitle = 
+      const matchesTitle =
         (song.searchTitle && song.searchTitle.includes(lowerQuery)) ||
         song.title.toLowerCase().includes(lowerQuery);
-      
-      const matchesLyrics = 
-        (song.searchLyrics && song.searchLyrics.includes(lowerQuery));
-      
+
+      const matchesLyrics = song.searchLyrics && song.searchLyrics.includes(lowerQuery);
+
       const matchesSearch = matchesTitle || matchesLyrics;
 
       // Filter by language
       const matchesLanguage = !options?.language || song.language === options.language;
 
       // Filter by tags
-      const matchesTags = !options?.tags || options.tags.length === 0 || 
+      const matchesTags =
+        !options?.tags ||
+        options.tags.length === 0 ||
         options.tags.some(tag => song.tags.some(t => t.name === tag || t.id === tag));
 
       return matchesSearch && matchesLanguage && matchesTags;
@@ -340,15 +365,18 @@ class SongsCacheService {
     results.sort((a, b) => a.title.localeCompare(b.title));
 
     const duration = performance.now() - startTime;
-    const titleMatches = results.filter(s => 
-      (s.searchTitle && s.searchTitle.includes(lowerQuery)) || 
-      s.title.toLowerCase().includes(lowerQuery)
+    const titleMatches = results.filter(
+      s =>
+        (s.searchTitle && s.searchTitle.includes(lowerQuery)) ||
+        s.title.toLowerCase().includes(lowerQuery)
     ).length;
-    const lyricsMatches = results.filter(s => 
-      s.searchLyrics && s.searchLyrics.includes(lowerQuery)
+    const lyricsMatches = results.filter(
+      s => s.searchLyrics && s.searchLyrics.includes(lowerQuery)
     ).length;
-    
-    console.log(`[Songs Cache] Search "${query}": ${results.length} results (${titleMatches} title, ${lyricsMatches} lyrics) from ${songs.length} songs, took ${duration.toFixed(2)}ms (CACHE HIT)`);
+
+    console.log(
+      `[Songs Cache] Search "${query}": ${results.length} results (${titleMatches} title, ${lyricsMatches} lyrics) from ${songs.length} songs, took ${duration.toFixed(2)}ms (CACHE HIT)`
+    );
 
     return results;
   }
@@ -382,4 +410,3 @@ class SongsCacheService {
 
 // Export singleton instance
 export const songsCache = new SongsCacheService();
-

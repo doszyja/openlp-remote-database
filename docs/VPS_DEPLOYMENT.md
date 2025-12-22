@@ -121,7 +121,8 @@ VITE_API_URL=http://vps-7ac7feb6.vps.ovh.net/api
 WEB_PORT=80
 ```
 
-**Important**: 
+**Important**:
+
 - Generate a strong `JWT_SECRET`: `openssl rand -base64 32`
 - **VPS URL**: `http://vps-7ac7feb6.vps.ovh.net` (update to HTTPS after SSL setup)
 - Update Discord OAuth redirect URI in Discord Developer Portal to: `http://vps-7ac7feb6.vps.ovh.net/api/auth/discord/callback` (update to HTTPS after SSL setup)
@@ -200,7 +201,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Increase timeout for long-running requests
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
@@ -226,7 +227,7 @@ server {
     # SSL certificates (will be added by Certbot)
     ssl_certificate /etc/letsencrypt/live/vps-7ac7feb6.vps.ovh.net/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/vps-7ac7feb6.vps.ovh.net/privkey.pem;
-    
+
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
@@ -263,7 +264,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Increase timeout for long-running requests
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
@@ -322,6 +323,7 @@ sudo ufw status
 #### Step 8: Verify Deployment
 
 1. **Check Docker containers:**
+
    ```bash
    docker-compose ps
    docker-compose logs api
@@ -329,6 +331,7 @@ sudo ufw status
    ```
 
 2. **Test API:**
+
    ```bash
    curl http://localhost:3000/health
    curl http://vps-7ac7feb6.vps.ovh.net/api/health
@@ -477,6 +480,7 @@ pm2 startup
 #### Step 6: Configure Nginx
 
 Same as Docker option, but proxy to:
+
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3000`
 
@@ -587,6 +591,7 @@ sudo chmod 666 /var/run/docker.sock  # Temporary fix (not recommended for produc
 ```
 
 **Note**: After adding user to docker group, you MUST either:
+
 - Run `newgrp docker` in the current session, OR
 - Log out and SSH back in
 
@@ -660,6 +665,7 @@ docker-compose up -d
 ```
 
 **Note**: The recommended setup is:
+
 - Nginx listens on port 80 (for external access)
 - Docker web container listens on port 8080 (internal)
 - Nginx proxies requests from port 80 to port 8080
@@ -734,4 +740,3 @@ sudo reboot  # if kernel updates
 ---
 
 **Last Updated**: 2025-01-22
-

@@ -28,6 +28,7 @@ OpenLP stores song lyrics in the `songs.lyrics` column as XML with `<verse>` tag
 ### XML Parsing
 
 The migration script:
+
 1. **Detects XML format** - Checks if lyrics start with `<` and contain `</verse>`
 2. **Extracts verses** - Uses regex to find all `<verse label="...">...</verse>` tags
 3. **Decodes XML entities** - Converts `&amp;`, `&lt;`, `&gt;`, etc. back to normal characters
@@ -70,14 +71,18 @@ Songs are stored in MongoDB with this structure:
 ```typescript
 {
   title: string;
-  chorus?: string;
+  verseOrder?: string; // e.g., "v1 c1 v2 c1" - 1:1 transparent with SQLite
+  lyricsXml?: string; // Exact XML from SQLite lyrics column - 1:1 transparent
   verses: Array<{
     order: number;
     content: string;
-    label?: string; // e.g., "Verse 1", "Bridge", "Pre-Chorus"
+    label?: string; // e.g., "Verse 1", "Bridge", "Chorus 1" (readable format)
+    originalLabel?: string; // e.g., "v1", "c1", "b1" (technical format from XML/verse_order)
   }>;
 }
 ```
+
+**Note**: Chorus is now stored within the `verses` array as a verse object with appropriate `type` and `originalLabel`. The `verseOrder` string dictates the display sequence and repetitions.
 
 ### Frontend Support
 
@@ -100,7 +105,7 @@ Songs are stored in MongoDB with this structure:
 ✅ All verse types are supported (v, c, b, p, t)  
 ✅ Frontend can edit and save verses with labels  
 ✅ Backend preserves verse structure  
-✅ Sync tool converts web format → OpenLP format  
+✅ Sync tool converts web format → OpenLP format
 
 ## Testing
 
@@ -118,8 +123,10 @@ To validate songs in MongoDB Compass:
 1. Connect to: `mongodb://openlp:openlp_password@localhost:27017/openlp_db?authSource=admin`
 2. Check `songs` collection
 3. Verify:
-   - `verses` array contains objects with `order`, `content`, `label`
-   - Verses are sorted by `order`
-   - Labels are preserved (e.g., "Verse 1", "Bridge")
-   - Chorus is in separate `chorus` field or as verse with label "Chorus"
-
+   - `verses` array contains objects with `order`, `content`, `label`, `originalLabel`
+   - Verses are sorted by `order` (but `verseOrder` string dictates display sequence)
+   - Labels are preserved (e.g., "Verse 1", "Bridge", "Chorus 1")
+   - `originalLabel` stores technical format (e.g., "v1", "c1", "b1") for matching with `verseOrder`
+   - Chorus is stored within `verses` array as verse object with `type: "chorus"` and `originalLabel: "c1"` (or similar)
+   - `verseOrder` string (e.g., "v1 c1 v2 c1") defines the display sequence and repetitions
+   - `lyricsXml` contains exact XML from SQLite for 1:1 transparency

@@ -29,7 +29,7 @@ const STORAGE_KEY = 'auth_token';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  
+
   // Load token from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem(STORAGE_KEY);
@@ -113,4 +113,3 @@ export function useAuth() {
   }
   return context;
 }
-

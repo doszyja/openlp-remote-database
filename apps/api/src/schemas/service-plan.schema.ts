@@ -19,6 +19,9 @@ export class ServicePlanItem {
 
   @Prop({ default: false })
   isActive?: boolean;
+
+  @Prop({ default: 0 })
+  activeVerseIndex?: number;
 }
 
 @Schema({ timestamps: true })
@@ -36,4 +39,3 @@ export class ServicePlan {
 export const ServicePlanSchema = SchemaFactory.createForClass(ServicePlan);
 ServicePlanSchema.index({ date: 1 });
 ServicePlanSchema.index({ createdAt: -1 });
-

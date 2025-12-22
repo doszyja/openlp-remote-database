@@ -5,8 +5,8 @@ export interface CreateSongDto {
     title: string;
     number?: string | null;
     language?: string;
-    chorus?: string | null;
     verses: string;
+    verseOrder?: string | null;
     tags?: string[];
 }
 /**

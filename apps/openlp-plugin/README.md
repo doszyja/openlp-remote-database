@@ -19,6 +19,7 @@ Wtyczka OpenLP, która dodaje przycisk "Synchronizuj" do interfejsu OpenLP. Przy
    - **macOS**: `~/Library/Application Support/OpenLP/plugins/`
 
 3. **Skopiuj folder wtyczki**:
+
    ```bash
    cp -r apps/openlp-plugin/openlp_sync_plugin <OPENLP_PLUGINS_DIR>/
    ```
@@ -36,6 +37,7 @@ Po pierwszym uruchomieniu wtyczki, skonfiguruj następujące ustawienia:
 3. **Ścieżka do bazy danych**: Ścieżka do pliku `songs.sqlite` OpenLP (zwykle wykrywana automatycznie)
 
 Ustawienia można zmienić w:
+
 - `Ustawienia` → `Wtyczki` → `OpenLP Sync Plugin`
 
 ## Użycie
@@ -46,6 +48,7 @@ Ustawienia można zmienić w:
 4. Poczekaj na zakończenie synchronizacji
 
 Podczas synchronizacji zobaczysz:
+
 - Postęp operacji
 - Liczbę utworzonych pieśni
 - Liczbę zaktualizowanych pieśni
@@ -129,4 +132,3 @@ openlp_sync_plugin/
 ## Licencja
 
 MIT License - zobacz główny plik LICENSE w repozytorium.
-

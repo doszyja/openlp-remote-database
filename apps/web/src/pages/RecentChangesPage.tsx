@@ -1,12 +1,4 @@
-import {
-  Typography,
-  Box,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-} from '@mui/material';
+import { Typography, Box, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
 import { History as HistoryIcon } from '@mui/icons-material';
 
 interface ChangeItem {
@@ -18,6 +10,7 @@ const recentChanges: ChangeItem[] = [
   {
     date: '2025-01-24',
     changes: [
+      'Naprawiono błąd TypeScript w LivePage.tsx - dodano obsługę typu dla właściwości verses (obsługa zarówno tablicy jak i stringa)',
       'Zaimplementowano inteligentny system cache dla piosenek z weryfikacją wersji - cache jest sprawdzany tylko co 2 minuty zamiast przy każdej zmianie strony',
       'Naprawiono problem z cache - wersja 0 jest teraz poprawnie rozpoznawana jako prawidłowa wersja',
       'Zoptymalizowano SongDetailPage - teraz używa cache zamiast pobierania danych z API, co znacznie przyspiesza wyświetlanie',
@@ -25,7 +18,7 @@ const recentChanges: ChangeItem[] = [
       'Dodano automatyczną inkrementację wersji przy operacjach create/update/delete w API, co zapewnia aktualność cache',
       'Poprawiono układ na stronie szczegółów pieśni w widoku 1024px (węższa kolumna nawigacyjna, ograniczona szerokość kontenera, dodatkowe odstępy)',
       'Przełącznik normalny/pełny widok jest teraz widoczny dopiero od szerokości lg, więc przyciski mieszczą się na mniejszych ekranach',
-      'Sekcje „Instrukcja użytkownika” i „Ostatnie zmiany” na stronie głównej przywrócono do kompaktowego stylu z dopasowanym tłem i cieniami w obu trybach',
+      'Sekcje „Instrukcja użytkownika" i „Ostatnie zmiany" na stronie głównej przywrócono do kompaktowego stylu z dopasowanym tłem i cieniami w obu trybach',
       'Skonfigurowano PWA (vite-plugin-pwa, manifest, rejestracja service workera), aby aplikacja działała offline',
     ],
   },
@@ -98,7 +91,13 @@ export default function RecentChangesPage() {
             mb: 4,
           }}
         >
-          <HistoryIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main }} />
+          <HistoryIcon
+            sx={{
+              fontSize: { xs: 32, sm: 40 },
+              color: theme =>
+                theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+            }}
+          />
           <Typography
             variant="h4"
             component="h1"
@@ -117,12 +116,14 @@ export default function RecentChangesPage() {
           elevation={0}
           sx={{
             bgcolor: 'background.paper',
-            boxShadow: (theme) =>
+            boxShadow: theme =>
               theme.palette.mode === 'dark'
                 ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                 : '0 4px 16px rgba(0, 0, 0, 0.08)',
-            border: (theme) =>
-              theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+            border: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.05)',
             borderRadius: 2,
             overflow: 'hidden',
           }}
@@ -144,7 +145,8 @@ export default function RecentChangesPage() {
                     sx={{
                       fontWeight: 600,
                       mb: 2,
-                      color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                      color: theme =>
+                        theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
                       fontSize: { xs: '1rem', sm: '1.125rem' },
                     }}
                   >
@@ -167,7 +169,10 @@ export default function RecentChangesPage() {
                             width: 6,
                             height: 6,
                             borderRadius: '50%',
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : theme.palette.primary.main,
+                            bgcolor: theme =>
+                              theme.palette.mode === 'dark'
+                                ? '#E8EAF6'
+                                : theme.palette.primary.main,
                             mt: 1.25,
                             mr: 1.5,
                             flexShrink: 0,
@@ -209,4 +214,3 @@ export default function RecentChangesPage() {
     </Box>
   );
 }
-

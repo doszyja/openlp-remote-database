@@ -8,9 +8,7 @@ interface VerseFixture {
 }
 
 export function buildVersesXml(verses: VerseFixture[]): string {
-  return verses
-    .map(({ label, content }) => `<verse label="${label}">${content}</verse>`)
-    .join('');
+  return verses.map(({ label, content }) => `<verse label="${label}">${content}</verse>`).join('');
 }
 
 export function buildSong(id: string, overrides: Partial<SongResponseDto> = {}): SongResponseDto {
@@ -36,9 +34,7 @@ export const baseSongs: SongResponseDto[] = [
   buildSong('song-1', {
     title: 'Światło Świata',
     number: '101',
-    tags: [
-      { id: 'tag-worship', name: 'Uwielbienie' },
-    ],
+    tags: [{ id: 'tag-worship', name: 'Uwielbienie' }],
     verses: buildVersesXml([
       { label: 'v1', content: 'Światło świata przyszło tu' },
       { label: 'c1', content: 'To jest refren światła' },
@@ -47,9 +43,7 @@ export const baseSongs: SongResponseDto[] = [
   }),
   buildSong('song-2', {
     title: 'Żywa Nadzieja',
-    tags: [
-      { id: 'tag-hope', name: 'Nadzieja' },
-    ],
+    tags: [{ id: 'tag-hope', name: 'Nadzieja' }],
     verses: buildVersesXml([
       { label: 'v1', content: 'Nadzieja żywa w sercu mym' },
       { label: 'c1', content: 'Refren nadziei powraca' },
@@ -57,12 +51,7 @@ export const baseSongs: SongResponseDto[] = [
   }),
   buildSong('song-3', {
     title: 'Pieśń Łaski',
-    tags: [
-      { id: 'tag-grace', name: 'Łaska' },
-    ],
-    verses: buildVersesXml([
-      { label: 'v1', content: 'Łaska płynie jak rzeka' },
-    ]),
+    tags: [{ id: 'tag-grace', name: 'Łaska' }],
+    verses: buildVersesXml([{ label: 'v1', content: 'Łaska płynie jak rzeka' }]),
   }),
 ];
-

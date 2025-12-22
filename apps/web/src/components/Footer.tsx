@@ -1,18 +1,31 @@
 import { Box, Typography, Stack, IconButton, Tooltip, Link } from '@mui/material';
-import { Brightness4 as DarkModeIcon, Brightness7 as LightModeIcon, BugReport as BugReportIcon } from '@mui/icons-material';
+import {
+  Brightness4 as DarkModeIcon,
+  Brightness7 as LightModeIcon,
+  BugReport as BugReportIcon,
+} from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
+import { useEffect, useState } from 'react';
 
 export default function Footer() {
   const { mode, toggleMode } = useTheme();
-  
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    const versionMeta = document.querySelector('meta[name="app-version"]');
+    if (versionMeta) {
+      setAppVersion(versionMeta.getAttribute('content') || '');
+    }
+  }, []);
+
   // Dominik's Discord user ID (provided by user)
   const discordUserId = '238746528372621312';
   // Link to Discord profile - user can click "Message" button there
   const discordProfileUrl = `https://discord.com/users/${discordUserId}`;
-  
+
   const handleBugReport = (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     // Open Discord profile page where user can click "Message" button
     window.open(discordProfileUrl, '_blank', 'noopener');
   };
@@ -24,15 +37,10 @@ export default function Footer() {
         mt: 'auto',
         py: 1.5,
         textAlign: 'center',
+        position: 'relative',
       }}
     >
-      <Stack
-        direction="row"
-        spacing={2}
-        alignItems="center"
-        justifyContent="center"
-        sx={{ mb: 1 }}
-      >
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 1 }}>
         <Tooltip title={`Przełącz na tryb ${mode === 'light' ? 'ciemny' : 'jasny'}`}>
           <IconButton
             onClick={toggleMode}
@@ -83,7 +91,22 @@ export default function Footer() {
           Znalazłeś błąd? Napisz na Discord
         </Link>
       </Stack>
+      {appVersion && (
+        <Typography
+          sx={{
+            position: 'absolute',
+            bottom: 4,
+            right: 8,
+            fontSize: '0.6rem',
+            color: 'text.disabled',
+            fontWeight: 300,
+            letterSpacing: '0.02em',
+            textTransform: 'lowercase',
+          }}
+        >
+          v{appVersion}
+        </Typography>
+      )}
     </Box>
   );
 }
-

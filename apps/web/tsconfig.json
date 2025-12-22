@@ -33,4 +33,3 @@
   "exclude": ["src/**/*.test.ts", "src/**/__tests__/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-

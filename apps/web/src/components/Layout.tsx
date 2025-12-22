@@ -39,7 +39,7 @@ export default function Layout({ children }: LayoutProps) {
         flexDirection: 'column',
         minHeight: '100vh',
         background: !isHomePage
-          ? (theme) =>
+          ? theme =>
               theme.palette.mode === 'dark'
                 ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
                 : '#ffffff'
@@ -64,7 +64,10 @@ export default function Layout({ children }: LayoutProps) {
           }}
         />
       )}
-      {!isHomePage && !isErrorState && <Navbar />}
+      {!isHomePage && !isErrorState && !location.pathname.match(/^\/service-plans\/[^/]+$/) && (
+        <Navbar />
+      )}
+      {location.pathname.match(/^\/service-plans\/[^/]+$/) && <Navbar />}
       <Box
         component="main"
         sx={{
@@ -90,4 +93,3 @@ export default function Layout({ children }: LayoutProps) {
     </Box>
   );
 }
-

@@ -89,13 +89,13 @@ export class SyncService {
     // The OpenLP service will handle formatting it to XML
     const newOpenlpId = this.openlpDb.upsertSong(song, openlpIdNumber);
 
-      if (options.verbose) {
-        if (openlpIdNumber) {
-          console.log(`Updated song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
-        } else {
-          console.log(`Created song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
-        }
+    if (options.verbose) {
+      if (openlpIdNumber) {
+        console.log(`Updated song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
+      } else {
+        console.log(`Created song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
       }
+    }
   }
 
   /**
@@ -113,4 +113,3 @@ export class SyncService {
     }
   }
 }
-

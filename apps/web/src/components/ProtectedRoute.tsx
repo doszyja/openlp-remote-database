@@ -39,7 +39,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
             Wymagane Uprawnienia
           </Typography>
           <Typography variant="body2">
-            Nie masz uprawnień do edycji pieśni. Skontaktuj się z administratorem, aby uzyskać odpowiednią rolę na serwerze Discord.
+            Nie masz uprawnień do edycji pieśni. Skontaktuj się z administratorem, aby uzyskać
+            odpowiednią rolę na serwerze Discord.
           </Typography>
         </Alert>
       </Box>
@@ -48,4 +49,3 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
-

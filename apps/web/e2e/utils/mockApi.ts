@@ -30,16 +30,19 @@ export interface AuthUserMock {
 
 const BASE_LIST_LIMIT = 200;
 
-export async function setupSongApiMock(page: Page, options: SongApiMockOptions = {}): Promise<SongApiMock> {
+export async function setupSongApiMock(
+  page: Page,
+  options: SongApiMockOptions = {}
+): Promise<SongApiMock> {
   const store = new Map<string, SongResponseDto>(
-    (options.songs ?? baseSongs).map((song) => [song.id, song]),
+    (options.songs ?? baseSongs).map(song => [song.id, song])
   );
   const defaultSearchHits: SearchHitMap = {
     nadzieja: [store.get('song-2')!].filter(Boolean),
     swiatlo: [store.get('song-1')!].filter(Boolean),
-    'światło': [store.get('song-1')!].filter(Boolean),
+    światło: [store.get('song-1')!].filter(Boolean),
     laska: [store.get('song-3')!].filter(Boolean),
-    'łaska': [store.get('song-3')!].filter(Boolean),
+    łaska: [store.get('song-3')!].filter(Boolean),
   };
   const searchHits: SearchHitMap = {
     ...defaultSearchHits,
@@ -53,7 +56,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
   let exportDownloads = 0;
   const fillerId = (page: number, index: number) => `filler-${page}-${index + 1}`;
 
-  await page.route('**/api/songs/export/zip', async (route) => {
+  await page.route('**/api/songs/export/zip', async route => {
     exportDownloads += 1;
     await route.fulfill({
       status: 200,
@@ -64,7 +67,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
     });
   });
 
-  await page.route(/\/api\/songs(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/songs(\?.*)?$/, async route => {
     const method = route.request().method();
     if (method.toUpperCase() === 'GET') {
       await handleSongsList(route);
@@ -77,7 +80,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
     await route.continue();
   });
 
-  await page.route(/\/api\/songs\/(?!export\/zip)([^/]+)$/, async (route) => {
+  await page.route(/\/api\/songs\/(?!export\/zip)([^/]+)$/, async route => {
     const method = route.request().method().toUpperCase();
     const songId = decodeURIComponent(route.request().url().split('/').pop() ?? '');
 
@@ -158,7 +161,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
     if (searchParam) {
       const hits =
         searchHits[searchParam] ??
-        Array.from(store.values()).filter((song) => normalize(song.title).includes(searchParam));
+        Array.from(store.values()).filter(song => normalize(song.title).includes(searchParam));
       data = hits.slice(0, limit);
       total = hits.length;
     } else if (pageParam <= 2) {
@@ -171,7 +174,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
               buildSong(fillerId(pageParam, idx), {
                 title: `Dodatkowa Pieśń ${pageParam}-${idx + 1}`,
                 tags: [],
-              }),
+              })
             )
           : [];
       data = [...actual, ...fillerSongs];
@@ -222,7 +225,7 @@ export async function setupSongApiMock(page: Page, options: SongApiMockOptions =
 }
 
 export async function setupAuthMock(page: Page, user?: AuthUserMock | null) {
-  await page.route('**/api/auth/me', async (route) => {
+  await page.route('**/api/auth/me', async route => {
     if (!user) {
       await route.fulfill({
         status: 401,
@@ -254,4 +257,3 @@ function normalize(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 }
-

@@ -15,7 +15,7 @@ describe('OpenLPDatabaseService', () => {
     // Create temporary file database for testing (shared between test and service)
     dbPath = join(tmpdir(), `test-${Date.now()}-${Math.random().toString(36).substring(7)}.db`);
     db = new Database(dbPath);
-    
+
     // Create tables matching OpenLP schema
     db.exec(`
       CREATE TABLE songs (
@@ -68,7 +68,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       expect(result.title).toBe('Amazing Grace');
       expect(result.search_title).toBe('amazing grace');
       expect(result.search_lyrics).toBe('verse 1 content\n\nverse 2 content');
@@ -91,7 +91,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       expect(result.search_title).toBe('test song');
     });
 
@@ -112,7 +112,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       expect(result.search_lyrics).toBe('verse one\n\nverse two');
     });
 
@@ -147,7 +147,7 @@ describe('OpenLPDatabaseService', () => {
       service.upsertSong(updatedSong, openlpId);
 
       const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       expect(result.title).toBe('Updated Title');
       expect(result.search_title).toBe('updated title');
       expect(result.search_lyrics).toBe('updated verses');
@@ -170,7 +170,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       // Should contain XML verse tags
       expect(result.lyrics).toContain('<verse label="c">');
       expect(result.lyrics).toContain('Chorus text');
@@ -197,12 +197,12 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       // Verify order: v1 should come before v2, v2 before v3
       const v1Index = result.lyrics.indexOf('<verse label="v1">');
       const v2Index = result.lyrics.indexOf('<verse label="v2">');
       const v3Index = result.lyrics.indexOf('<verse label="v3">');
-      
+
       expect(v1Index).toBeLessThan(v2Index);
       expect(v2Index).toBeLessThan(v3Index);
     });
@@ -226,7 +226,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       // Should still create XML structure even with empty verses
       expect(result.lyrics).toBeDefined();
     });
@@ -248,7 +248,7 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       // Should have 3 verse tags
       const verseMatches = result.lyrics.match(/<verse label="v\d+">/g);
       expect(verseMatches).toHaveLength(3);
@@ -271,11 +271,10 @@ describe('OpenLPDatabaseService', () => {
       const openlpId = service.upsertSong(song);
 
       const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
-      
+
       // Should have 1 verse tag
       expect(result.lyrics).toContain('<verse label="v1">');
       expect(result.lyrics).toContain('Single verse content');
     });
   });
 });
-

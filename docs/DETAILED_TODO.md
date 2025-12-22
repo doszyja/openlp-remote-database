@@ -5,6 +5,7 @@ _Last updated: 2025-11-24_
 This document captures the current implementation status and actionable next steps for every epic in the monorepo. Items are grouped by epic, then by milestone. Each line represents a task that should take no longer than ~2 hours. Use the legend below to interpret the checkboxes.
 
 ## Legend
+
 - `[x]` – Completed and merged into `main`
 - `[~]` – In progress
 - `[ ]` – Not started
@@ -12,20 +13,21 @@ This document captures the current implementation status and actionable next ste
 
 ## Epic Status Overview
 
-| Epic | Status | Notes |
-| --- | --- | --- |
-| 1. Monorepo & Tooling | ✅ Complete | Workspace, linting, shared package all set. |
-| 2. Backend API & DB | ⏳ Mostly complete | Mongo/Mongoose stack running; remaining work is documentation, Swagger, and seed data. |
-| 3. Frontend Application | ⏳ Mostly complete | CRUD UI, verse tooling, auth-aware UX ready; still need error boundaries & polish. |
-| 4. OpenLP Sync Tool | ⏳ Feature-complete | CLI + dry-run + Vitest done; packaging + DX polish outstanding. |
-| 5. Auth & Permissions | 🔄 Phase 2 underway | Discord OAuth, guards, contexts are live; need UX edge cases and role messaging. |
-| 6. Deployment & Environment | ♻️ Partially complete | Docker (dev/prod) ready; documentation + production hardening pending. |
+| Epic                        | Status                | Notes                                                                                  |
+| --------------------------- | --------------------- | -------------------------------------------------------------------------------------- |
+| 1. Monorepo & Tooling       | ✅ Complete           | Workspace, linting, shared package all set.                                            |
+| 2. Backend API & DB         | ⏳ Mostly complete    | Mongo/Mongoose stack running; remaining work is documentation, Swagger, and seed data. |
+| 3. Frontend Application     | ⏳ Mostly complete    | CRUD UI, verse tooling, auth-aware UX ready; still need error boundaries & polish.     |
+| 4. OpenLP Sync Tool         | ⏳ Feature-complete   | CLI + dry-run + Vitest done; packaging + DX polish outstanding.                        |
+| 5. Auth & Permissions       | 🔄 Phase 2 underway   | Discord OAuth, guards, contexts are live; need UX edge cases and role messaging.       |
+| 6. Deployment & Environment | ♻️ Partially complete | Docker (dev/prod) ready; documentation + production hardening pending.                 |
 
 ---
 
 ## EPIC 1: Monorepo & Tooling Setup (✅ Complete)
 
 ### Completed Milestones
+
 - [x] **Task 1.1.1**: Root `package.json` with pnpm workspace scripts (`dev:*`, `build:*`, `test:*`).
 - [x] **Task 1.1.2**: `pnpm-workspace.yaml` covering `apps/*` and `packages/*`.
 - [x] **Task 1.1.3**: Root `tsconfig.json` with strict mode and path aliases.
@@ -40,6 +42,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 1.3.4**: `.env.example` files for `api`, `web`, `sync`.
 
 ### Remaining Work
+
 - None. Epic 1 is fully complete.
 
 ---
@@ -47,6 +50,7 @@ This document captures the current implementation status and actionable next ste
 ## EPIC 2: Backend API & Database (MongoDB + NestJS)
 
 ### Completed Milestones
+
 - [x] **Task 2.1.1**: NestJS project initialized in `apps/api` with modular structure.
 - [x] **Task 2.1.2**: Global `ConfigModule`, `.env` templates, typed config helpers.
 - [x] **Task 2.1.3**: Folder structure (`songs/`, `auth/`, `audit-log/`, `database/`, `schemas/`).
@@ -65,6 +69,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 2.3.4 (Extension)**: Audit logging service + schema capturing edits, deletes, logins, exports.
 
 ### Remaining / Upcoming
+
 - [ ] **Task 2.7.1**: Add global HTTP exception filter for consistent API errors (normalize Mongoose, Discord, and validation errors).
 - [ ] **Task 2.7.2**: Introduce typed domain exceptions (`SongNotFoundException`, `ValidationException`) used inside services.
 - [ ] **Task 2.9.1**: Wire up Swagger/OpenAPI (`@nestjs/swagger`) in `main.ts`, expose `/api/docs`.
@@ -78,6 +83,7 @@ This document captures the current implementation status and actionable next ste
 ## EPIC 3: Frontend Application (React 18 + Vite + MUI)
 
 ### Completed Milestones
+
 - [x] **Task 3.1.1–3.1.5**: Vite + React + TypeScript app, path aliases, env handling, Material UI theme + CssBaseline.
 - [x] **Task 3.2.1–3.2.3**: React Router v6 layout with protected routes, admin routes, Navbar/Footer/ScrollToTop, Layout component.
 - [x] **Task 3.3.1–3.3.3**: API client wrapper (`src/services/api.ts`) w/ token injection, error handling, typed helpers, ZIP export.
@@ -94,6 +100,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 3.13 (Extension)**: Auth-aware UI (ProtectedRoute, AdminRoute, login/logout buttons in Navbar).
 
 ### Remaining / Upcoming
+
 - [ ] **Task 3.10.3**: Formal mobile QA – capture screenshots + fix any touch issues observed on iOS/Android hardware.
 - [ ] **Task 3.11.1**: Error boundary component wrapping route tree with friendly fallback + reset option.
 - [ ] **Task 3.6.x**: Add saved filter presets + multi-select tags UI (currently tags optional).
@@ -106,6 +113,7 @@ This document captures the current implementation status and actionable next ste
 ## EPIC 4: OpenLP Sync Tool (Node.js CLI)
 
 ### Completed Milestones
+
 - [x] **Task 4.1.1–4.1.3**: `apps/sync` TypeScript CLI scaffold (pnpm scripts, tsconfig, vitest, build).
 - [x] **Task 4.2.1–4.2.3**: Config loader (`loadConfig`) with env + `.env` support and strong typing.
 - [x] **Task 4.3.1–4.3.6**: `OpenLPDatabaseService` (better-sqlite3) for read/write/list operations, metadata parsing.
@@ -119,6 +127,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 4.11.1–4.11.3**: Vitest unit tests for SyncService, ApiClientService, and OpenLPDb service with mocks.
 
 ### Remaining / Upcoming
+
 - [ ] **Task 4.7.3 (New)**: Log file output option (`--log-file`) for audit trails on church PC.
 - [ ] **Task 4.8.5 (New)**: `import` command (OpenLP ➜ backend) using existing mapping utilities for one-time migrations.
 - [ ] **Task 4.10.1**: Windows batch launcher (`sync.bat`) & README snippet for double-click execution.
@@ -130,6 +139,7 @@ This document captures the current implementation status and actionable next ste
 ## EPIC 5: Auth & Permissions (Discord OAuth – Phase 2)
 
 ### Completed Milestones
+
 - [x] **Task 5.1.1**: Discord application + bot wiring (client ID/secret, callback URL documented in `.env.example` and `docs/DISCORD_AUTH_SETUP.md`).
 - [x] **Task 5.1.3**: Auth dependencies installed (`@nestjs/passport`, `passport-discord`, `@nestjs/jwt`, etc.).
 - [x] **Task 5.2.1**: `User` schema via Mongoose (Discord IDs, roles, timestamps).
@@ -146,6 +156,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 5.3.8 (Extension)**: Admin-only Audit Log view + Settings dialog.
 
 ### Remaining / Upcoming
+
 - [ ] **Task 5.1.2**: Optional Discord bot role-check automation (invite helper scripts + docs).
 - [ ] **Task 5.3.3**: User profile dropdown now shows avatar; need dedicated profile page with role list + permissions info.
 - [ ] **Task 5.3.5b**: Handle 401 responses globally (auto logout + redirect to `/login` when token expires).
@@ -158,6 +169,7 @@ This document captures the current implementation status and actionable next ste
 ## EPIC 6: Deployment & Environment
 
 ### Completed Milestones
+
 - [x] **Task 6.1.1**: `apps/api/Dockerfile` (multi-stage, Node 22, production build).
 - [x] **Task 6.1.2**: `apps/web/Dockerfile` (Node 22 build + nginx serve with `nginx.conf`).
 - [x] **Task 6.1.3**: `docker-compose.dev.yml` with MongoDB, API, hot-reloaded web, shared envs.
@@ -171,6 +183,7 @@ This document captures the current implementation status and actionable next ste
 - [x] **Task 6.4.2**: Docs set (`PROJECT_PLAN`, `ARCHITECTURE`, `ADRs`, etc.) kept in sync with Mongo migration.
 
 ### Remaining / Upcoming
+
 - [ ] **Task 6.2.2**: Production `.env.example` + checklist for secrets/Discord tokens.
 - [ ] **Task 6.2.3**: Dedicated `/api/health` already exists—document uptime checks + monitoring plan.
 - [ ] **Task 6.3.2**: Document static hosting alternative (e.g., Vercel/Netlify) with environment overrides.
@@ -1399,6 +1412,7 @@ Use this document to identify the next actionable task before writing code or up
 ## Recent Accomplishments (2025-01-22)
 
 ### Frontend Verse Management
+
 - ✅ Implemented comprehensive verse parsing from XML format (OpenLP) and plain string format
 - ✅ Created `verseParser.ts` utility with functions for parsing, combining, and managing verses
 - ✅ Added individual verse editing boxes in SongForm (add, delete, reorder, change type)
@@ -1409,12 +1423,14 @@ Use this document to identify the next actionable task before writing code or up
 - ✅ Added support for repeating verses in verse order string
 
 ### Notification System
+
 - ✅ Created global NotificationContext with Material UI Snackbar
 - ✅ Integrated success/error notifications across all pages
 - ✅ Top-center positioning with 3-second auto-dismiss
 - ✅ Used in SongCreatePage, SongEditPage, and SongDetailPage
 
 ### UI/UX Improvements
+
 - ✅ Implemented responsive design for mobile devices
 - ✅ Added fullscreen/normal view toggle for SongDetailPage
 - ✅ Created left-hand search column with song list (hidden on mobile)
@@ -1427,16 +1443,19 @@ Use this document to identify the next actionable task before writing code or up
 - ✅ Responsive button layouts (stack on mobile, row on desktop)
 
 ### Testing Infrastructure
+
 - ✅ Migrated sync package from Jest to Vitest
 - ✅ Created comprehensive unit tests for SyncService
 - ✅ Created comprehensive unit tests for ApiClientService
 - ✅ All tests passing with Vitest
 
 ### Development Environment
+
 - ✅ Set up Docker Compose for development (MongoDB in Docker, API/Web locally)
 - ✅ Configured hot-reloading for local development
 - ✅ Updated environment variable examples for Docker setup
 
 ### API Updates
+
 - ✅ Increased default song list limit from 20 to 150
 - ✅ Updated query DTOs with new default limit

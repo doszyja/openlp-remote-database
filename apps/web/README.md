@@ -37,6 +37,7 @@ pnpm test:e2e
 ## Environment Variables
 
 Create `.env` file:
+
 ```
 VITE_API_URL=http://localhost:3000/api
 ```
@@ -58,4 +59,3 @@ src/
 ├── main.tsx       # Entry point
 └── theme.ts       # Material UI theme
 ```
-

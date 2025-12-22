@@ -1,19 +1,22 @@
 /**
  * Base song type matching MongoDB schema with OpenLP compatibility
- * 
- * Note: verses is stored as a single string field (matching OpenLP's lyrics format).
- * The frontend can visually split this for editing, but it's stored as one field.
+ *
+ * Note: verses is stored as an array of verse objects (includes chorus, bridge, etc. as verse objects with type labels).
+ * The verseOrder string dictates the display sequence and repetitions.
+ * The lyricsXml field preserves the exact XML from SQLite for 1:1 transparency.
  */
 export interface Song {
   id: string;
   title: string;
   number: string | null; // Maps to OpenLP alternate_title or ccli_number
   language: string;
-  chorus: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
-  verses: string; // All verses as single string (can be split visually in frontend)
+  verses: Array<{ order: number; content: string; label?: string; originalLabel?: string }>; // Verses as array (includes chorus, bridge, etc. with type labels)
+  versesArray?: Array<{ order: number; content: string; label?: string; originalLabel?: string }>; // Alias for verses (for backward compatibility)
+  verseOrder?: string | null; // verse_order string from OpenLP SQLite (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1") - 1:1 transparent with SQLite structure
+  lyricsXml?: string | null; // Exact XML from SQLite lyrics column - 1:1 transparent (preserves CDATA, type/label attributes, etc.)
   tags: Tag[];
   // OpenLP compatibility fields
   copyright?: string | null; // OpenLP copyright field

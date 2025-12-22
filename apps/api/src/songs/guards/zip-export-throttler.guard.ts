@@ -13,14 +13,13 @@ import type { UserResponseDto } from '../../auth/dto/user-response.dto';
 export class ZipExportThrottlerGuard extends ThrottlerGuard {
   protected async getTracker(req: Record<string, any>): Promise<string> {
     const request = req as Request & { user?: UserResponseDto };
-    
+
     // Use user ID if authenticated, otherwise use IP
     if (request.user?.id) {
       return `zip-export:user:${request.user.id}`;
     }
-    
+
     // Fallback to IP for anonymous users
     return `zip-export:ip:${request.ip || request.socket?.remoteAddress || 'unknown'}`;
   }
 }
-

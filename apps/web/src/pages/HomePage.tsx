@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Typography,
   Box,
   Button,
   Stack,
   Paper,
-  Avatar,
   FormControlLabel,
   Switch,
+  AppBar,
+  Toolbar,
 } from '@mui/material';
 import {
   LibraryMusic as LibraryMusicIcon,
@@ -19,17 +20,68 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
+import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
+import { useServicePlans } from '../hooks/useServicePlans';
+import { UserAvatar, UserMenu } from '../components/Navbar';
+
+const ADMIN_ROLE_ID = '1161734352447746110';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user, hasEditPermission } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, user, logout, isLoading, hasEditPermission } = useAuth();
   const isDev = import.meta.env.DEV;
-  
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const settingsDialogRef = useRef<SettingsDialogRef>(null);
+  const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
+  const { data: allPlans } = useServicePlans();
+  const isLivePage = location.pathname === '/live';
+  const isServicePlansPage = location.pathname.startsWith('/service-plans');
+  const planIdMatch = location.pathname.match(/^\/service-plans\/([^/]+)$/);
+  const planId = planIdMatch ? planIdMatch[1] : null;
+
+  // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
+  const [hasToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('auth_token');
+    }
+    return false;
+  });
+
   // Get dev user type preference from localStorage, default to 'regular'
   const [devUserType, setDevUserType] = useState<'admin' | 'regular'>(() => {
     const stored = localStorage.getItem('dev-user-type');
-    return (stored === 'admin' || stored === 'regular') ? stored : 'regular';
+    return stored === 'admin' || stored === 'regular' ? stored : 'regular';
   });
+
+  const handleDiscordLogin = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    window.location.href = `${apiUrl}/auth/discord`;
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setPlansMenuAnchorEl(null);
+  };
+
+  const handlePlansMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setPlansMenuAnchorEl(event.currentTarget);
+  };
+
+  const handlePlansMenuClose = () => {
+    setPlansMenuAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleMenuClose();
+    logout();
+  };
 
   const handleDevLogin = () => {
     const apiUrl = getApiUrlForOAuth();
@@ -49,7 +101,7 @@ export default function HomePage() {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        background: (theme) =>
+        background: theme =>
           theme.palette.mode === 'dark'
             ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
             : '#ffffff',
@@ -58,6 +110,103 @@ export default function HomePage() {
         minHeight: 0, // Allow flexbox to shrink
       }}
     >
+      {/* Header */}
+      <AppBar
+        position="static"
+        elevation={0}
+        sx={{
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+          color: 'text.primary',
+        }}
+      >
+        <Toolbar
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            px: { xs: 1.5, sm: 2, md: 3 },
+            py: { xs: 1, sm: 1.5 },
+            gap: { xs: 1, sm: 2 },
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0, mr: { xs: 1, sm: 2 } }}>
+            <Typography
+              variant="h6"
+              component="h1"
+              sx={{
+                fontWeight: 300,
+                fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1rem', lg: '0.95rem' },
+                letterSpacing: { xs: 0.3, sm: 0.5, md: 0.6, lg: 0.5 },
+                color: 'text.primary',
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                lineHeight: 1.3,
+              }}
+            >
+              Pieśni Zborowe{' '}
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: 400,
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.85rem', sm: '0.95rem', md: '0.85rem', lg: '0.8rem' },
+                  letterSpacing: { xs: 0.2, sm: 0.3, md: 0.25 },
+                  display: { xs: 'block', sm: 'inline' },
+                  ml: { xs: 0, sm: 1 },
+                  mt: { xs: 0.25, sm: 0 },
+                }}
+              >
+                - Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
+              </Typography>
+            </Typography>
+          </Box>
+
+          {/* User Dropdown */}
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
+          >
+            {isAuthenticated && user ? (
+              <>
+                <UserAvatar user={user} onClick={handleMenuOpen} />
+                <UserMenu
+                  user={user}
+                  anchorEl={anchorEl}
+                  onClose={handleMenuClose}
+                  plansMenuAnchorEl={plansMenuAnchorEl}
+                  onPlansMenuOpen={handlePlansMenuOpen}
+                  onPlansMenuClose={handlePlansMenuClose}
+                  allPlans={allPlans}
+                  planId={planId}
+                  isServicePlansPage={isServicePlansPage}
+                  isLivePage={isLivePage}
+                  isAdmin={isAdmin}
+                  onNavigate={navigate}
+                  onOpenSettings={() => settingsDialogRef.current?.open()}
+                  onLogout={handleLogout}
+                />
+                <Box sx={{ display: 'none' }}>
+                  <SettingsDialog ref={settingsDialogRef} />
+                </Box>
+              </>
+            ) : !hasToken && !isLoading ? (
+              <Button
+                variant="contained"
+                onClick={handleDiscordLogin}
+                size="small"
+                sx={{
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  px: { xs: 1, sm: 1.5 },
+                  py: { xs: 0.5, sm: 0.75 },
+                }}
+              >
+                Zaloguj
+              </Button>
+            ) : null}
+          </Box>
+        </Toolbar>
+      </AppBar>
+
       {/* Decorative elements */}
       <Box
         sx={{
@@ -66,8 +215,8 @@ export default function HomePage() {
           left: 0,
           right: 0,
           bottom: 0,
-          opacity: (theme) => theme.palette.mode === 'dark' ? 0.02 : 0,
-          backgroundImage: (theme) =>
+          opacity: theme => (theme.palette.mode === 'dark' ? 0.02 : 0),
+          backgroundImage: theme =>
             theme.palette.mode === 'dark'
               ? 'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)'
               : 'none',
@@ -91,66 +240,6 @@ export default function HomePage() {
           overflow: 'auto', // Allow scrolling if content is too large
         }}
       >
-        {/* Main heading */}
-        <Box sx={{ width: '100%', maxWidth: { md: 800, lg: 900 }, mb: { xs: 3, sm: 5, md: 6 }, textAlign: { xs: 'left', md: 'center' } }}>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              fontWeight: 300,
-              fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3.5rem' },
-              letterSpacing: { xs: 1, sm: 3, md: 4 },
-              color: 'text.primary',
-              mb: { xs: 1.5, sm: 2 },
-              fontFamily: '"Playfair Display", "Georgia", serif',
-            }}
-          >
-            Pieśni Zborowe
-          </Typography>
-
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 400,
-              color: 'text.secondary',
-              fontSize: { xs: '0.85rem', sm: '1rem', md: '1.1rem' },
-              letterSpacing: { xs: 0.5, sm: 1 },
-              mb: { xs: 2, sm: 3 },
-            }}
-          >
-            Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
-          </Typography>
-
-          {user && (
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={1.5}
-              sx={{
-                bgcolor: 'background.paper',
-                px: { xs: 2, sm: 2.5, md: 3 },
-                py: { xs: 1, sm: 1.25, md: 1.5 },
-                borderRadius: 2,
-                boxShadow: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                    : '0 4px 16px rgba(0, 0, 0, 0.08)',
-                display: 'inline-flex',
-              }}
-            >
-              {user.avatar && (
-                <Avatar
-                  src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`}
-                  sx={{ width: { xs: 28, sm: 30, md: 32 }, height: { xs: 28, sm: 30, md: 32 } }}
-                />
-              )}
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                Zalogowano jako <strong>{user.username}</strong>
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
         {/* Action cards */}
         <Stack
           spacing={2.5}
@@ -161,21 +250,25 @@ export default function HomePage() {
         >
           <Paper
             elevation={0}
+            onClick={() => navigate('/songs')}
             sx={{
               width: '100%',
               p: { xs: 2.5, sm: 3.5, md: 4 },
               borderRadius: 3,
               bgcolor: 'background.paper',
-              boxShadow: (theme) =>
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                   : '0 8px 32px rgba(0, 0, 0, 0.1)',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
               transition: 'transform 0.2s, box-shadow 0.2s',
+              cursor: 'pointer',
               '&:hover': {
                 transform: { xs: 'none', sm: 'translateY(-4px)' },
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 12px 40px rgba(0, 0, 0, 0.4)'
                     : '0 12px 40px rgba(0, 0, 0, 0.15)',
@@ -209,7 +302,11 @@ export default function HomePage() {
                 >
                   Przeglądaj Pieśni
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                >
                   Przeglądaj i wyszukuj pieśni zborowe w bibliotece
                 </Typography>
               </Box>
@@ -218,7 +315,10 @@ export default function HomePage() {
               variant="contained"
               size="large"
               fullWidth
-              onClick={() => navigate('/songs')}
+              onClick={e => {
+                e.stopPropagation();
+                navigate('/songs');
+              }}
               sx={{
                 py: { xs: 1.25, sm: 1.5 },
                 fontSize: { xs: '0.9rem', sm: '1rem' },
@@ -234,21 +334,25 @@ export default function HomePage() {
           {hasEditPermission && (
             <Paper
               elevation={0}
+              onClick={() => navigate('/songs/new')}
               sx={{
                 width: '100%',
                 p: { xs: 2.5, sm: 3.5, md: 4 },
                 borderRadius: 3,
                 bgcolor: 'background.paper',
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                     : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: (theme) =>
-                  theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+                border: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(0, 0, 0, 0.05)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
+                cursor: 'pointer',
                 '&:hover': {
                   transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: (theme) =>
+                  boxShadow: theme =>
                     theme.palette.mode === 'dark'
                       ? '0 12px 40px rgba(0, 0, 0, 0.4)'
                       : '0 12px 40px rgba(0, 0, 0, 0.15)',
@@ -282,7 +386,11 @@ export default function HomePage() {
                   >
                     Dodaj Nową Pieśń
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                  >
                     Dodaj nową pieśń do biblioteki zborowej
                   </Typography>
                 </Box>
@@ -291,7 +399,10 @@ export default function HomePage() {
                 variant="contained"
                 size="large"
                 fullWidth
-                onClick={() => navigate('/songs/new')}
+                onClick={e => {
+                  e.stopPropagation();
+                  navigate('/songs/new');
+                }}
                 sx={{
                   py: { xs: 1.25, sm: 1.5 },
                   fontSize: { xs: '0.9rem', sm: '1rem' },
@@ -307,6 +418,7 @@ export default function HomePage() {
 
           {/* Help compact info */}
           <Box
+            onClick={() => navigate('/help')}
             sx={{
               width: '100%',
               display: 'flex',
@@ -315,13 +427,25 @@ export default function HomePage() {
               gap: { xs: 1.25, sm: 2 },
               p: { xs: 1.25, sm: 2 },
               borderRadius: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: (theme) =>
+              bgcolor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: { xs: 'none', sm: 'translateY(-2px)' },
+                boxShadow: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
+                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
+              },
             }}
           >
             <Box
@@ -362,7 +486,10 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={() => navigate('/help')}
+              onClick={e => {
+                e.stopPropagation();
+                navigate('/help');
+              }}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
@@ -376,6 +503,7 @@ export default function HomePage() {
 
           {/* Recent Changes compact info */}
           <Box
+            onClick={() => navigate('/recent-changes')}
             sx={{
               width: '100%',
               display: 'flex',
@@ -384,13 +512,25 @@ export default function HomePage() {
               gap: { xs: 1.25, sm: 2 },
               p: { xs: 1.25, sm: 2 },
               borderRadius: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
-              border: (theme) =>
-                theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: (theme) =>
+              bgcolor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: theme =>
                 theme.palette.mode === 'dark'
                   ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                   : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                transform: { xs: 'none', sm: 'translateY(-2px)' },
+                boxShadow: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
+                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
+              },
             }}
           >
             <Box
@@ -431,7 +571,10 @@ export default function HomePage() {
             </Box>
             <Button
               variant="text"
-              onClick={() => navigate('/recent-changes')}
+              onClick={e => {
+                e.stopPropagation();
+                navigate('/recent-changes');
+              }}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
@@ -452,16 +595,18 @@ export default function HomePage() {
                 p: { xs: 2.5, sm: 3.5, md: 4 },
                 borderRadius: 3,
                 bgcolor: 'background.paper',
-                boxShadow: (theme) =>
+                boxShadow: theme =>
                   theme.palette.mode === 'dark'
                     ? '0 8px 32px rgba(0, 0, 0, 0.3)'
                     : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: (theme) =>
-                  theme.palette.mode === 'dark' ? '1px solid rgba(250, 166, 26, 0.3)' : '1px solid rgba(250, 166, 26, 0.2)',
+                border: theme =>
+                  theme.palette.mode === 'dark'
+                    ? '1px solid rgba(250, 166, 26, 0.3)'
+                    : '1px solid rgba(250, 166, 26, 0.2)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: (theme) =>
+                  boxShadow: theme =>
                     theme.palette.mode === 'dark'
                       ? '0 12px 40px rgba(250, 166, 26, 0.2)'
                       : '0 12px 40px rgba(250, 166, 26, 0.15)',
@@ -495,7 +640,11 @@ export default function HomePage() {
                   >
                     Dev Login
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                  >
                     Szybkie logowanie deweloperskie bez Discord OAuth
                   </Typography>
                 </Box>
@@ -521,9 +670,13 @@ export default function HomePage() {
                       <Typography variant="body2" fontWeight={500}>
                         Tryb Administratora
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                        {devUserType === 'admin' 
-                          ? 'Pełny dostęp (edycja, usuwanie, logi audytu)' 
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mt: 0.25 }}
+                      >
+                        {devUserType === 'admin'
+                          ? 'Pełny dostęp (edycja, usuwanie, logi audytu)'
                           : 'Ograniczony dostęp (tylko przeglądanie)'}
                       </Typography>
                     </Box>
@@ -559,4 +712,3 @@ export default function HomePage() {
     </Box>
   );
 }
-

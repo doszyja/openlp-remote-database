@@ -22,11 +22,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
     AuditLogModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    DiscordStrategy,
-    JwtStrategy,
-  ],
+  providers: [AuthService, DiscordStrategy, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

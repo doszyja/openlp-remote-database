@@ -5,7 +5,7 @@
 ```
 🎵 **Nowy Śpiewnik Online!** 🎵
 
-Witajcie! Mamy dla Was nową aplikację do zarządzania pieśniami! 
+Witajcie! Mamy dla Was nową aplikację do zarządzania pieśniami!
 
 ✨ **Główne funkcje:**
 • Przeglądanie i wyszukiwanie pieśni
@@ -122,4 +122,3 @@ Zaloguj się przez Discord i zacznij korzystać!
 - Jeśli aplikacja jest jeszcze w wersji beta/testowej, możesz dodać: `⚠️ Aplikacja jest w fazie testowej`
 - Jeśli chcesz zachęcić do feedbacku, dodaj: `💡 Wasze opinie są bardzo ważne!`
 - Możesz dodać screenshot lub GIF z aplikacji dla lepszego efektu wizualnego
-

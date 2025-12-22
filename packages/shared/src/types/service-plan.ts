@@ -9,6 +9,7 @@ export interface ServicePlanItem {
   order: number; // Order in the service plan
   notes?: string; // Optional notes for this item
   isActive?: boolean; // Whether this song is currently active/presented
+  activeVerseIndex?: number; // Currently active verse index for live view
 }
 
 export interface ServicePlan {
@@ -43,3 +44,7 @@ export interface SetActiveSongDto {
   isActive: boolean;
 }
 
+export interface SetActiveVerseDto {
+  itemId: string;
+  verseIndex: number;
+}

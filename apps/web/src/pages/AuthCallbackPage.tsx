@@ -18,17 +18,22 @@ export default function AuthCallbackPage() {
     if (error) {
       const decodedError = decodeURIComponent(error);
       let message = '';
-      
+
       // Handle specific error types with Polish messages
-      if (decodedError === 'missing_role' || decodedError.includes('missing role') || decodedError.includes('not authorized')) {
-        message = 'Nie masz uprawnień do tego, aby zalogować się do tej strony i móc edytować oraz usuwać pieśni. Skontaktuj się z administratorem, aby uzyskać dostęp.';
+      if (
+        decodedError === 'missing_role' ||
+        decodedError.includes('missing role') ||
+        decodedError.includes('not authorized')
+      ) {
+        message =
+          'Nie masz uprawnień do tego, aby zalogować się do tej strony i móc edytować oraz usuwać pieśni. Skontaktuj się z administratorem, aby uzyskać dostęp.';
       } else {
         message = `Uwierzytelnienie nie powiodło się: ${decodedError}`;
       }
-      
+
       setErrorMessage(message);
       showError(message);
-      
+
       // Redirect after showing error for a bit
       setTimeout(() => {
         navigate('/songs');
@@ -41,7 +46,7 @@ export default function AuthCallbackPage() {
         .then(() => {
           navigate('/songs');
         })
-        .catch((err) => {
+        .catch(err => {
           console.error('Login error:', err);
           const message = 'Nie udało się zakończyć logowania. Spróbuj ponownie.';
           setErrorMessage(message);
@@ -75,17 +80,15 @@ export default function AuthCallbackPage() {
           justifyContent: 'center',
           alignItems: 'center',
           gap: 3,
-          backgroundColor: (theme) => 
-            theme.palette.mode === 'dark' 
-              ? 'rgba(26, 35, 50, 0.98)' 
-              : 'rgba(255, 255, 255, 0.98)',
+          backgroundColor: theme =>
+            theme.palette.mode === 'dark' ? 'rgba(26, 35, 50, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           zIndex: 9999,
           px: 3,
         }}
       >
-        <Alert 
-          severity="error" 
-          sx={{ 
+        <Alert
+          severity="error"
+          sx={{
             maxWidth: 600,
             width: '100%',
             py: 2,
@@ -122,10 +125,8 @@ export default function AuthCallbackPage() {
         justifyContent: 'center',
         alignItems: 'center',
         gap: 3,
-        backgroundColor: (theme) => 
-          theme.palette.mode === 'dark' 
-            ? 'rgba(26, 35, 50, 0.95)' 
-            : 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: theme =>
+          theme.palette.mode === 'dark' ? 'rgba(26, 35, 50, 0.95)' : 'rgba(255, 255, 255, 0.95)',
         zIndex: 9999,
       }}
     >
@@ -136,4 +137,3 @@ export default function AuthCallbackPage() {
     </Box>
   );
 }
-

@@ -5,7 +5,10 @@ import { SongController } from './song.controller';
 import { SongsVersionService } from './songs-version.service';
 import { Song, SongSchema } from '../schemas/song.schema';
 import { Tag, TagSchema } from '../schemas/tag.schema';
-import { SongsVersion, SongsVersionSchema } from '../schemas/songs-version.schema';
+import {
+  SongsVersion,
+  SongsVersionSchema,
+} from '../schemas/songs-version.schema';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({

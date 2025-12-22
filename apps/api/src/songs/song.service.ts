@@ -11,9 +11,22 @@ import { AuditLogAction } from '../schemas/audit-log.schema';
 import { SongsVersionService } from './songs-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
+import {
+  createOpenLPSqliteDatabase,
+} from './utils/sqlite-export.util';
+import * as fs from 'fs';
+
+interface SqliteCacheEntry {
+  filePath: string;
+  timestamp: number;
+}
 
 @Injectable()
 export class SongService {
+  // Cache for SQLite export (1 minutes TTL)
+  private sqliteCache: SqliteCacheEntry | null = null;
+  private readonly SQLITE_CACHE_TTL = 1 * 60 * 1000; // 2 minutes in milliseconds
+
   constructor(
     @InjectModel(Song.name) private songModel: Model<SongDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
@@ -22,7 +35,7 @@ export class SongService {
   ) {}
 
   async create(createSongDto: CreateSongDto) {
-    const { verses, tags, ...songData } = createSongDto;
+    const { verses, tags, verseOrder, ...songData } = createSongDto;
 
     // Create or get tags
     const tagIds: string[] = [];
@@ -38,30 +51,50 @@ export class SongService {
 
     // Generate search_title for OpenLP compatibility (lowercase title for searching)
     const searchTitle = (songData.title || '').toLowerCase().trim();
-    
-    // Generate search_lyrics for OpenLP compatibility (lowercase verses for searching)
-    const searchLyrics = (verses || '').toLowerCase().trim();
 
-    // Create song - verses is now a single string field
+    // Generate search_lyrics for OpenLP compatibility (lowercase verses for searching)
+    // Convert verses array to string for search
+    const versesString = Array.isArray(verses)
+      ? verses.map((v) => v.content).join('\n\n')
+      : verses || '';
+    const searchLyrics = versesString.toLowerCase().trim();
+
+    // Sort verses by order to ensure correct sequence
+    const sortedVerses = Array.isArray(verses)
+      ? [...verses].sort((a, b) => a.order - b.order)
+      : [];
+
+    // Create song - verses is now an array of objects with order
+    // Note: verseOrder (string) and lyricsXml should be provided in songData if available from OpenLP
     const song = await this.songModel.create({
       ...songData,
       language: songData.language || 'en',
-      verses: verses || '', // Store as single string
+      verses: sortedVerses, // Store as array with order preserved
+      verseOrder: verseOrder || null, // verseOrder (string) from DTO or null
+      // lyricsXml (string) is stored directly from SQLite lyrics column (1:1 transparent)
       tags: tagIds,
       searchTitle, // Auto-generate from title
       searchLyrics: songData.searchLyrics || searchLyrics, // Auto-generate from verses if not provided
     });
 
     // Increment version when song is created
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     return this.findOne(song._id.toString());
   }
 
   async findAll(query: QuerySongDto) {
-    const { page = 1, limit = 150, language, tags, search, sortBy = 'title', sortOrder = 'asc' } = query;
+    const {
+      page = 1,
+      limit = 150,
+      language,
+      tags,
+      search,
+      sortBy = 'title',
+      sortOrder = 'asc',
+    } = query;
     const skip = (page - 1) * limit;
 
     const filter: any = {
@@ -87,7 +120,7 @@ export class SongService {
         { searchTitle: { $regex: searchLower, $options: 'i' } }, // Indexed field
         { title: { $regex: search, $options: 'i' } }, // Fallback to original
         { searchLyrics: { $regex: searchLower, $options: 'i' } }, // Indexed field (lowercase lyrics)
-        { verses: { $regex: search, $options: 'i' } }, // Fallback to original verses
+        { 'verses.content': { $regex: search, $options: 'i' } }, // Search in verse content
       ];
     }
 
@@ -107,27 +140,44 @@ export class SongService {
     ]);
 
     // Transform to match expected format
-    const transformedSongs = songs.map((song: any) => ({
-      id: song._id.toString(),
-      title: song.title,
-      number: song.number,
-      language: song.language,
-      chorus: song.chorus,
-      verses: song.verses || '', // Verses is now a single string
-      tags: song.tags.map((tag: any) => ({
-        id: tag._id.toString(),
-        name: tag.name,
-      })),
-      // OpenLP compatibility fields
-      copyright: song.copyright,
-      comments: song.comments,
-      ccliNumber: song.ccliNumber,
-      searchTitle: song.searchTitle,
-      searchLyrics: song.searchLyrics,
-      openlpMapping: song.openlpMapping,
-      createdAt: song.createdAt,
-      updatedAt: song.updatedAt,
-    }));
+    const transformedSongs = songs.map((song: any) => {
+      // Convert verses array to string for backward compatibility (frontend expects string)
+      // But preserve order from verse.order
+      let versesString = '';
+      if (Array.isArray(song.verses) && song.verses.length > 0) {
+        // Sort by order and join content
+        const sortedVerses = [...song.verses].sort(
+          (a: any, b: any) => a.order - b.order,
+        );
+        versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+      } else if (typeof song.verses === 'string') {
+        // Backward compatibility: if verses is still a string, use it
+        versesString = song.verses;
+      }
+
+      return {
+        id: song._id.toString(),
+        title: song.title,
+        number: song.number,
+        language: song.language,
+        verses: versesString, // Convert array to string for frontend compatibility
+        verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+        lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
+        tags: song.tags.map((tag: any) => ({
+          id: tag._id.toString(),
+          name: tag.name,
+        })),
+        // OpenLP compatibility fields
+        copyright: song.copyright,
+        comments: song.comments,
+        ccliNumber: song.ccliNumber,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        openlpMapping: song.openlpMapping,
+        createdAt: song.createdAt,
+        updatedAt: song.updatedAt,
+      };
+    });
 
     return {
       data: transformedSongs,
@@ -151,14 +201,41 @@ export class SongService {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
 
+    // Return verses as array with originalLabel (for frontend logic) and also as string (for backward compatibility)
+    let versesArray: Array<{
+      order: number;
+      content: string;
+      label?: string;
+      originalLabel?: string;
+    }> = [];
+    let versesString = '';
+    if (Array.isArray(song.verses) && song.verses.length > 0) {
+      // Sort by order
+      const sortedVerses = [...song.verses].sort(
+        (a: any, b: any) => a.order - b.order,
+      );
+      versesArray = sortedVerses.map((v: any) => ({
+        order: v.order,
+        content: v.content,
+        label: v.label,
+        originalLabel: v.originalLabel, // Include originalLabel for frontend logic
+      }));
+      versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+    } else if (typeof song.verses === 'string') {
+      // Backward compatibility: if verses is still a string, use it
+      versesString = song.verses;
+    }
+
     // Transform to match expected format
     return {
       id: song._id.toString(),
       title: song.title,
       number: song.number,
       language: song.language,
-      chorus: song.chorus,
-      verses: song.verses || '', // Verses is now a single string
+      verses: versesString, // Keep as string for backward compatibility
+      versesArray: versesArray.length > 0 ? versesArray : undefined, // Add array with originalLabel for frontend logic
+      verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: song.tags.map((tag: any) => ({
         id: tag._id.toString(),
         name: tag.name,
@@ -175,8 +252,16 @@ export class SongService {
     };
   }
 
-  async update(id: string, updateSongDto: UpdateSongDto, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string) {
-    const { verses, tags, ...songData } = updateSongDto;
+  async update(
+    id: string,
+    updateSongDto: UpdateSongDto,
+    userId?: string,
+    username?: string,
+    discordId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const { verses, tags, verseOrder, ...songData } = updateSongDto;
 
     // Check if song exists
     const existing = await this.songModel.findOne({ _id: id, deletedAt: null });
@@ -191,11 +276,42 @@ export class SongService {
       updateData.searchTitle = songData.title.toLowerCase().trim();
     }
 
-    // Handle verses - now a single string field
+    // Handle verseOrder - use from DTO if provided, otherwise generate from verses
+    if (verseOrder !== undefined) {
+      updateData.verseOrder = verseOrder || null;
+    }
+
+    // Handle verses - now an array of objects with order
     // Also regenerate search_lyrics when verses change
     if (verses !== undefined) {
-      updateData.verses = verses;
-      updateData.searchLyrics = verses.toLowerCase().trim();
+      if (Array.isArray(verses)) {
+        // Sort verses by order to ensure correct sequence
+        const sortedVerses = [...verses].sort((a, b) => a.order - b.order);
+        updateData.verses = sortedVerses;
+        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
+        if (verseOrder === undefined) {
+          updateData.verseOrder = sortedVerses.map((v) => v.order);
+        }
+        // Generate search_lyrics from verse content
+        const versesString = sortedVerses.map((v) => v.content).join('\n\n');
+        updateData.searchLyrics = versesString.toLowerCase().trim();
+      } else {
+        // Backward compatibility: if verses is still a string, convert to array
+        // Split by double newlines and assign order based on position
+        const verseContents = (verses as string)
+          .split(/\n\n+/)
+          .filter((v) => v.trim());
+        const convertedVerses = verseContents.map((content, index) => ({
+          order: index + 1,
+          content: content.trim(),
+        }));
+        updateData.verses = convertedVerses;
+        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
+        if (verseOrder === undefined) {
+          updateData.verseOrder = convertedVerses.map((v) => v.order);
+        }
+        updateData.searchLyrics = (verses as string).toLowerCase().trim();
+      }
     }
 
     // Handle tags
@@ -213,27 +329,32 @@ export class SongService {
 
     // Track changes for audit log
     const changes: Record<string, any> = {};
-    
+
     // Check each field in updateData
     Object.keys(updateData).forEach((key) => {
       // Skip internal fields
       if (key === 'searchTitle' || key === 'searchLyrics') {
         return;
       }
-      
+
       const oldValue = (existing as any)[key];
       const newValue = updateData[key];
-      
+
       // Compare values (handle arrays and objects)
       let hasChanged = false;
       if (Array.isArray(oldValue) && Array.isArray(newValue)) {
         hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
-      } else if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue !== null && newValue !== null) {
+      } else if (
+        typeof oldValue === 'object' &&
+        typeof newValue === 'object' &&
+        oldValue !== null &&
+        newValue !== null
+      ) {
         hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
       } else {
         hasChanged = oldValue !== newValue;
       }
-      
+
       if (hasChanged) {
         changes[key] = {
           old: oldValue ?? null,
@@ -246,13 +367,17 @@ export class SongService {
     if (tags !== undefined) {
       // Get old tag names
       const oldTags = existing.tags as any[];
-      const oldTagNames = oldTags && oldTags.length > 0
-        ? oldTags.map((tag: any) => (tag.name || tag.toString())).sort().join(', ')
-        : '';
-      
+      const oldTagNames =
+        oldTags && oldTags.length > 0
+          ? oldTags
+              .map((tag: any) => tag.name || tag.toString())
+              .sort()
+              .join(', ')
+          : '';
+
       // Get new tag names (they're already names in the DTO)
       const newTagNames = tags.length > 0 ? tags.sort().join(', ') : '';
-      
+
       if (oldTagNames !== newTagNames) {
         changes.tags = {
           old: oldTagNames || '(brak)',
@@ -265,63 +390,61 @@ export class SongService {
     await this.songModel.updateOne({ _id: id }, updateData);
 
     // Increment version when song is updated
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
     if (userId && username) {
-      await this.auditLogService.log(
-        AuditLogAction.SONG_EDIT,
-        userId,
-        username,
-        {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_EDIT, userId, username, {
           discordId,
           songId: id,
           songTitle: updateData.title || existing.title,
           metadata: Object.keys(changes).length > 0 ? changes : undefined,
           ipAddress,
           userAgent,
-        },
-      ).catch(err => console.error('Failed to log audit trail:', err));
+        })
+        .catch((err) => console.error('Failed to log audit trail:', err));
     }
 
     return this.findOne(id);
   }
 
-  async remove(id: string, userId?: string, username?: string, discordId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async remove(
+    id: string,
+    userId?: string,
+    username?: string,
+    discordId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
     // Get song before deletion for audit log
     const song = await this.songModel.findOne({ _id: id, deletedAt: null });
-    
+
     if (!song) {
       throw new NotFoundException(`Song with ID ${id} not found`);
     }
 
     // Soft delete
-    await this.songModel.updateOne(
-      { _id: id },
-      { deletedAt: new Date() },
-    );
+    await this.songModel.updateOne({ _id: id }, { deletedAt: new Date() });
 
     // Increment version when song is deleted
-    await this.songsVersionService.incrementVersion().catch(err => 
-      console.error('Failed to increment songs version:', err)
-    );
+    await this.songsVersionService
+      .incrementVersion()
+      .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
     if (userId && username) {
-      await this.auditLogService.log(
-        AuditLogAction.SONG_DELETE,
-        userId,
-        username,
-        {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_DELETE, userId, username, {
           discordId,
           songId: id,
           songTitle: song.title,
           ipAddress,
           userAgent,
-        },
-      ).catch(err => console.error('Failed to log audit trail:', err));
+        })
+        .catch((err) => console.error('Failed to log audit trail:', err));
     }
   }
 
@@ -331,7 +454,9 @@ export class SongService {
   async findAllForCache() {
     const songs = await this.songModel
       .find({ deletedAt: null })
-      .select('title number language tags searchTitle searchLyrics chorus verses')
+      .select(
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml',
+      )
       .populate('tags', 'name')
       .sort({ title: 1 })
       .lean()
@@ -347,8 +472,18 @@ export class SongService {
         id: tag._id.toString(),
         name: tag.name,
       })),
-      chorus: song.chorus ?? null,
       verses: song.verses ?? null,
+      versesArray:
+        Array.isArray(song.verses) && song.verses.length > 0
+          ? song.verses.map((v: any) => ({
+              order: v.order,
+              content: v.content,
+              label: v.label,
+              originalLabel: v.originalLabel, // Include originalLabel for frontend logic
+            }))
+          : undefined,
+      verseOrder: song.verseOrder || null, // verse_order string from OpenLP SQLite (1:1 transparent)
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       searchTitle: song.searchTitle,
       searchLyrics: song.searchLyrics,
     }));
@@ -386,8 +521,9 @@ export class SongService {
       title: song.title || '',
       number: song.number || null,
       language: song.language || 'en',
-      chorus: song.chorus || null,
-      verses: typeof song.verses === 'string' ? song.verses : (song.verses || ''),
+      verses: typeof song.verses === 'string' ? song.verses : song.verses || '',
+      verseOrder: song.verseOrder || null, // verse_order string for OpenLyrics format
+      lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: (song.tags || []).map((tag: any) => ({
         id: tag._id?.toString() || tag.toString(),
         name: tag.name || tag,
@@ -408,5 +544,111 @@ export class SongService {
     archive.finalize();
 
     return archive;
+  }
+
+  /**
+   * Export all songs to OpenLP SQLite database file
+   * Returns the path to the temporary SQLite file
+   * Uses cache with 2 minutes TTL to avoid regenerating the same file
+   */
+  async exportToSqlite(): Promise<string> {
+    // Check cache first
+    const now = Date.now();
+    if (
+      this.sqliteCache &&
+      now - this.sqliteCache.timestamp < this.SQLITE_CACHE_TTL
+    ) {
+      // Check if cached file still exists
+      if (fs.existsSync(this.sqliteCache.filePath)) {
+        return this.sqliteCache.filePath;
+      } else {
+        // File was deleted, clear cache
+        this.sqliteCache = null;
+      }
+    }
+
+    // Cache expired or doesn't exist, generate new file
+    // Fetch all non-deleted songs
+    const songs = await this.songModel
+      .find({ deletedAt: null })
+      .populate('tags', 'name')
+      .lean()
+      .exec();
+
+    // Transform songs to match expected format for SQLite export
+    const transformedSongs: any[] = songs.map((song: any) => {
+      // Convert verses array to string for backward compatibility
+      let versesString = '';
+      let versesArray: Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+      }> = [];
+
+      if (Array.isArray(song.verses) && song.verses.length > 0) {
+        // Sort by order
+        const sortedVerses = [...song.verses].sort(
+          (a: any, b: any) => a.order - b.order,
+        );
+        versesArray = sortedVerses.map((v: any) => ({
+          order: v.order,
+          content: v.content,
+          label: v.label,
+          originalLabel: v.originalLabel,
+        }));
+        versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+      } else if (typeof song.verses === 'string') {
+        versesString = song.verses;
+      }
+
+      return {
+        id: song._id.toString(),
+        title: song.title || '',
+        number: song.number || null,
+        language: song.language || 'en',
+        verses: versesString, // String format for SQLite export utility
+        versesArray: versesArray.length > 0 ? versesArray : undefined,
+        verseOrder: song.verseOrder || null,
+        lyricsXml: song.lyricsXml || null,
+        tags: (song.tags || []).map((tag: any) => ({
+          id: tag._id?.toString() || tag.toString(),
+          name: tag.name || tag,
+        })),
+        copyright: song.copyright || null,
+        comments: song.comments || null,
+        ccliNumber: song.ccliNumber || null,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        createdAt: (song as any).createdAt || new Date(),
+        updatedAt: (song as any).updatedAt || new Date(),
+        deletedAt: null,
+      };
+    });
+
+    // Create SQLite database
+    const sqlitePath = await createOpenLPSqliteDatabase(transformedSongs);
+
+    // Update cache
+    this.sqliteCache = {
+      filePath: sqlitePath,
+      timestamp: now,
+    };
+
+    return sqlitePath;
+  }
+
+  /**
+   * Check if a file path is currently cached
+   * Used to determine if file should be kept after streaming
+   */
+  isCached(filePath: string): boolean {
+    if (!this.sqliteCache) {
+      return false;
+    }
+    const now = Date.now();
+    const isCacheValid =
+      now - this.sqliteCache.timestamp < this.SQLITE_CACHE_TTL;
+    return isCacheValid && this.sqliteCache.filePath === filePath;
   }
 }

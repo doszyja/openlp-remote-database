@@ -14,12 +14,17 @@ export class DiscordAuthGuard extends AuthGuard('discord') {
 
       if (err) {
         if (err.message) {
-          if (err.message.includes('not authorized') || err.message.includes('missing role')) {
+          if (
+            err.message.includes('not authorized') ||
+            err.message.includes('missing role')
+          ) {
             errorMessage = 'missing_role';
           } else if (err.message.includes('Invalid "code"')) {
-            errorMessage = 'Authentication code expired or already used. Please try logging in again.';
+            errorMessage =
+              'Authentication code expired or already used. Please try logging in again.';
           } else if (err.message.includes('rate limited')) {
-            errorMessage = 'Discord API is temporarily unavailable. Please try again in a few moments.';
+            errorMessage =
+              'Discord API is temporarily unavailable. Please try again in a few moments.';
           } else if (err.message.includes('Discord API error')) {
             errorMessage = 'Discord API error. Please try again later.';
           } else {
@@ -34,11 +39,12 @@ export class DiscordAuthGuard extends AuthGuard('discord') {
       }
 
       console.error('Discord OAuth callback error:', err || info);
-      response.redirect(`${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`);
+      response.redirect(
+        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+      );
       return null;
     }
 
     return user;
   }
 }
-

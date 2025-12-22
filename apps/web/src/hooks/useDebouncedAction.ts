@@ -73,4 +73,3 @@ export function usePreventDoubleClick<T extends (...args: any[]) => Promise<any>
 
   return [protectedAction, isPendingRef.current];
 }
-

@@ -13,16 +13,25 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Switch,
-  FormControlLabel,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ArrowBack as ArrowBackIcon,
-  Fullscreen as FullscreenIcon,
-  ViewColumn as ViewColumnIcon,
   Slideshow as SlideshowIcon,
+  NavigateBefore as NavigateBeforeIcon,
+  NavigateNext as NavigateNextIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useDeleteSong } from '../hooks';
@@ -32,26 +41,71 @@ import { useAuth } from '../contexts/AuthContext';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { songsCache } from '../services/songs-cache';
 import SongList from '../components/SongList';
+import {
+  useActiveSong,
+  useServicePlans,
+  useServicePlan,
+  useSetActiveSong,
+} from '../hooks/useServicePlans';
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasEditPermission } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { hasEditPermission, isAuthenticated } = useAuth();
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [_isFullscreen, _setIsFullscreen] = useState(false);
+  const isFullscreen = false; // Always false for now
+  const [isServiceView, setIsServiceView] = useState(false); // Default to false, only enabled for authenticated users
   const [search, setSearch] = useState('');
   const [showLoading, setShowLoading] = useState(false);
+  const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   // Get all cached songs to ensure cache is loaded
   const { songs: allCachedSongs, isLoading: isCacheLoading } = useCachedSongs();
-  
+
+  // Service plan hooks - only enabled for authenticated users
+  const { data: allPlans } = useServicePlans();
+  const { data: activeSongData } = useActiveSong(isAuthenticated); // Wywołuj endpoint tylko dla zalogowanych użytkowników
+  const { data: servicePlan } = useServicePlan(
+    isAuthenticated && selectedPlanId ? selectedPlanId : ''
+  );
+  const setActiveSong = useSetActiveSong();
+
+  // Disable service view if user is not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && isServiceView) {
+      setIsServiceView(false);
+    }
+  }, [isAuthenticated, isServiceView]);
+
+  // Auto-select plan if there's an active song
+  useEffect(() => {
+    if (isAuthenticated && activeSongData?.servicePlan?.id && !selectedPlanId) {
+      setSelectedPlanId(activeSongData.servicePlan.id);
+    }
+  }, [isAuthenticated, activeSongData, selectedPlanId]);
+
   // Get song from cache
   const song = useMemo(() => {
     if (!id) return null;
     return songsCache.getSongById(id);
-  }, [id, allCachedSongs]);
+  }, [id]);
+
+  // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
+  const parsedVerses = useMemo(() => {
+    if (!song) return [];
+    return parseVerses(
+      song.verses,
+      song.verseOrder || null,
+      song.lyricsXml || null,
+      song.versesArray || null
+    );
+  }, [song]);
 
   // Loading state: show loading only if cache is loading and we don't have the song
   const isLoading = isCacheLoading && !song;
@@ -89,8 +143,7 @@ export default function SongDetailPage() {
   }, [id]);
 
   // Use cached search for instant results when searching, otherwise show all songs
-  const { results: searchResults, isLoading: isSearchLoading } =
-    useCachedSongSearch(search);
+  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
 
   // Memoize search results to prevent unnecessary re-renders
   // Show all songs (no limit) - same as SongListPage
@@ -121,7 +174,6 @@ export default function SongDetailPage() {
       setDeleteDialogOpen(false);
     }
   };
-
 
   // Handle scroll position when navigating to a song
   const handleSongClick = useCallback(() => {
@@ -206,41 +258,17 @@ export default function SongDetailPage() {
       return null;
     }
 
-    // Debug: Log verses to console
-    const parsedVerses = parseVerses(song.verses);
     return (
       <>
         <Box
           display="flex"
           flexDirection={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
+          justifyContent="flex-end"
           alignItems={{ xs: 'flex-start', sm: 'center' }}
           mb={{ xs: 2, md: 3 }}
           flexWrap="wrap"
           gap={{ xs: 1.5, sm: 1 }}
         >
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/songs')}
-            size="small"
-            variant="outlined"
-            sx={{
-              borderColor: theme =>
-                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
-              color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
-              '&:hover': {
-                borderColor: theme =>
-                  theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
-                backgroundColor: theme =>
-                  theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.04)',
-              },
-              width: { xs: '100%', sm: 'auto' },
-            }}
-          >
-            Wstecz
-          </Button>
           <Stack
             direction="row"
             spacing={{ xs: 0.5, sm: 1, md: 2 }}
@@ -281,28 +309,6 @@ export default function SongDetailPage() {
             >
               Prezentacja
             </Button>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={!isFullscreen}
-                  onChange={e => setIsFullscreen(!e.target.checked)}
-                  size="small"
-                />
-              }
-              label={
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  {isFullscreen ? (
-                    <FullscreenIcon fontSize="small" />
-                  ) : (
-                    <ViewColumnIcon fontSize="small" />
-                  )}
-                  <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                    {isFullscreen ? 'Pełna szerokość' : 'Normalny widok'}
-                  </Typography>
-                </Box>
-              }
-              sx={{ display: { xs: 'none', lg: 'flex' }, m: 0 }}
-            />
             {hasEditPermission && (
               <Box display="flex" gap={{ xs: 0.25, sm: 0.5 }}>
                 <Button
@@ -310,6 +316,7 @@ export default function SongDetailPage() {
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/songs/${id}/edit`)}
                   size="small"
+                  style={{marginRight: 8}}
                   sx={{
                     fontSize: { xs: '0.75rem', sm: '0.875rem' },
                     px: { xs: 1, sm: 1.5 },
@@ -400,47 +407,6 @@ export default function SongDetailPage() {
           </Box>
         </Paper>
 
-        {song.chorus && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2, sm: 2.5 },
-              mb: 2,
-              bgcolor: 'background.paper',
-              boxShadow: theme =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              border: theme =>
-                theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.1)'
-                  : '1px solid rgba(0, 0, 0, 0.05)',
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 600,
-                mb: 1.5,
-                fontSize: '0.95rem',
-                color: 'text.secondary',
-              }}
-            >
-              Refren
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{
-                whiteSpace: 'pre-line',
-                lineHeight: 1.8,
-                fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
-              }}
-            >
-              {song.chorus}
-            </Typography>
-          </Paper>
-        )}
-
         <Box>
           <Typography
             variant="subtitle2"
@@ -462,45 +428,52 @@ export default function SongDetailPage() {
               {parsedVerses
                 .filter(v => v.content && v.content.trim())
                 .map((verse, index) => (
-                  <Paper
+                  <Box
                     key={`verse-${verse.order}-${index}`}
-                    elevation={0}
                     sx={{
-                      p: { xs: 1.5, sm: 2 },
-                      bgcolor: 'background.paper',
-                      boxShadow: theme =>
-                        theme.palette.mode === 'dark'
-                          ? '0 2px 8px rgba(0, 0, 0, 0.15)'
-                          : '0 2px 8px rgba(0, 0, 0, 0.05)',
-                      border: theme =>
-                        theme.palette.mode === 'dark'
-                          ? '1px solid rgba(255, 255, 255, 0.08)'
-                          : '1px solid rgba(0, 0, 0, 0.05)',
+                      position: 'relative',
                     }}
                   >
                     <Typography
                       variant="caption"
                       sx={{
+                        position: 'relative',
+                        mb: 0.5,
                         color: 'text.secondary',
-                        fontSize: '0.75rem',
+                        fontSize: '0.65rem',
                         fontWeight: 500,
-                        display: 'block',
-                        mb: 1,
+                        lineHeight: 1,
                       }}
                     >
                       {getVerseDisplayLabel(verse, index)}
                     </Typography>
-                    <Typography
-                      variant="body1"
+                    <Paper
+                      elevation={0}
                       sx={{
-                        whiteSpace: 'pre-line',
-                        lineHeight: 1.8,
-                        fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
+                        p: { xs: 1.5, sm: 2 },
+                        bgcolor: 'background.paper',
+                        boxShadow: theme =>
+                          theme.palette.mode === 'dark'
+                            ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                            : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        border: theme =>
+                          theme.palette.mode === 'dark'
+                            ? '1px solid rgba(255, 255, 255, 0.08)'
+                            : '1px solid rgba(0, 0, 0, 0.05)',
                       }}
                     >
-                      {verse.content}
-                    </Typography>
-                  </Paper>
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          whiteSpace: 'pre-line',
+                          lineHeight: 1.8,
+                          fontSize: { xs: '1.04rem', sm: '1.09rem', md: '1.14rem' },
+                        }}
+                      >
+                        {verse.content}
+                      </Typography>
+                    </Paper>
+                  </Box>
                 ))}
             </Stack>
           )}
@@ -511,24 +484,136 @@ export default function SongDetailPage() {
     showLoading,
     error,
     song,
+    parsedVerses,
     isFetching,
     isLoading,
     id,
     hasEditPermission,
     navigate,
-    isFullscreen,
-    setIsFullscreen,
   ]);
 
-  // Calculate list height for SongDetailPage
-  const calculateListHeight = useCallback((viewportHeight: number) => {
-    // Account for header, search box, and padding
-    const headerHeight = 60;
-    const searchHeight = 120;
-    const padding = 40;
-    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
+  // Calculate list height for SongDetailPage - use full available height
+  // Note: viewportHeight is now the container height, not window.innerHeight
+  const calculateListHeight = useCallback((containerHeight: number) => {
+    // Container height already accounts for available space, just subtract minimal padding
+    // Search input height is already handled in SongList component
+    const padding = 20; // Minimal padding for visual spacing
+    const calculatedHeight = containerHeight - padding;
+    // Use full container height minus minimal overhead
     return Math.max(300, calculatedHeight);
   }, []);
+
+  // Service view: Get active song and prepare verse content (only for authenticated users)
+  const activeSong = isAuthenticated ? activeSongData?.song : null;
+  const activeSongVerses = useMemo(() => {
+    if (!isAuthenticated || !activeSong) return [];
+    // Normalize verses to convert undefined labels to null (parseVerses expects label: string | null when verses is an array)
+    const normalizedVerses: string | Array<{
+      order: number;
+      content: string;
+      label: string | null;
+      originalLabel?: string;
+    }> = typeof activeSong.verses === 'string'
+      ? activeSong.verses
+      : activeSong.verses.map(v => ({
+          order: v.order,
+          content: v.content,
+          label: v.label ?? null,
+          originalLabel: v.originalLabel,
+        }));
+    // Normalize versesArray to convert undefined labels to null
+    const normalizedVersesArray: Array<{
+      order: number;
+      content: string;
+      label?: string;
+      originalLabel?: string;
+    }> | null = activeSong.versesArray
+      ? activeSong.versesArray.map(v => ({
+          order: v.order,
+          content: v.content,
+          label: v.label,
+          originalLabel: v.originalLabel,
+        }))
+      : null;
+    const parsed = parseVerses(
+      normalizedVerses,
+      activeSong.verseOrder || null,
+      activeSong.lyricsXml || null,
+      normalizedVersesArray
+    ).filter(v => v.content && v.content.trim());
+    const allContent = parsed.map((v, idx) => ({
+      type: v.type || 'verse',
+      content: v.content,
+      label: v.label || null,
+      stepLabel: getVerseDisplayLabel(v, idx),
+    }));
+    return allContent;
+  }, [isAuthenticated, activeSong]);
+
+  // Reset verse index when active song changes in service view
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    // When we switch to a different active song, always start from the first verse
+    setCurrentVerseIndex(0);
+  }, [isAuthenticated, activeSong?.id]);
+
+  // Handle verse navigation
+  const handleNextVerse = useCallback(() => {
+    if (currentVerseIndex < activeSongVerses.length - 1) {
+      setCurrentVerseIndex(prev => prev + 1);
+    }
+  }, [currentVerseIndex, activeSongVerses.length]);
+
+  const handlePreviousVerse = useCallback(() => {
+    if (currentVerseIndex > 0) {
+      setCurrentVerseIndex(prev => prev - 1);
+    }
+  }, [currentVerseIndex]);
+
+  // Handle setting active song
+  const handleSetActive = useCallback(
+    async (itemId: string) => {
+      if (!selectedPlanId) return;
+      try {
+        await setActiveSong.mutateAsync({
+          planId: selectedPlanId,
+          data: { itemId, isActive: true },
+        });
+        showSuccess('Pieśń została ustawiona jako aktywna!');
+      } catch (error) {
+        showError('Nie udało się ustawić pieśni jako aktywnej.');
+      }
+    },
+    [selectedPlanId, setActiveSong, showSuccess, showError]
+  );
+
+  // Keyboard navigation for verse switching in service view (only for authenticated users)
+  useEffect(() => {
+    if (!isAuthenticated || !isServiceView || !activeSong) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (currentVerseIndex > 0) {
+          setCurrentVerseIndex(prev => prev - 1);
+        }
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        if (currentVerseIndex < activeSongVerses.length - 1) {
+          setCurrentVerseIndex(prev => prev + 1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isAuthenticated, isServiceView, activeSong, currentVerseIndex, activeSongVerses.length]);
+
+  // Service plan songs list (only for authenticated users)
+  const planSongs = useMemo(() => {
+    if (!isAuthenticated || !servicePlan) return [];
+    return [...servicePlan.items].sort((a, b) => a.order - b.order);
+  }, [isAuthenticated, servicePlan]);
 
   // Memoize search column to prevent unnecessary re-renders
   const searchColumn = useMemo(
@@ -544,16 +629,13 @@ export default function SongDetailPage() {
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography
-            variant="h6"
-            sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}
-          >
+          <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
             Szukaj Pieśni
           </Typography>
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ 
+            sx={{
               fontSize: { xs: '0.7rem', md: '0.75rem' },
               fontStyle: 'italic',
             }}
@@ -564,7 +646,7 @@ export default function SongDetailPage() {
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <SongList
             songs={allSearchSongs}
-            onSongClick={(songId) => {
+            onSongClick={songId => {
               handleSongClick();
               navigate(`/songs/${songId}`);
             }}
@@ -579,8 +661,242 @@ export default function SongDetailPage() {
         </Box>
       </Paper>
     ),
-    [isSearchLoadingState, search, allSearchSongs, id, handleSongClick, navigate, calculateListHeight]
+    [
+      isSearchLoadingState,
+      search,
+      allSearchSongs,
+      id,
+      handleSongClick,
+      navigate,
+      calculateListHeight,
+    ]
   );
+
+  // Service view: Plan songs column
+  const planSongsColumn = useMemo(
+    () => (
+      <Paper
+        sx={{
+          p: { xs: 1.5, md: 2 },
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        }}
+      >
+        <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
+            Plan Nabożeństwa
+          </Typography>
+          {allPlans && allPlans.length > 0 && (
+            <FormControl size="small" fullWidth>
+              <InputLabel>Wybierz plan</InputLabel>
+              <Select
+                value={selectedPlanId || ''}
+                onChange={e => setSelectedPlanId(e.target.value)}
+                label="Wybierz plan"
+              >
+                {allPlans.map(plan => (
+                  <MenuItem key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Box>
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          {!selectedPlanId ? (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Wybierz plan nabożeństwa
+            </Alert>
+          ) : planSongs.length === 0 ? (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Brak pieśni w planie
+            </Alert>
+          ) : (
+            <List dense>
+              {planSongs.map(item => (
+                <ListItem
+                  key={item.id}
+                  disablePadding
+                  sx={{
+                    mb: 0.5,
+                    border: theme =>
+                      item.isActive
+                        ? `2px solid ${theme.palette.primary.main}`
+                        : `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    bgcolor: item.isActive ? 'action.selected' : 'background.paper',
+                  }}
+                >
+                  <ListItemButton
+                    onClick={() => {
+                      if (!item.isActive) {
+                        handleSetActive(item.id);
+                      }
+                    }}
+                    selected={item.isActive}
+                  >
+                    <ListItemText
+                      primary={item.songTitle}
+                      secondary={item.notes}
+                      primaryTypographyProps={{
+                        sx: {
+                          fontWeight: item.isActive ? 600 : 400,
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                    />
+                    {item.isActive && (
+                      <Chip label="AKTYWNA" color="primary" size="small" sx={{ ml: 1 }} />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Box>
+      </Paper>
+    ),
+    [allPlans, selectedPlanId, planSongs, handleSetActive]
+  );
+
+  // Service view: Active song display column
+  const activeSongColumn = useMemo(() => {
+    if (!activeSong || activeSongVerses.length === 0) {
+      return (
+        <Paper
+          sx={{
+            p: { xs: 2, md: 3 },
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Alert severity="info">
+            {!activeSong ? 'Brak aktywnej pieśni' : 'Brak zwrotek w pieśni'}
+          </Alert>
+        </Paper>
+      );
+    }
+
+    const currentVerse = activeSongVerses[currentVerseIndex];
+    const displayTitle = activeSong.number
+      ? `${activeSong.title} (${activeSong.number})`
+      : activeSong.title;
+
+    return (
+      <Paper
+        sx={{
+          p: { xs: 2, md: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+              fontWeight: 600,
+              mb: 0.5,
+            }}
+          >
+            {displayTitle}
+          </Typography>
+          {activeSongData?.servicePlan && (
+            <Typography variant="caption" color="text.secondary">
+              {activeSongData.servicePlan.name}
+            </Typography>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 0,
+          }}
+        >
+          <Box
+            sx={{
+              width: '100%',
+              textAlign: 'center',
+              mb: 2,
+            }}
+          >
+            {currentVerse?.label && (
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mb: 1,
+                  color: 'text.secondary',
+                  fontWeight: 600,
+                }}
+              >
+                {currentVerse.label}
+              </Typography>
+            )}
+            <Typography
+              variant="body1"
+              sx={{
+                whiteSpace: 'pre-line',
+                lineHeight: 1.8,
+                fontSize: { xs: '1.1rem', sm: '1.2rem', md: '1.35rem' },
+              }}
+            >
+              {currentVerse?.content}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mt: 2,
+            pt: 2,
+            borderTop: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <IconButton onClick={handlePreviousVerse} disabled={currentVerseIndex === 0} size="large">
+            <NavigateBeforeIcon />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary">
+            {currentVerseIndex + 1} / {activeSongVerses.length}
+          </Typography>
+          <IconButton
+            onClick={handleNextVerse}
+            disabled={currentVerseIndex >= activeSongVerses.length - 1}
+            size="large"
+          >
+            <NavigateNextIcon />
+          </IconButton>
+        </Box>
+      </Paper>
+    );
+  }, [
+    activeSong,
+    activeSongVerses,
+    currentVerseIndex,
+    handleNextVerse,
+    handlePreviousVerse,
+    activeSongData,
+  ]);
 
   return (
     <Box
@@ -592,7 +908,84 @@ export default function SongDetailPage() {
         overflowX: 'hidden',
       }}
     >
-      {isFullscreen ? (
+      {/* Mobile back button */}
+      {isMobile && (
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/songs')}
+          variant="outlined"
+          size="small"
+          sx={{
+            mb: 2,
+            borderColor: theme =>
+              theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+            color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
+            '&:hover': {
+              borderColor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            },
+            display: { xs: 'flex', sm: 'none' },
+          }}
+        >
+          Wstecz
+        </Button>
+      )}
+      {isAuthenticated && isServiceView ? (
+        // Service view: 3-column layout
+        <Box
+          display="flex"
+          flexDirection={{ xs: 'column', lg: 'row' }}
+          gap={2}
+          alignItems={{ xs: 'flex-start', lg: 'stretch' }}
+          maxWidth={{ xs: '100%', lg: '1600px' }}
+          mx="auto"
+          width="100%"
+          sx={{ px: { xs: 0, md: 2 }, overflowX: 'hidden' }}
+        >
+          {/* Column 1: Song List */}
+          <Box
+            sx={{
+              width: { xs: '100%', lg: '300px' },
+              minWidth: { xs: '100%', lg: '300px' },
+              maxWidth: { xs: '100%', lg: '300px' },
+              flexShrink: 0,
+              display: { xs: 'none', lg: 'flex' },
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ position: 'sticky', top: 20, height: '100%', minHeight: '100%' }}>
+              {searchColumn}
+            </Box>
+          </Box>
+          {/* Column 2: Plan Songs */}
+          <Box
+            sx={{
+              width: { xs: '100%', lg: '300px' },
+              minWidth: { xs: '100%', lg: '300px' },
+              maxWidth: { xs: '100%', lg: '300px' },
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ position: 'sticky', top: 20, height: '100%', minHeight: '100%' }}>
+              {planSongsColumn}
+            </Box>
+          </Box>
+          {/* Column 3: Active Song Display */}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              width: { xs: '100%', lg: 'auto' },
+            }}
+          >
+            <Box key={id}>{activeSongColumn}</Box>
+          </Box>
+        </Box>
+      ) : isFullscreen ? (
         <Box maxWidth={{ xs: '100%', sm: '800px', md: '1000px', lg: '1200px' }} mx="auto">
           <Box key={id}>{songContent}</Box>
         </Box>
@@ -601,7 +994,7 @@ export default function SongDetailPage() {
           display="flex"
           flexDirection={{ xs: 'column', md: 'row' }}
           gap={{ xs: 2, md: 2 }}
-          alignItems="flex-start"
+          alignItems={{ xs: 'flex-start', md: 'stretch' }}
           maxWidth={{ xs: '100%', md: '1024px', lg: '1200px' }}
           mx="auto"
           width="100%"
@@ -624,10 +1017,19 @@ export default function SongDetailPage() {
               flexShrink: 0,
               transition:
                 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              display: { xs: 'none', md: 'block' },
+              display: { xs: 'none', md: 'flex' },
+              flexDirection: 'column',
             }}
           >
-            <Box sx={{ width: { md: '240px', lg: '320px' }, position: 'sticky', top: 20 }}>
+            <Box
+              sx={{
+                width: { md: '240px', lg: '320px' },
+                position: 'sticky',
+                top: 20,
+                height: '100%',
+                minHeight: '100%',
+              }}
+            >
               {searchColumn}
             </Box>
           </Box>

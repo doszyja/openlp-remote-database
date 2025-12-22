@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -11,8 +11,15 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { Add as AddIcon, Download as DownloadIcon, ErrorOutline as ErrorOutlineIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Download as DownloadIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useAuth } from '../contexts/AuthContext';
 import { useExportZip } from '../hooks/useExportZip';
@@ -21,6 +28,9 @@ import SongList from '../components/SongList';
 
 export default function SongListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { hasEditPermission } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [search, setSearch] = useState('');
@@ -28,14 +38,20 @@ export default function SongListPage() {
   const [lastExportTime, setLastExportTime] = useState<number>(0);
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const exportZip = useExportZip();
+  const hasAutoNavigatedRef = useRef(false);
 
   // Use cached songs for both search and initial list (no API calls needed)
-  const { songs: cachedSongs, isLoading: isCacheLoading, error, refetch: refetchCache } = useCachedSongs();
+  const {
+    songs: cachedSongs,
+    isLoading: isCacheLoading,
+    error,
+    refetch: refetchCache,
+  } = useCachedSongs();
   const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
-  
+
   // Use cached search results if we have a search query, otherwise use cached songs list
   const useCacheForSearch = !!search.trim();
-  
+
   // Determine loading state
   const isLoading = useCacheForSearch ? isSearchLoading : isCacheLoading;
 
@@ -46,6 +62,37 @@ export default function SongListPage() {
     }
     return cachedSongs || [];
   }, [useCacheForSearch, searchResults, cachedSongs]);
+
+  // Get first song ID for auto-selection (only when not searching and songs are loaded)
+  const firstSongId = useMemo(() => {
+    if (useCacheForSearch || !displaySongs || displaySongs.length === 0) {
+      return undefined;
+    }
+    return displaySongs[0]?.id;
+  }, [useCacheForSearch, displaySongs]);
+
+  // Check if we should auto-navigate (before rendering to prevent visual jump)
+  // Don't auto-navigate on mobile - show list instead
+  const shouldAutoNavigate = useMemo(() => {
+    return (
+      !isMobile && // Don't auto-navigate on mobile
+      location.pathname === '/songs' &&
+      !hasAutoNavigatedRef.current &&
+      !isLoading &&
+      !useCacheForSearch &&
+      !!firstSongId
+    );
+  }, [isMobile, location.pathname, isLoading, useCacheForSearch, firstSongId]);
+
+  // Auto-navigate to first song on initial load (only if we're on /songs exactly, not /songs/:id)
+  // Use useLayoutEffect to navigate synchronously before browser paints, preventing visual jump
+  useLayoutEffect(() => {
+    if (!shouldAutoNavigate) return;
+
+    hasAutoNavigatedRef.current = true;
+    // Use replace: true to avoid adding to history and prevent visual jump
+    navigate(`/songs/${firstSongId}`, { replace: true });
+  }, [shouldAutoNavigate, firstSongId, navigate]);
 
   // Calculate list height based on viewport
   const calculateListHeight = useCallback((viewportHeight: number) => {
@@ -81,8 +128,6 @@ export default function SongListPage() {
     }
   }, [error]);
 
-
-
   const handleExportZip = useCallback(async () => {
     // Prevent multiple clicks - debounce of 3 seconds
     const now = Date.now();
@@ -100,7 +145,7 @@ export default function SongListPage() {
     try {
       // Use React Query to fetch (will use cache if available)
       const blob = await exportZip.refetch();
-      
+
       if (blob.data) {
         const url = window.URL.createObjectURL(blob.data);
         const link = document.createElement('a');
@@ -134,10 +179,8 @@ export default function SongListPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: (theme) => 
-            theme.palette.mode === 'dark' 
-              ? 'rgba(26, 35, 50, 0.98)' 
-              : 'rgba(255, 255, 255, 0.98)',
+          backgroundColor: theme =>
+            theme.palette.mode === 'dark' ? 'rgba(26, 35, 50, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           zIndex: 9999,
           px: 3,
         }}
@@ -150,13 +193,13 @@ export default function SongListPage() {
             width: '100%',
             textAlign: 'center',
             bgcolor: 'background.paper',
-            boxShadow: (theme) =>
+            boxShadow: theme =>
               theme.palette.mode === 'dark'
                 ? '0 8px 32px rgba(0, 0, 0, 0.4)'
                 : '0 8px 32px rgba(0, 0, 0, 0.12)',
-            border: (theme) =>
-              theme.palette.mode === 'dark' 
-                ? '1px solid rgba(255, 255, 255, 0.12)' 
+            border: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.12)'
                 : '1px solid rgba(0, 0, 0, 0.08)',
             borderRadius: 2,
           }}
@@ -217,10 +260,10 @@ export default function SongListPage() {
                 opacity: 0.7,
                 transition: 'opacity 0.2s',
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.opacity = '1';
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.opacity = '0.7';
               }}
             >
@@ -232,20 +275,35 @@ export default function SongListPage() {
     );
   }
 
+  // Don't render content if we're about to auto-navigate (prevents visual jump)
+  if (shouldAutoNavigate) {
+    return null;
+  }
+
   return (
-    <Box sx={{ py: { xs: 1.5, sm: 2.5, md: 4 }, px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 }, position: 'relative', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, width: '100%' }}>
+    <Box
+      sx={{
+        py: { xs: 1.5, sm: 2.5, md: 4 },
+        px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 },
+        position: 'relative',
+        maxWidth: { xs: '100%', sm: '100%', md: '100%' },
+        width: '100%',
+      }}
+    >
       {/* Skeleton loading for list items - only show after debounce delay */}
       {showLoadingAnimation && isLoading && (
         <Paper
           elevation={0}
           sx={{
             bgcolor: 'background.paper',
-            boxShadow: (theme) =>
+            boxShadow: theme =>
               theme.palette.mode === 'dark'
                 ? '0 4px 16px rgba(0, 0, 0, 0.2)'
                 : '0 4px 16px rgba(0, 0, 0, 0.08)',
-            border: (theme) =>
-              theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+            border: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.05)',
             borderRadius: 2,
             overflow: 'hidden',
             animation: 'fadeIn 0.3s ease-in',
@@ -261,11 +319,11 @@ export default function SongListPage() {
         >
           <MuiList dense sx={{ py: 1 }}>
             {[...Array(10)].map((_, index) => (
-              <ListItem 
-                key={index} 
+              <ListItem
+                key={index}
                 disablePadding
                 sx={{
-                  borderBottom: (theme) =>
+                  borderBottom: theme =>
                     index < 9
                       ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
                       : 'none',
@@ -274,27 +332,33 @@ export default function SongListPage() {
                 <ListItemButton disabled sx={{ py: 1.5, px: 2 }}>
                   <ListItemText
                     primary={
-                      <Skeleton 
-                        variant="text" 
-                        width={index % 3 === 0 ? '70%' : index % 3 === 1 ? '55%' : '65%'} 
+                      <Skeleton
+                        variant="text"
+                        width={index % 3 === 0 ? '70%' : index % 3 === 1 ? '55%' : '65%'}
                         height={22}
                         animation="wave"
                         sx={{
-                          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                          bgcolor: theme =>
+                            theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.06)',
                           borderRadius: 0.5,
                         }}
                       />
                     }
                     secondary={
                       index % 3 === 0 ? (
-                        <Skeleton 
-                          variant="text" 
-                          width="45%" 
+                        <Skeleton
+                          variant="text"
+                          width="45%"
                           height={18}
                           animation="wave"
                           sx={{
                             mt: 0.5,
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                            bgcolor: theme =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.05)'
+                                : 'rgba(0, 0, 0, 0.04)',
                             borderRadius: 0.5,
                           }}
                         />
@@ -311,86 +375,108 @@ export default function SongListPage() {
       {/* Normal content when not loading */}
       {!showLoadingAnimation && (
         <>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
-        <Typography 
-          variant="h5" 
-          component="h1"
-          sx={{
-            fontWeight: 500,
-            fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
-          }}
-        >
-          Pieśni
-        </Typography>
-        <Box display="flex" gap={0.75} flexWrap="wrap">
-          {hasEditPermission && (
-            <Button
-              variant="outlined"
-              startIcon={isExporting || exportZip.isFetching ? <CircularProgress size={14} /> : <DownloadIcon />}
-              onClick={handleExportZip}
-              disabled={isExporting || exportZip.isFetching || !!error}
-              size="small"
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+            flexWrap="wrap"
+            gap={1}
+          >
+            <Typography
+              variant="h5"
+              component="h1"
               sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                px: { xs: 1, sm: 1.5 },
-                py: { xs: 0.5, sm: 0.75 },
-                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
-                color: (theme) => theme.palette.mode === 'dark' ? '#E8EAF6' : undefined,
-                '&:hover': {
-                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
-                  backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
-                },
+                fontWeight: 500,
+                fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
               }}
             >
-              {isExporting || exportZip.isFetching ? 'Eksportowanie...' : 'Eksportuj'}
-            </Button>
-          )}
-          {hasEditPermission && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/songs/new')}
-              disabled={!!error}
-              size="small"
-              sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                px: { xs: 1, sm: 1.5 },
-                py: { xs: 0.5, sm: 0.75 },
-              }}
-            >
-              Dodaj Pieśń
-            </Button>
-          )}
-        </Box>
-      </Box>
+              Pieśni
+            </Typography>
+            <Box display="flex" gap={0.75} flexWrap="wrap">
+              {hasEditPermission && (
+                <Button
+                  variant="outlined"
+                  startIcon={
+                    isExporting || exportZip.isFetching ? (
+                      <CircularProgress size={14} />
+                    ) : (
+                      <DownloadIcon />
+                    )
+                  }
+                  onClick={handleExportZip}
+                  disabled={isExporting || exportZip.isFetching || !!error}
+                  size="small"
+                  sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    px: { xs: 1, sm: 1.5 },
+                    py: { xs: 0.5, sm: 0.75 },
+                    borderColor: theme =>
+                      theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                    color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : undefined),
+                    '&:hover': {
+                      borderColor: theme =>
+                        theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                      backgroundColor: theme =>
+                        theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+                    },
+                  }}
+                >
+                  {isExporting || exportZip.isFetching ? 'Eksportowanie...' : 'Eksportuj'}
+                </Button>
+              )}
+              {hasEditPermission && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => navigate('/songs/new')}
+                  disabled={!!error}
+                  size="small"
+                  sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    px: { xs: 1, sm: 1.5 },
+                    py: { xs: 0.5, sm: 0.75 },
+                  }}
+                >
+                  Dodaj Pieśń
+                </Button>
+              )}
+            </Box>
+          </Box>
 
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          bgcolor: 'background.paper',
-          boxShadow: (theme) =>
-            theme.palette.mode === 'dark'
-              ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-              : '0 4px 16px rgba(0, 0, 0, 0.08)',
-          border: (theme) =>
-            theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
-        }}
-      >
-        <SongList
-          songs={displaySongs}
-          onSongClick={(songId) => navigate(`/songs/${songId}`)}
-          showSearch={true}
-          searchValue={search}
-          onSearchChange={setSearch}
-          isLoading={isLoading}
-          emptyMessage={cachedSongs && cachedSongs.length === 0 ? 'Nie znaleziono pieśni. Utwórz pierwszą pieśń!' : 'Nie znaleziono pieśni.'}
-          calculateHeight={calculateListHeight}
-        />
-      </Paper>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 1.5, sm: 2 },
+              bgcolor: 'background.paper',
+              boxShadow: theme =>
+                theme.palette.mode === 'dark'
+                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
+            }}
+          >
+            <SongList
+              songs={displaySongs}
+              onSongClick={songId => navigate(`/songs/${songId}`)}
+              currentSongId={firstSongId}
+              showSearch={true}
+              searchValue={search}
+              onSearchChange={setSearch}
+              isLoading={isLoading}
+              emptyMessage={
+                cachedSongs && cachedSongs.length === 0
+                  ? 'Nie znaleziono pieśni. Utwórz pierwszą pieśń!'
+                  : 'Nie znaleziono pieśni.'
+              }
+              calculateHeight={calculateListHeight}
+            />
+          </Paper>
         </>
       )}
     </Box>
   );
 }
-

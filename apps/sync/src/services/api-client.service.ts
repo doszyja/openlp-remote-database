@@ -23,7 +23,7 @@ export class ApiClientService {
     if (query?.page) params.append('page', query.page.toString());
     if (query?.limit) params.append('limit', query.limit.toString());
     if (query?.language) params.append('language', query.language);
-    if (query?.tags) query.tags.forEach((tag) => params.append('tags', tag));
+    if (query?.tags) query.tags.forEach(tag => params.append('tags', tag));
     if (query?.search) params.append('search', query.search);
     if (query?.sortBy) params.append('sortBy', query.sortBy);
     if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
@@ -64,4 +64,3 @@ export class ApiClientService {
     return allSongs;
   }
 }
-

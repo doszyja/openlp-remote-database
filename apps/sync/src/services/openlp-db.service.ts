@@ -102,10 +102,10 @@ export class OpenLPDatabaseService {
       const lyrics = this.formatSongLyrics(song);
       const searchTitle = (song as any).searchTitle || song.title.toLowerCase().trim();
       // Generate search_lyrics from verses (lowercase for searching)
-      const searchLyrics = (song as any).searchLyrics || (typeof song.verses === 'string' 
-        ? song.verses.toLowerCase().trim() 
-        : '');
-      
+      const searchLyrics =
+        (song as any).searchLyrics ||
+        (typeof song.verses === 'string' ? song.verses.toLowerCase().trim() : '');
+
       // Map MongoDB fields to OpenLP fields
       const alternateTitle = song.number || null;
       const copyright = (song as any).copyright || null;
@@ -178,12 +178,11 @@ export class OpenLPDatabaseService {
     return transaction();
   }
 
-
   /**
    * Format song lyrics for OpenLP format
    * OpenLP stores all verses in a single lyrics field with XML formatting
    * Format: <verse label="v1">text</verse>
-   * 
+   *
    * Verses are now stored as a single string in MongoDB (matching OpenLP's format).
    * We split by double newlines to get individual verses, then format as XML.
    */
@@ -201,7 +200,7 @@ export class OpenLPDatabaseService {
     if (versesString.trim()) {
       // Split by double newlines (paragraph breaks)
       const verseBlocks = versesString.split(/\n\n+/).filter(block => block.trim());
-      
+
       if (verseBlocks.length > 0) {
         // Each block becomes a verse (v1, v2, v3, etc.)
         verseBlocks.forEach((block, index) => {
@@ -257,4 +256,3 @@ export class OpenLPDatabaseService {
     this.db.close();
   }
 }
-

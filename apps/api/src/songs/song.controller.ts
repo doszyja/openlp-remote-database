@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
+import * as fs from 'fs';
 import { SongService } from './song.service';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
@@ -135,20 +136,20 @@ export class SongController {
     @Res() res: Response,
   ) {
     const archive = await this.songService.exportAllToZip();
-    
+
     const timestamp = new Date().toISOString().split('T')[0];
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="openlp-songs-${timestamp}.zip"`);
-    
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="openlp-songs-${timestamp}.zip"`,
+    );
+
     // Log audit trail for ZIP export
     const ipAddress = req.ip || req.socket.remoteAddress || undefined;
     const userAgent = req.get('user-agent') || undefined;
-    
-    this.auditLogService.log(
-      AuditLogAction.ZIP_EXPORT,
-      user.id,
-      user.username,
-      {
+
+    this.auditLogService
+      .log(AuditLogAction.ZIP_EXPORT, user.id, user.username, {
         discordId: user.discordId,
         metadata: {
           exportType: 'zip',
@@ -156,11 +157,13 @@ export class SongController {
         },
         ipAddress,
         userAgent,
-      },
-    ).catch(err => console.error('Failed to log ZIP export audit trail:', err));
-    
+      })
+      .catch((err) =>
+        console.error('Failed to log ZIP export audit trail:', err),
+      );
+
     archive.pipe(res);
-    
+
     // Handle archive errors
     archive.on('error', (err) => {
       console.error('Archive error:', err);
@@ -169,5 +172,76 @@ export class SongController {
       }
     });
   }
-}
 
+  @Get('export/sqlite')
+  @Public() // Public: Allow anonymous users to download SQLite database for sync
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 100 requests per minute
+  async exportToSqlite(@Res() res: Response) {
+    let sqlitePath: string | null = null;
+    try {
+      sqlitePath = await this.songService.exportToSqlite();
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const cacheMaxAge = 120; // 2 minutes in seconds
+      const expiresDate = new Date(Date.now() + cacheMaxAge * 1000);
+
+      // Set content headers
+      res.setHeader('Content-Type', 'application/x-sqlite3');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="songs-${timestamp}.sqlite"`,
+      );
+
+      // Set cache control headers
+      res.setHeader('Cache-Control', `public, max-age=${cacheMaxAge}, must-revalidate`);
+      res.setHeader('Expires', expiresDate.toUTCString());
+      
+      // Set ETag based on file modification time for cache validation
+      const stats = fs.statSync(sqlitePath);
+      const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
+      res.setHeader('ETag', etag);
+      
+      // Check If-None-Match header for cache validation
+      const ifNoneMatch = (res.req as any).headers['if-none-match'];
+      if (ifNoneMatch === etag) {
+        return res.status(304).end(); // Not Modified
+      }
+
+      // Stream the file
+      const fileStream = fs.createReadStream(sqlitePath);
+      fileStream.pipe(res);
+
+      // Clean up temporary file after streaming
+      // Don't delete if file is cached (will be reused within 1 minutes)
+      fileStream.on('end', () => {
+        if (sqlitePath && !this.songService.isCached(sqlitePath)) {
+          fs.unlink(sqlitePath, (err: any) => {
+            if (err) {
+              console.error('Failed to delete temporary SQLite file:', err);
+            }
+          });
+        }
+      });
+
+      fileStream.on('error', (err: any) => {
+        console.error('Error streaming SQLite file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Error exporting SQLite database' });
+        }
+        // Clean up on error
+        if (sqlitePath) {
+          fs.unlink(sqlitePath, () => {});
+        }
+      });
+    } catch (error) {
+      console.error('Error exporting to SQLite:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error exporting SQLite database' });
+      }
+      // Clean up on error
+      if (sqlitePath) {
+        fs.unlink(sqlitePath, () => {});
+      }
+    }
+  }
+}

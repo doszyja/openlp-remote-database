@@ -20,7 +20,7 @@ program
   .option('-d, --dry-run', 'Perform a dry run without making changes')
   .option('-v, --verbose', 'Enable verbose logging')
   .option('--force', 'Force sync even if already synced')
-  .action(async (options) => {
+  .action(async options => {
     try {
       const config = loadConfig();
       const logger = new Logger(options.verbose ? LogLevel.DEBUG : LogLevel.INFO);
@@ -95,7 +95,7 @@ program
   .command('list')
   .description('List all songs in OpenLP database')
   .option('-v, --verbose', 'Show detailed information')
-  .action(async (options) => {
+  .action(async options => {
     try {
       const config = loadConfig();
       const logger = new Logger(options.verbose ? LogLevel.DEBUG : LogLevel.INFO);

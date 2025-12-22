@@ -12,11 +12,19 @@ import {
   FormControlLabel,
   Button,
   Divider,
+  Alert,
 } from '@mui/material';
-import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-material';
+import {
+  Settings as SettingsIcon,
+  Close as CloseIcon,
+  Delete as DeleteIcon,
+} from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCachedSongs } from '../hooks/useCachedSongs';
+import { songsCache } from '../services/songs-cache';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNotification } from '../contexts/NotificationContext';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -25,7 +33,10 @@ export interface SettingsDialogRef {
 function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const { mode, toggleMode } = useTheme();
   const { isAuthenticated, user } = useAuth();
-  
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useNotification();
+  const [isClearingCache, setIsClearingCache] = useState(false);
+
   // Check if API is working using cached songs (no unnecessary requests)
   const { error: apiError } = useCachedSongs();
   const isApiError = !!apiError;
@@ -35,6 +46,37 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
     window.location.href = `${apiUrl}/auth/discord`;
   };
 
+  const handleClearCache = async () => {
+    if (
+      !window.confirm(
+        'Czy na pewno chcesz wyczyścić cache? Wszystkie zapisane pieśni zostaną usunięte z pamięci przeglądarki i będą pobrane ponownie z serwera.'
+      )
+    ) {
+      return;
+    }
+
+    setIsClearingCache(true);
+    try {
+      // Clear songs cache
+      songsCache.clearCache();
+
+      // Clear React Query cache for songs
+      queryClient.invalidateQueries({ queryKey: ['cached-songs'] });
+      queryClient.invalidateQueries({ queryKey: ['songs'] });
+      queryClient.removeQueries({ queryKey: ['cached-songs'] });
+      queryClient.removeQueries({ queryKey: ['songs'] });
+
+      showSuccess('Cache został wyczyszczony. Pieśni zostaną pobrane ponownie z serwera.');
+
+      // Refresh cache immediately
+      await songsCache.refreshCache();
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
+      showError('Nie udało się wyczyścić cache. Spróbuj ponownie.');
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
 
   return (
     <>
@@ -70,7 +112,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
                 onClick={handleDiscordLogin}
                 disabled={isApiError}
                 fullWidth
-                sx={{ 
+                sx={{
                   mt: 1,
                   color: 'primary.contrastText',
                   backgroundColor: 'primary.main',
@@ -119,10 +161,26 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
             }
             sx={{ width: '100%', alignItems: 'flex-start', m: 0 }}
           />
+
+          <Divider sx={{ my: 2 }} />
+
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleClearCache}
+            disabled={isClearingCache}
+            fullWidth
+            sx={{
+              mt: 1,
+            }}
+          >
+            {isClearingCache ? 'Czyszczenie...' : 'Wyczyść Cache'}
+          </Button>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button 
+        <Button
           onClick={onClose}
           sx={{
             color: 'text.primary',
@@ -155,10 +213,10 @@ const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
           <SettingsIcon />
         </IconButton>
       </Tooltip>
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
@@ -176,4 +234,3 @@ const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
 SettingsDialog.displayName = 'SettingsDialog';
 
 export default SettingsDialog;
-

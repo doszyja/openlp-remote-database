@@ -59,4 +59,3 @@ test('deletes a song from the detail page', async ({ page }) => {
   await expect(page.getByText('Pieśń została usunięta pomyślnie!')).toBeVisible();
   expect(mock.getLastDeletedId()).toBe('song-2');
 });
-

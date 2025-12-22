@@ -400,7 +400,7 @@
 ### Discord OAuth Flow
 
 1. **User Login**: User clicks login → Redirected to Discord OAuth
-2. **Backend Validation**: 
+2. **Backend Validation**:
    - Check if user is in Discord guild (server)
    - If in guild: Allow login, set `hasEditPermission` based on role presence
    - If not in guild: Reject login with error message

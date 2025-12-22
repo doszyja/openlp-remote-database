@@ -13,20 +13,25 @@
 Folder wtyczek OpenLP zależy od systemu operacyjnego:
 
 #### Windows
+
 ```
 %APPDATA%\OpenLP\plugins\
 ```
+
 Lub:
+
 ```
 C:\Users\<TwojaNazwaUżytkownika>\AppData\Roaming\OpenLP\plugins\
 ```
 
 #### Linux
+
 ```
 ~/.openlp/plugins/
 ```
 
 #### macOS
+
 ```
 ~/Library/Application Support/OpenLP/plugins/
 ```
@@ -38,12 +43,14 @@ C:\Users\<TwojaNazwaUżytkownika>\AppData\Roaming\OpenLP\plugins\
 **Opcja A: Użyj skryptu instalacyjnego (Zalecane)**
 
 #### Windows (PowerShell)
+
 ```powershell
 cd apps/openlp-plugin
 .\install-plugin.ps1
 ```
 
 #### Linux/macOS
+
 ```bash
 cd apps/openlp-plugin
 chmod +x install-plugin.sh
@@ -55,6 +62,7 @@ chmod +x install-plugin.sh
 Jeśli folder `plugins` nie istnieje, najpierw go utwórz:
 
 #### Windows
+
 ```powershell
 # Utwórz folder (jeśli nie istnieje)
 New-Item -ItemType Directory -Path "$env:APPDATA\OpenLP\plugins" -Force
@@ -64,6 +72,7 @@ Copy-Item -Recurse "apps\openlp-plugin\openlp_sync_plugin" "$env:APPDATA\OpenLP\
 ```
 
 #### Linux/macOS
+
 ```bash
 # Utwórz folder (jeśli nie istnieje)
 mkdir -p ~/.openlp/plugins  # Linux
@@ -105,6 +114,7 @@ Po instalacji powinieneś zobaczyć:
 ### Problem: Wtyczka nie pojawia się w liście wtyczek
 
 **Rozwiązanie**:
+
 - Sprawdź, czy folder wtyczki jest w prawidłowej lokalizacji
 - Sprawdź, czy wszystkie pliki są obecne (powinny być: `__init__.py`, `plugin.py`, `api_client.py`, `sync_service.py`, `settings_dialog.py`)
 - Sprawdź logi OpenLP pod kątem błędów
@@ -112,12 +122,14 @@ Po instalacji powinieneś zobaczyć:
 ### Problem: Błąd importu modułów Python
 
 **Rozwiązanie**:
+
 - Sprawdź, czy wszystkie pliki wtyczki zostały poprawnie skopiowane
 - Upewnij się, że używasz OpenLP 3.0+ z Pythonem 3.6+
 
 ### Problem: Nie można znaleźć bazy danych OpenLP
 
 **Rozwiązanie**:
+
 - W ustawieniach wtyczki ręcznie wskaż ścieżkę do pliku `songs.sqlite`
 - Typowe lokalizacje:
   - Windows: `%APPDATA%\OpenLP\songs.sqlite`
@@ -127,6 +139,7 @@ Po instalacji powinieneś zobaczyć:
 ### Problem: Błąd połączenia z API
 
 **Rozwiązanie**:
+
 - Sprawdź, czy URL API jest poprawny
 - Sprawdź, czy backend API jest uruchomiony
 - Sprawdź, czy klucz API (jeśli wymagany) jest poprawny
@@ -152,7 +165,7 @@ Aby zaktualizować wtyczkę:
 ## Wsparcie
 
 Jeśli masz problemy z instalacją, sprawdź:
+
 - Dokumentację główną: `apps/openlp-plugin/README.md`
 - Dokumentację techniczną: `docs/OPENLP_PLUGIN.md`
 - Logi OpenLP pod kątem błędów
-
