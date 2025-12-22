@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import type {
   ServicePlan,
   CreateServicePlanDto,
@@ -10,13 +11,16 @@ import type {
 } from '@openlp/shared';
 
 export function useServicePlans() {
+  const { isAuthenticated } = useAuth();
+
   return useQuery<ServicePlan[]>({
     queryKey: ['service-plans'],
     queryFn: () => api.servicePlans.getAll(),
+    enabled: isAuthenticated, // Only fetch when user is authenticated
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes (increased to reduce API calls)
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnMount: false, // Don't refetch on mount if data exists (only once after page load)
   });
 }
 

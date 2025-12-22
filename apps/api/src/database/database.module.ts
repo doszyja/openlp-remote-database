@@ -13,11 +13,10 @@ import {
   imports: [
     MongooseModule.forRoot(
       (() => {
-        // If DATABASE_URL is explicitly set and doesn't contain localhost, use it
-        if (
-          process.env.DATABASE_URL &&
-          !process.env.DATABASE_URL.includes('localhost')
-        ) {
+        // If DATABASE_URL is explicitly set, use it (even if it contains localhost)
+        // This ensures local development uses local database and production uses remote
+        if (process.env.DATABASE_URL) {
+          console.log('[Database] Using DATABASE_URL from environment');
           return process.env.DATABASE_URL;
         }
 
@@ -34,11 +33,13 @@ import {
 
         // If credentials are provided (not defaults), use auth
         // Otherwise, try without auth first (for existing volumes)
-        if (user && password && user !== '' && password !== '') {
-          return `mongodb://${user}:${password}@${host}:${port}/${db}?authSource=admin`;
-        } else {
-          return `mongodb://${host}:${port}/${db}`;
-        }
+        const constructedUrl =
+          user && password && user !== '' && password !== ''
+            ? `mongodb://${user}:${password}@${host}:${port}/${db}?authSource=admin`
+            : `mongodb://${host}:${port}/${db}`;
+
+        console.log('[Database] Constructed connection URL from env vars');
+        return constructedUrl;
       })(),
     ),
     MongooseModule.forFeature([

@@ -85,6 +85,9 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    sourcemap: true, // Generate sourcemaps for production builds
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -10,12 +10,12 @@ import {
   Switch,
   AppBar,
   Toolbar,
+  Avatar,
 } from '@mui/material';
 import {
   LibraryMusic as LibraryMusicIcon,
   Add as AddIcon,
   Help as HelpIcon,
-  History as HistoryIcon,
   DeveloperMode as DeveloperModeIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,10 +49,10 @@ export default function HomePage() {
     return false;
   });
 
-  // Get dev user type preference from localStorage, default to 'regular'
+  // Get dev user type preference from localStorage, default to 'admin' (test admin)
   const [devUserType, setDevUserType] = useState<'admin' | 'regular'>(() => {
     const stored = localStorage.getItem('dev-user-type');
-    return stored === 'admin' || stored === 'regular' ? stored : 'regular';
+    return stored === 'admin' || stored === 'regular' ? stored : 'admin';
   });
 
   const handleDiscordLogin = () => {
@@ -123,45 +123,13 @@ export default function HomePage() {
       >
         <Toolbar
           sx={{
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             alignItems: 'center',
             px: { xs: 1.5, sm: 2, md: 3 },
             py: { xs: 1, sm: 1.5 },
             gap: { xs: 1, sm: 2 },
           }}
         >
-          <Box sx={{ flex: 1, minWidth: 0, mr: { xs: 1, sm: 2 } }}>
-            <Typography
-              variant="h6"
-              component="h1"
-              sx={{
-                fontWeight: 300,
-                fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1rem', lg: '0.95rem' },
-                letterSpacing: { xs: 0.3, sm: 0.5, md: 0.6, lg: 0.5 },
-                color: 'text.primary',
-                fontFamily: '"Playfair Display", "Georgia", serif',
-                whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                lineHeight: 1.3,
-              }}
-            >
-              Pieśni Zborowe{' '}
-              <Typography
-                component="span"
-                sx={{
-                  fontWeight: 400,
-                  color: 'text.secondary',
-                  fontSize: { xs: '0.85rem', sm: '0.95rem', md: '0.85rem', lg: '0.8rem' },
-                  letterSpacing: { xs: 0.2, sm: 0.3, md: 0.25 },
-                  display: { xs: 'block', sm: 'inline' },
-                  ml: { xs: 0, sm: 1 },
-                  mt: { xs: 0.25, sm: 0 },
-                }}
-              >
-                - Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
-              </Typography>
-            </Typography>
-          </Box>
-
           {/* User Dropdown */}
           <Box
             sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
@@ -240,6 +208,106 @@ export default function HomePage() {
           overflow: 'auto', // Allow scrolling if content is too large
         }}
       >
+        {/* Main title */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: { xs: 'flex-start', sm: 'center', md: 'center' },
+            mb: { xs: 3, sm: 4, md: 5 },
+            textAlign: { xs: 'left', sm: 'center', md: 'center' },
+          }}
+        >
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: 300,
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem', lg: '3rem' },
+              letterSpacing: { xs: 0.3, sm: 0.5, md: 0.6 },
+              color: 'text.primary',
+              fontFamily: '"Playfair Display", "Georgia", serif',
+              mb: { xs: 1, sm: 1.5 },
+              lineHeight: 1.2,
+            }}
+          >
+            Pieśni Zborowe
+          </Typography>
+          <Typography
+            variant="h6"
+            component="p"
+            sx={{
+              fontWeight: 400,
+              color: 'text.secondary',
+              fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.2rem' },
+              letterSpacing: { xs: 0.2, sm: 0.3, md: 0.25 },
+              maxWidth: { xs: '100%', sm: '600px', md: '700px' },
+              lineHeight: 1.5,
+            }}
+          >
+            Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
+          </Typography>
+        </Box>
+
+        {/* Welcome message */}
+        {isAuthenticated && user?.username && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: { xs: 'flex-start', sm: 'center', md: 'center' },
+              mb: { xs: 2, sm: 2.5 },
+              gap: 1.5,
+            }}
+          >
+            <Typography
+              variant="h5"
+              component="h2"
+              sx={{
+                fontWeight: 400,
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.4rem' },
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}
+            >
+              Witaj,{' '}
+              <Box
+                component="span"
+                sx={{
+                  fontWeight: 500,
+                  color:
+                    user.username?.toLowerCase().includes('dev') ||
+                    user.username?.toLowerCase().includes('developer')
+                      ? 'text.secondary'
+                      : 'text.primary',
+                }}
+              >
+                {user.username}
+              </Box>
+            </Typography>
+            <Avatar
+              src={
+                user.avatar
+                  ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
+                  : undefined
+              }
+              sx={{
+                width: { xs: 24, sm: 32 },
+                height: { xs: 24, sm: 32 },
+                bgcolor: !user.avatar ? 'primary.main' : undefined,
+                color: !user.avatar ? 'primary.contrastText' : undefined,
+                fontSize: { xs: '1rem', sm: '1.1rem' },
+                fontWeight: 500,
+              }}
+            >
+              {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+            </Avatar>
+          </Box>
+        )}
+
         {/* Action cards */}
         <Stack
           spacing={2.5}
@@ -489,91 +557,6 @@ export default function HomePage() {
               onClick={e => {
                 e.stopPropagation();
                 navigate('/help');
-              }}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: { xs: '0.78rem', sm: '0.9rem' },
-                px: { xs: 0.5, sm: 1 },
-              }}
-            >
-              Zobacz
-            </Button>
-          </Box>
-
-          {/* Recent Changes compact info */}
-          <Box
-            onClick={() => navigate('/recent-changes')}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: { xs: 1.25, sm: 2 },
-              p: { xs: 1.25, sm: 2 },
-              borderRadius: 2,
-              bgcolor: theme =>
-                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#ffffff',
-              border: theme =>
-                theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.12)'
-                  : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: theme =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              '&:hover': {
-                transform: { xs: 'none', sm: 'translateY(-2px)' },
-                boxShadow: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
-                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
-              },
-            }}
-          >
-            <Box
-              sx={{
-                p: { xs: 0.6, sm: 0.9 },
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <HistoryIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
-            </Box>
-            <Box flex={1} minWidth={0}>
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                  mb: 0.25,
-                }}
-              >
-                Ostatnie zmiany
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  fontSize: { xs: '0.78rem', sm: '0.85rem' },
-                  lineHeight: 1.4,
-                }}
-              >
-                Szybki podgląd nowości i ulepszeń w aplikacji
-              </Typography>
-            </Box>
-            <Button
-              variant="text"
-              onClick={e => {
-                e.stopPropagation();
-                navigate('/recent-changes');
               }}
               sx={{
                 textTransform: 'none',
