@@ -11,9 +11,22 @@ import { AuditLogAction } from '../schemas/audit-log.schema';
 import { SongsVersionService } from './songs-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
+import {
+  createOpenLPSqliteDatabase,
+} from './utils/sqlite-export.util';
+import * as fs from 'fs';
+
+interface SqliteCacheEntry {
+  filePath: string;
+  timestamp: number;
+}
 
 @Injectable()
 export class SongService {
+  // Cache for SQLite export (1 minutes TTL)
+  private sqliteCache: SqliteCacheEntry | null = null;
+  private readonly SQLITE_CACHE_TTL = 1 * 60 * 1000; // 2 minutes in milliseconds
+
   constructor(
     @InjectModel(Song.name) private songModel: Model<SongDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
@@ -531,5 +544,111 @@ export class SongService {
     archive.finalize();
 
     return archive;
+  }
+
+  /**
+   * Export all songs to OpenLP SQLite database file
+   * Returns the path to the temporary SQLite file
+   * Uses cache with 2 minutes TTL to avoid regenerating the same file
+   */
+  async exportToSqlite(): Promise<string> {
+    // Check cache first
+    const now = Date.now();
+    if (
+      this.sqliteCache &&
+      now - this.sqliteCache.timestamp < this.SQLITE_CACHE_TTL
+    ) {
+      // Check if cached file still exists
+      if (fs.existsSync(this.sqliteCache.filePath)) {
+        return this.sqliteCache.filePath;
+      } else {
+        // File was deleted, clear cache
+        this.sqliteCache = null;
+      }
+    }
+
+    // Cache expired or doesn't exist, generate new file
+    // Fetch all non-deleted songs
+    const songs = await this.songModel
+      .find({ deletedAt: null })
+      .populate('tags', 'name')
+      .lean()
+      .exec();
+
+    // Transform songs to match expected format for SQLite export
+    const transformedSongs: any[] = songs.map((song: any) => {
+      // Convert verses array to string for backward compatibility
+      let versesString = '';
+      let versesArray: Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+      }> = [];
+
+      if (Array.isArray(song.verses) && song.verses.length > 0) {
+        // Sort by order
+        const sortedVerses = [...song.verses].sort(
+          (a: any, b: any) => a.order - b.order,
+        );
+        versesArray = sortedVerses.map((v: any) => ({
+          order: v.order,
+          content: v.content,
+          label: v.label,
+          originalLabel: v.originalLabel,
+        }));
+        versesString = sortedVerses.map((v: any) => v.content).join('\n\n');
+      } else if (typeof song.verses === 'string') {
+        versesString = song.verses;
+      }
+
+      return {
+        id: song._id.toString(),
+        title: song.title || '',
+        number: song.number || null,
+        language: song.language || 'en',
+        verses: versesString, // String format for SQLite export utility
+        versesArray: versesArray.length > 0 ? versesArray : undefined,
+        verseOrder: song.verseOrder || null,
+        lyricsXml: song.lyricsXml || null,
+        tags: (song.tags || []).map((tag: any) => ({
+          id: tag._id?.toString() || tag.toString(),
+          name: tag.name || tag,
+        })),
+        copyright: song.copyright || null,
+        comments: song.comments || null,
+        ccliNumber: song.ccliNumber || null,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        createdAt: (song as any).createdAt || new Date(),
+        updatedAt: (song as any).updatedAt || new Date(),
+        deletedAt: null,
+      };
+    });
+
+    // Create SQLite database
+    const sqlitePath = await createOpenLPSqliteDatabase(transformedSongs);
+
+    // Update cache
+    this.sqliteCache = {
+      filePath: sqlitePath,
+      timestamp: now,
+    };
+
+    return sqlitePath;
+  }
+
+  /**
+   * Check if a file path is currently cached
+   * Used to determine if file should be kept after streaming
+   */
+  isCached(filePath: string): boolean {
+    if (!this.sqliteCache) {
+      return false;
+    }
+    const now = Date.now();
+    const isCacheValid =
+      now - this.sqliteCache.timestamp < this.SQLITE_CACHE_TTL;
+    return isCacheValid && this.sqliteCache.filePath === filePath;
   }
 }

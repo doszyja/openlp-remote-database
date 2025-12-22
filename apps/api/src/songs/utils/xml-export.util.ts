@@ -325,13 +325,9 @@ export function generateSongXml(song: {
     xmlParts.push(`        <verseOrder>${escapeXml(verseOrderString)}</verseOrder>`);
   }
 
-  // Add authors (use comments or default)
+  // Add authors (always use "Nieznany" to match SQLite default author)
   xmlParts.push('        <authors>');
-  if (song.comments) {
-    xmlParts.push(`            <author>${escapeXml(song.comments)}</author>`);
-  } else {
-    xmlParts.push('            <author>Nieznany</author>');
-  }
+  xmlParts.push('            <author>Nieznany</author>');
   xmlParts.push('        </authors>');
 
   // Add songbooks from tags
