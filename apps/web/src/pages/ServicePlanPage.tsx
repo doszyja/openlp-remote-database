@@ -1106,8 +1106,14 @@ export default function ServicePlanPage() {
       );
     }
 
+    // Handle verses - backend returns it as string for backward compatibility
+    // But it can also be an array in some cases, so we need to handle both
+    const versesInput = Array.isArray(song.verses)
+      ? song.verses.map(v => ({ ...v, label: v.label ?? null }))
+      : song.verses || '';
+
     const parsedVerses = parseVerses(
-      song.verses?.map(v => ({ ...v, label: v.label ?? null })) ?? null,
+      versesInput,
       song.verseOrder || null,
       song.lyricsXml || null,
       song.versesArray?.map(

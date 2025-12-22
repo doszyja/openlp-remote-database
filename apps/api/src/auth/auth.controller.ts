@@ -18,15 +18,25 @@ export class AuthController {
     console.log('[devLogin] Dev login endpoint called');
     console.log('[devLogin] NODE_ENV:', process.env.NODE_ENV);
 
-    // Only allow in development mode
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Only allow in development mode (block only if explicitly production)
+    // In dev, NODE_ENV might be undefined or 'development', both are fine
     if (process.env.NODE_ENV === 'production') {
-      console.log('[devLogin] Blocked: Production mode');
-      return res.status(403).json({
-        message: 'Dev authentication is only available in development mode',
-      });
+      console.log('[devLogin] Blocked: Production mode detected');
+      const errorMessage =
+        'Dev authentication is only available in development mode';
+      return res.redirect(
+        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+      );
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    console.log(
+      '[devLogin] Allowed: Development mode (NODE_ENV:',
+      process.env.NODE_ENV || 'undefined',
+      ')',
+    );
+
     console.log('[devLogin] Frontend URL:', frontendUrl);
 
     // Get user type from query parameter (admin or regular, default to regular)

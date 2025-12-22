@@ -206,6 +206,32 @@ server {
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
     }
+
+    # WebSocket - forward /ws/* to http://localhost:3000/ws/*
+    # WebSocket requires special proxy configuration with Upgrade and Connection headers
+    location /ws {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade headers (required for WebSocket to work)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for WebSocket
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+
+        # WebSocket timeouts (longer than regular HTTP)
+        proxy_read_timeout 86400s;  # 24 hours
+        proxy_send_timeout 86400s;  # 24 hours
+        proxy_connect_timeout 75s;
+    }
 }
 ```
 
@@ -267,6 +293,32 @@ server {
 
         # Increase timeout for long-running requests
         proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+
+    # WebSocket - forward /ws/* to http://localhost:3000/ws/*
+    # WebSocket requires special proxy configuration with Upgrade and Connection headers
+    location /ws {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade headers (required for WebSocket to work)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for WebSocket
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+
+        # WebSocket timeouts (longer than regular HTTP)
+        proxy_read_timeout 86400s;  # 24 hours
+        proxy_send_timeout 86400s;  # 24 hours
         proxy_connect_timeout 75s;
     }
 }

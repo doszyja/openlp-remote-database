@@ -101,6 +101,32 @@ server {
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
     }
+
+    # WebSocket - forward /ws/* to http://localhost:3000/ws/*
+    # WebSocket requires special proxy configuration with Upgrade and Connection headers
+    location /ws {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade headers (required for WebSocket to work)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for WebSocket
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+
+        # WebSocket timeouts (longer than regular HTTP)
+        proxy_read_timeout 86400s;  # 24 hours
+        proxy_send_timeout 86400s;  # 24 hours
+        proxy_connect_timeout 75s;
+    }
 }
 ```
 
@@ -164,6 +190,32 @@ server {
         proxy_read_timeout 300s;
         proxy_connect_timeout 75s;
     }
+
+    # WebSocket - forward /ws/* to http://localhost:3000/ws/*
+    # WebSocket requires special proxy configuration with Upgrade and Connection headers
+    location /ws {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade headers (required for WebSocket to work)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for WebSocket
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+
+        # WebSocket timeouts (longer than regular HTTP)
+        proxy_read_timeout 86400s;  # 24 hours
+        proxy_send_timeout 86400s;  # 24 hours
+        proxy_connect_timeout 75s;
+    }
 }
 ```
 
@@ -225,3 +277,52 @@ If you prefer to strip the prefix in nginx, you would need to:
 2. Use `location /api/ { proxy_pass http://localhost:3000/; }` in nginx
 
 But the recommended approach is to keep the prefix in NestJS and forward it through nginx.
+
+## Problem: WebSocket connection fails in Docker
+
+When the application is built and running in Docker, WebSocket connections to `/ws/service-plans` fail to connect.
+
+### Solution: Add WebSocket proxy configuration to Nginx
+
+WebSocket requires special proxy configuration with `Upgrade` and `Connection` headers. Add the following `location /ws` block to your Nginx configuration:
+
+```nginx
+# WebSocket - forward /ws/* to http://localhost:3000/ws/*
+location /ws {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+
+    # WebSocket upgrade headers (required for WebSocket to work)
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    # Standard proxy headers
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Disable buffering for WebSocket
+    proxy_buffering off;
+    proxy_cache_bypass $http_upgrade;
+
+    # WebSocket timeouts (longer than regular HTTP)
+    proxy_read_timeout 86400s;  # 24 hours
+    proxy_send_timeout 86400s;  # 24 hours
+    proxy_connect_timeout 75s;
+}
+```
+
+### Key Points for WebSocket Configuration
+
+- **`proxy_set_header Upgrade $http_upgrade`** - Required for WebSocket upgrade handshake
+- **`proxy_set_header Connection "upgrade"`** - Required for WebSocket upgrade handshake
+- **`proxy_buffering off`** - Disables buffering for real-time WebSocket communication
+- **Long timeouts** - WebSocket connections can stay open for hours, so timeouts are set to 24 hours
+- **Place before `/api` location** - More specific locations should come first, but `/ws` and `/api` don't conflict
+
+After adding this configuration:
+
+1. Test the configuration: `sudo nginx -t`
+2. Reload nginx: `sudo systemctl reload nginx`
+3. Verify WebSocket connection works in the browser console

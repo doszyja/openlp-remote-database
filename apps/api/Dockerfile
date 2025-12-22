@@ -68,7 +68,8 @@ ENV NODE_PATH=/app/node_modules:/app/apps/api/node_modules
 # Keep working directory at root for pnpm workspace resolution
 WORKDIR /app
 
-# Expose port
+# Expose port 3000 for HTTP API and WebSocket connections
+# WebSocket connections use the same port via HTTP upgrade
 EXPOSE 3000
 
 # Health check (use pnpm exec to ensure proper module resolution)

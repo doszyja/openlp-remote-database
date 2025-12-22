@@ -147,7 +147,7 @@ export default function SongForm({
         } catch (error) {
           console.error('Error parsing verse order:', error);
           // Fallback to source verses in order
-          executionVerses = validSourceVerses.map((v) => ({
+          executionVerses = validSourceVerses.map(v => ({
             order: v.order,
             content: v.content,
             label: v.label ?? null,
@@ -157,7 +157,7 @@ export default function SongForm({
         }
       } else {
         // No order string, use source verses in their order
-        executionVerses = validSourceVerses.map((v) => ({
+        executionVerses = validSourceVerses.map(v => ({
           order: v.order,
           content: v.content,
           label: v.label ?? null,

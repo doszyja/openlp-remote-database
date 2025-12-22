@@ -443,7 +443,8 @@ export class AuthService {
     userAgent?: string,
     userType: 'admin' | 'regular' = 'regular',
   ): Promise<{ access_token: string; user: UserResponseDto }> {
-    // Only allow in development
+    // Only allow in development (block only if explicitly production)
+    // In dev, NODE_ENV might be undefined or 'development', both are fine
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Dev login is only available in development mode');
     }

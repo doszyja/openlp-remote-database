@@ -27,6 +27,12 @@ export default function AuthCallbackPage() {
       ) {
         message =
           'Nie masz uprawnień do tego, aby zalogować się do tej strony i móc edytować oraz usuwać pieśni. Skontaktuj się z administratorem, aby uzyskać dostęp.';
+      } else if (
+        decodedError.includes('Dev authentication is only available') ||
+        decodedError.includes('Dev login is only available')
+      ) {
+        message =
+          'Logowanie deweloperskie jest dostępne tylko w trybie deweloperskim. W produkcji użyj logowania przez Discord.';
       } else {
         message = `Uwierzytelnienie nie powiodło się: ${decodedError}`;
       }
