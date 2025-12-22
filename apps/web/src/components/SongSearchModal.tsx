@@ -45,10 +45,6 @@ const SearchModalRow = memo(
     };
   }) => {
     const song = data.songs[index];
-    if (!song) return null;
-
-    const displayTitle = song.number ? `${song.title} (${song.number})` : song.title;
-    const isSelected = song.id === data.currentSongId;
     const isFocused = data.selectedIndex === index;
     const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -59,21 +55,22 @@ const SearchModalRow = memo(
 
     // Focus button when this item is selected
     useEffect(() => {
-      if (isFocused && buttonRef.current) {
+      if (isFocused && buttonRef.current && song) {
         // Find the focusable element inside (button or div)
         const focusableElement = buttonRef.current.querySelector('button') || buttonRef.current;
         if (focusableElement && typeof (focusableElement as HTMLElement).focus === 'function') {
           (focusableElement as HTMLElement).focus();
         }
       }
-    }, [isFocused]);
+    }, [isFocused, song]);
 
     const handleActivate = useCallback(() => {
+      if (!song) return;
       if (data.onSongClick) {
         data.onSongClick(song.id);
         data.onClose();
       }
-    }, [song.id, data]);
+    }, [song, data]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -97,6 +94,11 @@ const SearchModalRow = memo(
       },
       [handleActivate, index, data]
     );
+
+    if (!song) return null;
+
+    const displayTitle = song.number ? `${song.title} (${song.number})` : song.title;
+    const isSelected = song.id === data.currentSongId;
 
     return (
       <div style={style} data-song-index={index}>
@@ -204,15 +206,26 @@ export default function SongSearchModal({
   }, [open]);
 
   // Filter songs based on search (memoized to prevent unnecessary recalculations)
+  // Search in title, number, and lyrics (searchLyrics field)
   const filteredSongs = useMemo(() => {
     if (!searchValue.trim()) {
       return [];
     }
     const searchLower = searchValue.toLowerCase();
     return songs.filter(song => {
-      const title = song.title?.toLowerCase() || '';
+      // Search in title (use searchTitle if available for faster matching)
+      const title = (song as any).searchTitle || song.title?.toLowerCase() || '';
+      const matchesTitle = title.includes(searchLower) || song.title?.toLowerCase().includes(searchLower);
+      
+      // Search in number
       const number = song.number?.toLowerCase() || '';
-      return title.includes(searchLower) || number.includes(searchLower);
+      const matchesNumber = number.includes(searchLower);
+      
+      // Search in lyrics (use searchLyrics if available for faster matching)
+      const lyrics = (song as any).searchLyrics || '';
+      const matchesLyrics = lyrics && lyrics.includes(searchLower);
+      
+      return matchesTitle || matchesNumber || matchesLyrics;
     });
   }, [songs, searchValue]);
 
@@ -391,7 +404,7 @@ export default function SongSearchModal({
             <Paper
               elevation={0}
               sx={{
-                border: (theme: any) =>
+                border: theme =>
                   theme.palette.mode === 'dark'
                     ? '1px solid rgba(255, 255, 255, 0.1)'
                     : '1px solid rgba(0, 0, 0, 0.1)',

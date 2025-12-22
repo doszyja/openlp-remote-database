@@ -22,7 +22,7 @@ export class SongService {
   ) {}
 
   async create(createSongDto: CreateSongDto) {
-    const { verses, tags, ...songData } = createSongDto;
+    const { verses, tags, verseOrder, ...songData } = createSongDto;
 
     // Create or get tags
     const tagIds: string[] = [];
@@ -57,7 +57,7 @@ export class SongService {
       ...songData,
       language: songData.language || 'en',
       verses: sortedVerses, // Store as array with order preserved
-      // verseOrder (string) is stored directly from OpenLP if provided in songData
+      verseOrder: verseOrder || null, // verseOrder (string) from DTO or null
       // lyricsXml (string) is stored directly from SQLite lyrics column (1:1 transparent)
       tags: tagIds,
       searchTitle, // Auto-generate from title
@@ -248,7 +248,7 @@ export class SongService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const { verses, tags, ...songData } = updateSongDto;
+    const { verses, tags, verseOrder, ...songData } = updateSongDto;
 
     // Check if song exists
     const existing = await this.songModel.findOne({ _id: id, deletedAt: null });
@@ -263,6 +263,11 @@ export class SongService {
       updateData.searchTitle = songData.title.toLowerCase().trim();
     }
 
+    // Handle verseOrder - use from DTO if provided, otherwise generate from verses
+    if (verseOrder !== undefined) {
+      updateData.verseOrder = verseOrder || null;
+    }
+
     // Handle verses - now an array of objects with order
     // Also regenerate search_lyrics when verses change
     if (verses !== undefined) {
@@ -270,8 +275,10 @@ export class SongService {
         // Sort verses by order to ensure correct sequence
         const sortedVerses = [...verses].sort((a, b) => a.order - b.order);
         updateData.verses = sortedVerses;
-        // Extract verse_order array for direct storage
-        updateData.verseOrder = sortedVerses.map((v) => v.order);
+        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
+        if (verseOrder === undefined) {
+          updateData.verseOrder = sortedVerses.map((v) => v.order);
+        }
         // Generate search_lyrics from verse content
         const versesString = sortedVerses.map((v) => v.content).join('\n\n');
         updateData.searchLyrics = versesString.toLowerCase().trim();
@@ -286,7 +293,10 @@ export class SongService {
           content: content.trim(),
         }));
         updateData.verses = convertedVerses;
-        updateData.verseOrder = convertedVerses.map((v) => v.order);
+        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
+        if (verseOrder === undefined) {
+          updateData.verseOrder = convertedVerses.map((v) => v.order);
+        }
         updateData.searchLyrics = (verses as string).toLowerCase().trim();
       }
     }
@@ -432,7 +442,7 @@ export class SongService {
     const songs = await this.songModel
       .find({ deletedAt: null })
       .select(
-        'title number language tags searchTitle searchLyrics chorus verses verseOrder lyricsXml',
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml',
       )
       .populate('tags', 'name')
       .sort({ title: 1 })
@@ -499,6 +509,7 @@ export class SongService {
       number: song.number || null,
       language: song.language || 'en',
       verses: typeof song.verses === 'string' ? song.verses : song.verses || '',
+      verseOrder: song.verseOrder || null, // verse_order string for OpenLyrics format
       lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       tags: (song.tags || []).map((tag: any) => ({
         id: tag._id?.toString() || tag.toString(),

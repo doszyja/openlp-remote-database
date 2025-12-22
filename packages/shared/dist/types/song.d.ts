@@ -1,19 +1,32 @@
 /**
  * Base song type matching MongoDB schema with OpenLP compatibility
  *
- * Note: verses is stored as a single string field (matching OpenLP's lyrics format).
- * The frontend can visually split this for editing, but it's stored as one field.
+ * Note: verses is stored as an array of verse objects (includes chorus, bridge, etc. as verse objects with type labels).
+ * The verseOrder string dictates the display sequence and repetitions.
+ * The lyricsXml field preserves the exact XML from SQLite for 1:1 transparency.
  */
 export interface Song {
     id: string;
     title: string;
     number: string | null;
     language: string;
-    chorus: string | null;
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
-    verses: string;
+    verses: Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+    }>;
+    versesArray?: Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+    }>;
+    verseOrder?: string | null;
+    lyricsXml?: string | null;
     tags: Tag[];
     copyright?: string | null;
     comments?: string | null;

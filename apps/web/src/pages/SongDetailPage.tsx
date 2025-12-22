@@ -22,6 +22,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -29,6 +31,7 @@ import {
   Slideshow as SlideshowIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useDeleteSong } from '../hooks';
@@ -48,11 +51,14 @@ import {
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { hasEditPermission, isAuthenticated } = useAuth();
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [_isFullscreen, _setIsFullscreen] = useState(false);
+  const isFullscreen = false; // Always false for now
   const [isServiceView, setIsServiceView] = useState(false); // Default to false, only enabled for authenticated users
   const [search, setSearch] = useState('');
   const [showLoading, setShowLoading] = useState(false);
@@ -88,16 +94,16 @@ export default function SongDetailPage() {
   const song = useMemo(() => {
     if (!id) return null;
     return songsCache.getSongById(id);
-  }, [id, allCachedSongs]);
+  }, [id]);
 
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {
     if (!song) return [];
     return parseVerses(
       song.verses,
-      (song as any).verseOrder || null,
-      (song as any).lyricsXml || null,
-      (song as any).versesArray || null
+      song.verseOrder || null,
+      song.lyricsXml || null,
+      song.versesArray || null
     );
   }, [song]);
 
@@ -310,6 +316,7 @@ export default function SongDetailPage() {
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/songs/${id}/edit`)}
                   size="small"
+                  style={{marginRight: 8}}
                   sx={{
                     fontSize: { xs: '0.75rem', sm: '0.875rem' },
                     px: { xs: 1, sm: 1.5 },
@@ -430,17 +437,11 @@ export default function SongDetailPage() {
                     <Typography
                       variant="caption"
                       sx={{
-                        position: 'absolute',
-                        top: -8,
-                        left: 8,
-                        zIndex: 1,
+                        position: 'relative',
+                        mb: 0.5,
                         color: 'text.secondary',
                         fontSize: '0.65rem',
                         fontWeight: 500,
-                        bgcolor: 'background.paper',
-                        px: 0.5,
-                        py: 0.25,
-                        borderRadius: 0.5,
                         lineHeight: 1,
                       }}
                     >
@@ -466,7 +467,7 @@ export default function SongDetailPage() {
                         sx={{
                           whiteSpace: 'pre-line',
                           lineHeight: 1.8,
-                          fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
+                          fontSize: { xs: '1.04rem', sm: '1.09rem', md: '1.14rem' },
                         }}
                       >
                         {verse.content}
@@ -492,13 +493,13 @@ export default function SongDetailPage() {
   ]);
 
   // Calculate list height for SongDetailPage - use full available height
-  const calculateListHeight = useCallback((viewportHeight: number) => {
-    // Account for header, search box, and padding
-    const headerHeight = 60;
-    const searchHeight = 120;
-    const padding = 40;
-    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
-    // Use full viewport height minus minimal overhead for better space utilization
+  // Note: viewportHeight is now the container height, not window.innerHeight
+  const calculateListHeight = useCallback((containerHeight: number) => {
+    // Container height already accounts for available space, just subtract minimal padding
+    // Search input height is already handled in SongList component
+    const padding = 20; // Minimal padding for visual spacing
+    const calculatedHeight = containerHeight - padding;
+    // Use full container height minus minimal overhead
     return Math.max(300, calculatedHeight);
   }, []);
 
@@ -506,11 +507,39 @@ export default function SongDetailPage() {
   const activeSong = isAuthenticated ? activeSongData?.song : null;
   const activeSongVerses = useMemo(() => {
     if (!isAuthenticated || !activeSong) return [];
+    // Normalize verses to convert undefined labels to null (parseVerses expects label: string | null when verses is an array)
+    const normalizedVerses: string | Array<{
+      order: number;
+      content: string;
+      label: string | null;
+      originalLabel?: string;
+    }> = typeof activeSong.verses === 'string'
+      ? activeSong.verses
+      : activeSong.verses.map(v => ({
+          order: v.order,
+          content: v.content,
+          label: v.label ?? null,
+          originalLabel: v.originalLabel,
+        }));
+    // Normalize versesArray to convert undefined labels to null
+    const normalizedVersesArray: Array<{
+      order: number;
+      content: string;
+      label?: string;
+      originalLabel?: string;
+    }> | null = activeSong.versesArray
+      ? activeSong.versesArray.map(v => ({
+          order: v.order,
+          content: v.content,
+          label: v.label,
+          originalLabel: v.originalLabel,
+        }))
+      : null;
     const parsed = parseVerses(
-      activeSong.verses,
+      normalizedVerses,
       activeSong.verseOrder || null,
-      (activeSong as any).lyricsXml || null,
-      (activeSong as any).versesArray || null
+      activeSong.lyricsXml || null,
+      normalizedVersesArray
     ).filter(v => v.content && v.content.trim());
     const allContent = parsed.map((v, idx) => ({
       type: v.type || 'verse',
@@ -825,7 +854,7 @@ export default function SongDetailPage() {
               sx={{
                 whiteSpace: 'pre-line',
                 lineHeight: 1.8,
-                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                fontSize: { xs: '1.1rem', sm: '1.2rem', md: '1.35rem' },
               }}
             >
               {currentVerse?.content}
@@ -879,6 +908,30 @@ export default function SongDetailPage() {
         overflowX: 'hidden',
       }}
     >
+      {/* Mobile back button */}
+      {isMobile && (
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/songs')}
+          variant="outlined"
+          size="small"
+          sx={{
+            mb: 2,
+            borderColor: theme =>
+              theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+            color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
+            '&:hover': {
+              borderColor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: theme =>
+                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            },
+            display: { xs: 'flex', sm: 'none' },
+          }}
+        >
+          Wstecz
+        </Button>
+      )}
       {isAuthenticated && isServiceView ? (
         // Service view: 3-column layout
         <Box

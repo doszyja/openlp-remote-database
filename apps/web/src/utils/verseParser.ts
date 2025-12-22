@@ -625,23 +625,33 @@ export function getVerseDisplayLabel(verse: ParsedVerse, index: number): string 
       return `Verse ${num}`;
     }
     if (label.startsWith('c')) {
-      return 'Chorus';
+      const num = label.slice(1);
+      return num ? `Chorus ${num}` : 'Chorus';
     }
     if (label.startsWith('b')) {
       const num = label.slice(1) || '';
       return num ? `Bridge ${num}` : 'Bridge';
     }
     if (label.startsWith('p')) {
-      return 'Pre-Chorus';
+      const num = label.slice(1);
+      return num ? `Pre-Chorus ${num}` : 'Pre-Chorus';
     }
     if (label.startsWith('t')) {
-      return 'Tag';
+      const num = label.slice(1);
+      return num ? `Tag ${num}` : 'Tag';
     }
     return verse.label;
   }
 
   // PRIORITY 3: Default labels based on type
   if (verse.type === 'chorus') {
+    // Try to extract number from originalLabel if available
+    if (verse.originalLabel) {
+      const numMatch = verse.originalLabel.toLowerCase().match(/\d+/);
+      if (numMatch) {
+        return `Chorus ${numMatch[0]}`;
+      }
+    }
     return 'Chorus';
   }
   if (verse.type === 'bridge') {
@@ -677,6 +687,62 @@ export function getVerseTypePrefix(type?: ParsedVerse['type']): string {
 }
 
 /**
+ * Normalize verse identifier to standard format (v1, c1, b1, p1, t1)
+ * This function ensures that verse identifiers are always in the correct format
+ * for validation and matching purposes.
+ *
+ * @param sourceId - Optional source identifier (e.g., "v1", "c1")
+ * @param label - Optional label (e.g., "v1", "Verse 1", "Chorus 1")
+ * @param type - Verse type (verse, chorus, bridge, pre-chorus, tag)
+ * @param order - Verse order number
+ * @returns Normalized identifier in format v1, c1, etc.
+ */
+export function normalizeVerseIdentifier(
+  sourceId: string | undefined,
+  label: string | null | undefined,
+  type: 'verse' | 'chorus' | 'bridge' | 'pre-chorus' | 'tag' | undefined,
+  order: number
+): string {
+  // PRIORITY 1: Use sourceId if available (already in format v1, c1, etc.)
+  if (sourceId) {
+    const sourceIdLower = sourceId.toLowerCase();
+    // Ensure it's in correct format (v1, c1, etc.)
+    const match = sourceIdLower.match(/^([vcbpt])(\d+)$/);
+    if (match) {
+      return sourceIdLower;
+    }
+    // If sourceId doesn't match format, extract number and rebuild
+    const numMatch = sourceIdLower.match(/\d+/);
+    if (numMatch) {
+      const prefix = getVerseTypePrefix(type);
+      return `${prefix}${numMatch[0]}`;
+    }
+  }
+
+  // PRIORITY 2: Extract from label if it matches format (e.g., "v1", "c1")
+  if (label) {
+    const labelLower = label.toLowerCase();
+    const prefix = getVerseTypePrefix(type);
+    // Check if label starts with prefix (e.g., "c1", "v2")
+    if (labelLower.startsWith(prefix)) {
+      const numMatch = labelLower.match(/\d+/);
+      if (numMatch) {
+        return `${prefix}${numMatch[0]}`;
+      }
+    }
+    // Extract number from readable label (e.g., "Verse 1" -> "1")
+    const numMatch = labelLower.match(/\d+/);
+    if (numMatch) {
+      return `${prefix}${numMatch[0]}`;
+    }
+  }
+
+  // PRIORITY 3: Generate from type and order
+  const prefix = getVerseTypePrefix(type);
+  return `${prefix}${order}`;
+}
+
+/**
  * Generate verse order string like "v1 c1 v2 c1 v3 c1 v4 c1"
  * This represents the visual order of verses for editing
  * Uses originalLabel if available (for logic), otherwise falls back to label or order
@@ -689,15 +755,16 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
 
       // PRIORITY 1: Use originalLabel if available (e.g., "v1", "c1") - this is the source of truth
       if (v.originalLabel) {
-        const originalLabelLower = v.originalLabel.toLowerCase();
+        const originalLabelLower = v.originalLabel.toLowerCase().trim();
         // Check if originalLabel matches the prefix (e.g., "c1", "v2")
         if (originalLabelLower.startsWith(prefix)) {
-          const numFromOriginalLabel = originalLabelLower.slice(prefix.length);
+          const numFromOriginalLabel = originalLabelLower.slice(prefix.length).trim();
           if (numFromOriginalLabel) {
             return `${prefix}${numFromOriginalLabel}`;
           }
         }
         // If originalLabel doesn't match prefix, extract number from it
+        // This handles cases like "verse 1", "chorus 1", etc.
         const numMatch = originalLabelLower.match(/\d+/);
         if (numMatch) {
           return `${prefix}${numMatch[0]}`;
@@ -705,13 +772,14 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
       }
 
       // PRIORITY 2: Extract number from label if available (e.g., "c1" -> "1", "v2" -> "2")
+      // Handle both short format (v1, c1) and readable format (Verse 1, Chorus 1)
       // Otherwise use order
       let number: string | number;
       if (v.label) {
-        const labelLower = v.label.toLowerCase();
+        const labelLower = v.label.toLowerCase().trim();
         // Check if label starts with the prefix (e.g., "c1", "v2")
         if (labelLower.startsWith(prefix)) {
-          const numFromLabel = labelLower.slice(prefix.length);
+          const numFromLabel = labelLower.slice(prefix.length).trim();
           if (numFromLabel) {
             number = numFromLabel;
           } else {
@@ -719,7 +787,8 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
             number = v.type === 'chorus' ? '1' : v.order;
           }
         } else {
-          // Label doesn't match prefix, extract any number from it
+          // Label doesn't match prefix - could be readable format like "Verse 1", "Chorus 1"
+          // Extract any number from it
           const numMatch = labelLower.match(/\d+/);
           number = numMatch ? numMatch[0] : v.order;
         }
@@ -728,6 +797,7 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
         number = v.type === 'chorus' ? '1' : v.order;
       }
 
+      // Always return short format (v1, c1, b1, etc.) - never return readable format like "verse 1"
       return `${prefix}${number}`;
     })
     .join(' ');

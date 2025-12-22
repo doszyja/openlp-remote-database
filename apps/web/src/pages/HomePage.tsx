@@ -10,12 +10,6 @@ import {
   Switch,
   AppBar,
   Toolbar,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  ListItemIcon,
-  ListItemText,
 } from '@mui/material';
 import {
   LibraryMusic as LibraryMusicIcon,
@@ -23,16 +17,12 @@ import {
   Help as HelpIcon,
   History as HistoryIcon,
   DeveloperMode as DeveloperModeIcon,
-  Logout as LogoutIcon,
-  Settings as SettingsIcon,
-  EventNote as EventNoteIcon,
-  LiveTv as LiveTvIcon,
-  ArrowDropDown as ArrowDropDownIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
 import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
 import { useServicePlans } from '../hooks/useServicePlans';
+import { UserAvatar, UserMenu } from '../components/Navbar';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
 
@@ -48,6 +38,8 @@ export default function HomePage() {
   const { data: allPlans } = useServicePlans();
   const isLivePage = location.pathname === '/live';
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
+  const planIdMatch = location.pathname.match(/^\/service-plans\/([^/]+)$/);
+  const planId = planIdMatch ? planIdMatch[1] : null;
 
   // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
   const [hasToken] = useState(() => {
@@ -176,243 +168,23 @@ export default function HomePage() {
           >
             {isAuthenticated && user ? (
               <>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: { xs: 0.75, sm: 1 },
-                    cursor: 'pointer',
-                    borderRadius: 1,
-                    px: { xs: 0.75, sm: 1 },
-                    py: { xs: 0.5, sm: 0.75 },
-                    userSelect: 'none',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
-                  }}
-                  onClick={handleMenuOpen}
-                >
-                  <Avatar
-                    src={
-                      user.avatar
-                        ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-                        : undefined
-                    }
-                    sx={{
-                      width: { xs: 28, sm: 32 },
-                      height: { xs: 28, sm: 32 },
-                      cursor: 'pointer',
-                      bgcolor: !user.avatar ? 'action.selected' : undefined,
-                      color: !user.avatar ? 'text.primary' : undefined,
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      userSelect: 'none',
-                    }}
-                  >
-                    {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
-                  </Avatar>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      display: { xs: 'none', sm: 'block' },
-                      fontWeight: 500,
-                      maxWidth: 100,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      userSelect: 'none',
-                    }}
-                  >
-                    {user.username}
-                  </Typography>
-                </Box>
-
-                {/* User Menu */}
-                <Menu
+                <UserAvatar user={user} onClick={handleMenuOpen} />
+                <UserMenu
+                  user={user}
                   anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
                   onClose={handleMenuClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 200,
-                    },
-                  }}
-                >
-                  <MenuItem disabled>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, userSelect: 'none' }}>
-                      <Avatar
-                        src={
-                          user.avatar
-                            ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-                            : undefined
-                        }
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          bgcolor: !user.avatar ? 'action.selected' : undefined,
-                          color: !user.avatar ? 'text.primary' : undefined,
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          userSelect: 'none',
-                        }}
-                      >
-                        {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
-                      </Avatar>
-                      <Typography
-                        variant="caption"
-                        sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}
-                      >
-                        Zalogowano jako{' '}
-                        <strong style={{ fontWeight: 600, userSelect: 'none' }}>
-                          {user.username}
-                        </strong>
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                  <Divider />
-                  <MenuItem
-                    onClick={handlePlansMenuOpen}
-                    sx={{
-                      minHeight: 48,
-                      py: 1.25,
-                    }}
-                  >
-                    <EventNoteIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText>Plany Nabożeństwa</ListItemText>
-                    <ArrowDropDownIcon sx={{ ml: 'auto', fontSize: 20 }} />
-                  </MenuItem>
-                  {/* Nested Menu for Plans */}
-                  <Menu
-                    anchorEl={plansMenuAnchorEl}
-                    open={Boolean(plansMenuAnchorEl)}
-                    onClose={handlePlansMenuClose}
-                    anchorOrigin={{
-                      vertical: 'top',
-                      horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'right',
-                    }}
-                    PaperProps={{
-                      sx: {
-                        mt: 0.5,
-                        minWidth: 250,
-                        maxHeight: 400,
-                        overflow: 'auto',
-                      },
-                    }}
-                  >
-                    <MenuItem
-                      onClick={() => {
-                        handlePlansMenuClose();
-                        handleMenuClose();
-                        navigate('/service-plans');
-                      }}
-                      selected={isServicePlansPage}
-                      sx={{
-                        minHeight: 40,
-                        py: 0.75,
-                        fontWeight: 600,
-                      }}
-                    >
-                      <ListItemText primary="Wszystkie plany" />
-                    </MenuItem>
-                    {allPlans && allPlans.length > 0 && <Divider />}
-                    {allPlans && allPlans.length > 0 ? (
-                      allPlans.map(plan => (
-                        <MenuItem
-                          key={plan.id}
-                          onClick={() => {
-                            handlePlansMenuClose();
-                            handleMenuClose();
-                            navigate(`/service-plans/${plan.id}`);
-                          }}
-                          sx={{
-                            minHeight: 40,
-                            py: 0.75,
-                          }}
-                        >
-                          <ListItemText
-                            primary={plan.name}
-                            secondary={
-                              plan.date
-                                ? new Date(plan.date).toLocaleDateString('pl-PL')
-                                : `${plan.items.length} ${plan.items.length === 1 ? 'pieśń' : 'pieśni'}`
-                            }
-                          />
-                        </MenuItem>
-                      ))
-                    ) : (
-                      <MenuItem disabled sx={{ minHeight: 40, py: 0.75 }}>
-                        <ListItemText primary="Brak planów" secondary="Utwórz pierwszy plan" />
-                      </MenuItem>
-                    )}
-                  </Menu>
-                  <MenuItem
-                    onClick={() => {
-                      handleMenuClose();
-                      navigate('/live');
-                    }}
-                    selected={isLivePage}
-                    sx={{
-                      minHeight: 48,
-                      py: 1.25,
-                    }}
-                  >
-                    <LiveTvIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    Na żywo
-                  </MenuItem>
-                  {isAdmin && (
-                    <MenuItem
-                      onClick={() => {
-                        handleMenuClose();
-                        navigate('/audit-logs');
-                      }}
-                      sx={{
-                        minHeight: 48,
-                        py: 1.25,
-                      }}
-                    >
-                      <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      Logi Audytu
-                    </MenuItem>
-                  )}
-                  <MenuItem
-                    onClick={() => {
-                      handleMenuClose();
-                      settingsDialogRef.current?.open();
-                    }}
-                    sx={{
-                      minHeight: 48,
-                      py: 1.25,
-                    }}
-                  >
-                    <SettingsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    Ustawienia
-                  </MenuItem>
-                  <MenuItem
-                    onClick={handleLogout}
-                    sx={{
-                      minHeight: 48,
-                      py: 1.25,
-                    }}
-                  >
-                    <LogoutIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    Wyloguj
-                  </MenuItem>
-                </Menu>
-
-                {/* Settings dialog - hidden but accessible via menu */}
+                  plansMenuAnchorEl={plansMenuAnchorEl}
+                  onPlansMenuOpen={handlePlansMenuOpen}
+                  onPlansMenuClose={handlePlansMenuClose}
+                  allPlans={allPlans}
+                  planId={planId}
+                  isServicePlansPage={isServicePlansPage}
+                  isLivePage={isLivePage}
+                  isAdmin={isAdmin}
+                  onNavigate={navigate}
+                  onOpenSettings={() => settingsDialogRef.current?.open()}
+                  onLogout={handleLogout}
+                />
                 <Box sx={{ display: 'none' }}>
                   <SettingsDialog ref={settingsDialogRef} />
                 </Box>

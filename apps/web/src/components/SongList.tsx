@@ -47,30 +47,26 @@ const VirtualizedRow = memo(
     };
   }) => {
     const song = data.songs[index];
-    if (!song) return null;
-
-    const displayTitle = song.number ? `${song.title} (${song.number})` : song.title;
-
-    const isSelected = song.id === data.currentSongId;
     const isFocused = data.selectedIndex === index;
     const buttonRef = useRef<HTMLDivElement>(null);
 
     // Focus button when this item is selected
     useEffect(() => {
-      if (isFocused && buttonRef.current) {
+      if (isFocused && buttonRef.current && song) {
         const focusableElement = buttonRef.current.querySelector('button') || buttonRef.current;
         if (focusableElement && typeof (focusableElement as HTMLElement).focus === 'function') {
           (focusableElement as HTMLElement).focus();
         }
       }
-    }, [isFocused]);
+    }, [isFocused, song]);
 
     const handleClick = useCallback(() => {
+      if (!song) return;
       data.onSelectIndex(index);
       if (data.onSongClick) {
         data.onSongClick(song.id);
       }
-    }, [song.id, data, index]);
+    }, [song, data, index]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -95,6 +91,11 @@ const VirtualizedRow = memo(
       },
       [handleClick, index, data]
     );
+
+    if (!song) return null;
+
+    const displayTitle = song.number ? `${song.title} (${song.number})` : song.title;
+    const isSelected = song.id === data.currentSongId;
 
     return (
       <div style={style} data-song-index={index}>
@@ -167,22 +168,92 @@ export default function SongList({
   const [selectedIndex, setSelectedIndex] = useState<number>(-1); // -1 means input is focused
   const listRef = useRef<FixedSizeList>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastHeightRef = useRef<number>(height || 600);
 
-  // Calculate list height based on viewport if calculateHeight function is provided
+  // Calculate list height based on container or viewport if calculateHeight function is provided
   useEffect(() => {
     if (calculateHeight && !height) {
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      
       const updateHeight = () => {
-        const calculatedHeight = calculateHeight(window.innerHeight);
-        setListHeight(Math.max(450, calculatedHeight));
+        if (!containerRef.current) return;
+        
+        const viewportHeight = window.innerHeight;
+        const searchInputHeight = showSearch ? 60 : 0;
+        
+        // Always use viewport height as the base for minimum height calculation
+        // This ensures the list always fills at least the viewport height
+        // Use viewport height minus typical header/navbar height (64px) and search input if shown
+        const minViewportHeight = viewportHeight - 64 - searchInputHeight;
+        
+        const containerRect = containerRef.current.getBoundingClientRect();
+        let newHeight: number;
+        
+        if (containerRect.height > 0) {
+          // Use container height directly, minus search input height if search is shown
+          const availableHeight = containerRect.height - searchInputHeight;
+          
+          // If calculateHeight is provided, use it to adjust the height (e.g., subtract padding)
+          // Otherwise, use available height directly
+          const calculatedHeight = calculateHeight(availableHeight);
+          
+          // Always use the maximum of calculated height and minimum viewport height
+          // This ensures the list always has at least the viewport height, even if content is smaller
+          newHeight = Math.max(calculatedHeight, minViewportHeight);
+        } else {
+          // Fallback to viewport-based calculation if container height not available yet
+          const calculatedHeight = calculateHeight(viewportHeight);
+          newHeight = Math.max(calculatedHeight, minViewportHeight);
+        }
+        
+        // Never decrease height - always use the maximum of new height, minimum viewport height, and current height
+        // This ensures the list never shrinks below its current size or minimum viewport height
+        const currentHeight = lastHeightRef.current;
+        const finalHeight = Math.max(newHeight, minViewportHeight, currentHeight);
+        
+        // Only update if there's a significant change (more than 10px) to prevent jitter
+        if (Math.abs(finalHeight - currentHeight) > 10) {
+          lastHeightRef.current = finalHeight;
+          setListHeight(finalHeight);
+        }
       };
 
-      updateHeight();
-      window.addEventListener('resize', updateHeight);
-      return () => window.removeEventListener('resize', updateHeight);
+      // Debounced update function to prevent too frequent recalculations
+      const debouncedUpdateHeight = () => {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(updateHeight, 100);
+      };
+
+      // Initial calculation
+      const timeoutId = setTimeout(updateHeight, 0);
+      
+      // Use ResizeObserver to watch container size changes
+      // Use debounced version to prevent excessive updates
+      let resizeObserver: ResizeObserver | null = null;
+      if (containerRef.current && typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(debouncedUpdateHeight);
+        resizeObserver.observe(containerRef.current);
+      }
+      
+      window.addEventListener('resize', debouncedUpdateHeight);
+      return () => {
+        clearTimeout(timeoutId);
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+        window.removeEventListener('resize', debouncedUpdateHeight);
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+      };
     } else if (height) {
       setListHeight(height);
+      lastHeightRef.current = height;
     }
-  }, [height, calculateHeight]);
+  }, [height, calculateHeight, showSearch]);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,7 +329,10 @@ export default function SongList({
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <Box
+      ref={containerRef}
+      sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+    >
       {showSearch && (
         <Box sx={{ mb: { xs: 1.5, sm: 2 }, flexShrink: 0 }}>
           <TextField

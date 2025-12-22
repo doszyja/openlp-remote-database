@@ -164,19 +164,6 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
 
           <Divider sx={{ my: 2 }} />
 
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-            Cache
-          </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body2" gutterBottom>
-              Cache przechowuje pieśni w pamięci przeglądarki, aby przyspieszyć wyszukiwanie i
-              wyświetlanie.
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Jeśli masz problemy z wyświetlaniem pieśni lub chcesz pobrać najnowsze dane z serwera,
-              możesz wyczyścić cache.
-            </Typography>
-          </Alert>
           <Button
             variant="outlined"
             color="error"

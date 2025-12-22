@@ -158,8 +158,16 @@ function SortableListItem({
     setIsSwiping(false);
   }, [hasEditPermission, isDragging, swipeOffset, onRemove, item.id]);
 
+  // Restrict transform to vertical (Y-axis) only
+  const restrictedTransform = transform
+    ? {
+        ...transform,
+        x: 0, // Block horizontal movement
+      }
+    : null;
+
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: restrictedTransform ? CSS.Transform.toString(restrictedTransform) : undefined,
     transition: isDragging ? transition : undefined,
     opacity: isDragging ? 0.5 : 1,
     position: 'relative' as const,
@@ -334,7 +342,7 @@ export default function ServicePlanPage() {
   // Alias for allSongs to maintain compatibility
   const allSongs = allCachedSongs;
 
-  // Drag and drop sensors
+  // Drag and drop sensors - restricted to vertical movement only
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {

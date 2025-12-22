@@ -22,8 +22,10 @@ import {
 } from '@mui/icons-material';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { parseVerses } from '../utils/verseParser';
+import { generateStepLabel } from '../utils/liveUtils';
 import { useActiveSong } from '../hooks/useServicePlans';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
+import { useResponsiveFontSizes } from '../hooks/useResponsiveFontSizes';
 
 export default function LivePage() {
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ export default function LivePage() {
   // HTTP fallback - wywołuj tylko gdy WebSocket nie jest połączony
   const { data: httpData, isLoading: httpLoading, error: httpError } = useActiveSong(!wsConnected);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
-  const [fontSizes, setFontSizes] = useState({ titleSize: 48, contentSize: 75 });
+  const fontSizes = useResponsiveFontSizes();
   const [dynamicContentSize, setDynamicContentSize] = useState(32);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,58 +104,6 @@ export default function LivePage() {
     return !lowerLabel.match(/^verse\s*\d+$/i);
   };
 
-  // Generate step labels (V1, V2, C1, etc.) for each content item
-  const generateStepLabel = (type: string | undefined, originalLabel: string | null): string => {
-    const verseType = type || 'verse';
-    const label = originalLabel || '';
-
-    if (label) {
-      const labelLower = label.toLowerCase();
-      const match = labelLower.match(/([vcbpt])(\d+)/);
-      if (match) {
-        const prefix = match[1].toUpperCase();
-        const number = match[2];
-        const displayPrefix =
-          prefix === 'C'
-            ? 'C'
-            : prefix === 'B'
-              ? 'B'
-              : prefix === 'P'
-                ? 'P'
-                : prefix === 'T'
-                  ? 'T'
-                  : 'V';
-        return `${displayPrefix}${number}`;
-      }
-      const numMatch = labelLower.match(/\d+/);
-      if (numMatch) {
-        const prefix =
-          verseType === 'chorus'
-            ? 'C'
-            : verseType === 'bridge'
-              ? 'B'
-              : verseType === 'pre-chorus'
-                ? 'P'
-                : verseType === 'tag'
-                  ? 'T'
-                  : 'V';
-        return `${prefix}${numMatch[0]}`;
-      }
-    }
-
-    const prefix =
-      verseType === 'chorus'
-        ? 'C'
-        : verseType === 'bridge'
-          ? 'B'
-          : verseType === 'pre-chorus'
-            ? 'P'
-            : verseType === 'tag'
-              ? 'T'
-              : 'V';
-    const number = verseType === 'chorus' ? '1' : '1';
-    return `${prefix}${number}`;
-  };
 
   const allContent = useMemo(() => {
     if (!song) return [];
@@ -205,42 +155,6 @@ export default function LivePage() {
     };
   }, []);
 
-  // Calculate and update responsive font sizes
-  useEffect(() => {
-    const calculateFontSizes = () => {
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const isLandscape = vw > vh;
-      const minDimension = Math.min(vh, vw);
-      const primaryDimension = isLandscape ? vh : minDimension;
-      const isMobile = vw < 600;
-      const isTablet = vw >= 600 && vw < 1024;
-
-      let titleSize = 48;
-      let contentSize = 75;
-
-      if (isMobile && isLandscape) {
-        titleSize = Math.max(24, primaryDimension * 0.08);
-        contentSize = Math.max(32, primaryDimension * 0.12);
-      } else if (isMobile) {
-        titleSize = Math.max(28, primaryDimension * 0.06);
-        contentSize = Math.max(40, primaryDimension * 0.1);
-      } else if (isTablet) {
-        titleSize = Math.max(36, primaryDimension * 0.05);
-        contentSize = Math.max(60, primaryDimension * 0.08);
-      } else {
-        titleSize = Math.max(48, primaryDimension * 0.04);
-        contentSize = Math.max(75, primaryDimension * 0.06);
-      }
-
-      setFontSizes({ titleSize, contentSize });
-    };
-
-    calculateFontSizes();
-    window.addEventListener('resize', calculateFontSizes);
-    return () => window.removeEventListener('resize', calculateFontSizes);
-  }, []);
-
   // Dynamic content size calculation
   useEffect(() => {
     if (!contentRef.current || allContent.length === 0) return;
@@ -281,17 +195,23 @@ export default function LivePage() {
     const handleKeyPress = async (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
-        if (currentVerseIndex > 0) {
-          setCurrentVerseIndex(currentVerseIndex - 1);
-        }
+        setCurrentVerseIndex(prev => {
+          if (prev > 0) {
+            return prev - 1;
+          }
+          return prev;
+        });
         return;
       }
 
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
         e.preventDefault();
-        if (currentVerseIndex < allContent.length - 1) {
-          setCurrentVerseIndex(currentVerseIndex + 1);
-        }
+        setCurrentVerseIndex(prev => {
+          if (prev < allContent.length - 1) {
+            return prev + 1;
+          }
+          return prev;
+        });
         return;
       }
 
@@ -325,18 +245,24 @@ export default function LivePage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentVerseIndex, allContent.length, navigate, isFullscreen]);
+  }, [allContent.length, navigate, isFullscreen]);
 
   const handleNext = () => {
-    if (currentVerseIndex < allContent.length - 1) {
-      setCurrentVerseIndex(currentVerseIndex + 1);
-    }
+    setCurrentVerseIndex(prev => {
+      if (prev < allContent.length - 1) {
+        return prev + 1;
+      }
+      return prev;
+    });
   };
 
   const handlePrevious = () => {
-    if (currentVerseIndex > 0) {
-      setCurrentVerseIndex(currentVerseIndex - 1);
-    }
+    setCurrentVerseIndex(prev => {
+      if (prev > 0) {
+        return prev - 1;
+      }
+      return prev;
+    });
   };
 
   const handleClose = () => {

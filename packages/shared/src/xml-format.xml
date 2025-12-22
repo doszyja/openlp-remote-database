@@ -1,0 +1,41 @@
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8" createdIn="OpenLP 3.0.2"
+    modifiedIn="OpenLP 3.0.2" modifiedDate="2025-08-03T08:25:23">
+    <properties>
+        <titles>
+            <title>1. Ach potrzebuję Cię</title>
+        </titles>
+        <verseOrder>v1 c1 v2 c1 v3 c1 v4 c1 v5 c1</verseOrder>
+        <authors>
+            <author>Nieznany</author>
+        </authors>
+        <songbooks>
+            <songbook name="KWCH SWIĘTOCHŁOWICE" />
+        </songbooks>
+    </properties>
+    <lyrics>
+        <verse name="v1">
+            <lines> Ach potrzebuję Cię, <br /> Łaskawy Panie mój! <br /> Twe imię skałą mą, <br /> w
+                Nim jest pociechy zdrój! </lines>
+        </verse>
+        <verse name="v2">
+            <lines> Ach potrzebuję Cię, <br /> o Jezu przy mnie stój, <br /> Bym został wiernym Ci, <br />
+                przez cały życia bój. </lines>
+        </verse>
+        <verse name="v3">
+            <lines> Ach potrzebuję Cię, <br /> jak chcesz tak mnie wiedź. <br /> Bo wiem, że w
+                słowie Twym <br /> nadzieję mogę mieć. </lines>
+        </verse>
+        <verse name="v4">
+            <lines> Ach potrzebuję Cię, <br /> w dniach dobrych, jak i w złych. <br /> Tyś słońcem,
+                tarczą mą, <br /> na wszystkich drogach mych. </lines>
+        </verse>
+        <verse name="v5">
+            <lines> Ach potrzebuję Cię, <br /> przez Ciebie w górze mi, <br /> Kochany Jezu mój <br />
+                korona życia lśni! </lines>
+        </verse>
+        <verse name="c1">
+            <lines> O Panie, drogi Panie, <br /> potrzebuję Ciebie. <br /> Ja muszę mieć Cię zawsze. <br />
+                Błogosław mi </lines>
+        </verse>
+    </lyrics>
+</song>
