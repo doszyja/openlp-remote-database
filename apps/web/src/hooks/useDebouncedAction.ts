@@ -6,7 +6,7 @@ import { useRef, useCallback } from 'react';
  * @param delay - Debounce delay in milliseconds (default: 500ms)
  * @returns Debounced action function and isPending state
  */
-export function useDebouncedAction<T extends (...args: any[]) => Promise<any>>(
+export function useDebouncedAction<T extends (...args: unknown[]) => Promise<unknown>>(
   action: T,
   delay: number = 500
 ): [T, boolean] {
@@ -17,7 +17,7 @@ export function useDebouncedAction<T extends (...args: any[]) => Promise<any>>(
     async (...args: Parameters<T>): Promise<ReturnType<T>> => {
       // If already pending, ignore the call
       if (isPendingRef.current) {
-        return Promise.reject(new Error('Action already in progress'));
+        return Promise.reject(new Error('Action already in progress')) as Promise<ReturnType<T>>;
       }
 
       // Clear any existing timeout
@@ -30,7 +30,7 @@ export function useDebouncedAction<T extends (...args: any[]) => Promise<any>>(
           try {
             isPendingRef.current = true;
             const result = await action(...args);
-            resolve(result);
+            resolve(result as ReturnType<T>);
           } catch (error) {
             reject(error);
           } finally {
@@ -49,7 +49,7 @@ export function useDebouncedAction<T extends (...args: any[]) => Promise<any>>(
  * Simpler hook that just prevents multiple calls while action is pending
  * Better for React Query mutations
  */
-export function usePreventDoubleClick<T extends (...args: any[]) => Promise<any>>(
+export function usePreventDoubleClick<T extends (...args: unknown[]) => Promise<unknown>>(
   action: T
 ): [T, boolean] {
   const isPendingRef = useRef(false);
@@ -57,13 +57,13 @@ export function usePreventDoubleClick<T extends (...args: any[]) => Promise<any>
   const protectedAction = useCallback(
     async (...args: Parameters<T>): Promise<ReturnType<T>> => {
       if (isPendingRef.current) {
-        return Promise.reject(new Error('Action already in progress'));
+        return Promise.reject(new Error('Action already in progress')) as Promise<ReturnType<T>>;
       }
 
       try {
         isPendingRef.current = true;
         const result = await action(...args);
-        return result;
+        return result as ReturnType<T>;
       } finally {
         isPendingRef.current = false;
       }

@@ -44,13 +44,16 @@ describe('useVerseManagement logic', () => {
       ];
 
       const existingOfType = sourceVerses.filter(v => v.type === 'verse');
-      const newNumber = existingOfType.length > 0
-        ? Math.max(...existingOfType.map(v => {
-            const label = v.label || '';
-            const numMatch = label.match(/\d+/);
-            return numMatch ? parseInt(numMatch[0], 10) : 0;
-          })) + 1
-        : 1;
+      const newNumber =
+        existingOfType.length > 0
+          ? Math.max(
+              ...existingOfType.map(v => {
+                const label = v.label || '';
+                const numMatch = label.match(/\d+/);
+                return numMatch ? parseInt(numMatch[0], 10) : 0;
+              })
+            ) + 1
+          : 1;
 
       expect(newNumber).toBe(2);
     });
@@ -61,13 +64,16 @@ describe('useVerseManagement logic', () => {
       ];
 
       const existingOfType = sourceVerses.filter(v => v.type === 'chorus');
-      const newNumber = existingOfType.length > 0
-        ? Math.max(...existingOfType.map(v => {
-            const label = v.label || '';
-            const numMatch = label.match(/\d+/);
-            return numMatch ? parseInt(numMatch[0], 10) : 0;
-          })) + 1
-        : 1;
+      const newNumber =
+        existingOfType.length > 0
+          ? Math.max(
+              ...existingOfType.map(v => {
+                const label = v.label || '';
+                const numMatch = label.match(/\d+/);
+                return numMatch ? parseInt(numMatch[0], 10) : 0;
+              })
+            ) + 1
+          : 1;
 
       expect(newNumber).toBe(1);
     });
@@ -80,13 +86,16 @@ describe('useVerseManagement logic', () => {
       ];
 
       const existingOfType = sourceVerses.filter(v => v.type === 'verse');
-      const newNumber = existingOfType.length > 0
-        ? Math.max(...existingOfType.map(v => {
-            const label = v.label || '';
-            const numMatch = label.match(/\d+/);
-            return numMatch ? parseInt(numMatch[0], 10) : 0;
-          })) + 1
-        : 1;
+      const newNumber =
+        existingOfType.length > 0
+          ? Math.max(
+              ...existingOfType.map(v => {
+                const label = v.label || '';
+                const numMatch = label.match(/\d+/);
+                return numMatch ? parseInt(numMatch[0], 10) : 0;
+              })
+            ) + 1
+          : 1;
 
       expect(newNumber).toBe(4);
     });
@@ -126,7 +135,7 @@ describe('useVerseManagement logic', () => {
       const currentOrder = 'v1 c1';
       const newSourceId = 'v2';
       const orderPattern = new RegExp(`\\b${newSourceId}\\b`, 'i');
-      
+
       if (!orderPattern.test(currentOrder)) {
         const newOrder = `${currentOrder} ${newSourceId}`;
         expect(newOrder).toBe('v1 c1 v2');
@@ -137,7 +146,7 @@ describe('useVerseManagement logic', () => {
       const currentOrder = 'v1 c1 v2';
       const newSourceId = 'v2';
       const orderPattern = new RegExp(`\\b${newSourceId}\\b`, 'i');
-      
+
       if (orderPattern.test(currentOrder)) {
         // Should not add
         expect(orderPattern.test(currentOrder)).toBe(true);
@@ -147,7 +156,7 @@ describe('useVerseManagement logic', () => {
     it('should set order string to new verse when empty', () => {
       const currentOrder = '';
       const newSourceId = 'v1';
-      
+
       if (!currentOrder.trim()) {
         const newOrder = newSourceId;
         expect(newOrder).toBe('v1');
@@ -155,4 +164,3 @@ describe('useVerseManagement logic', () => {
     });
   });
 });
-

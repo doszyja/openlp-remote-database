@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuditLogs } from '../hooks/useAuditLogs';
-import { AuditLogAction } from '@openlp/shared/types/audit-log';
+import { AuditLogAction, AuditLog } from '@openlp/shared';
 // Simple date formatter (no external dependency needed)
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -85,7 +85,7 @@ function getActionColor(
 export default function AuditLogPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Input values (update immediately for UI responsiveness)
   const [inputFilters, setInputFilters] = useState<{
@@ -192,7 +192,7 @@ export default function AuditLogPage() {
     };
   }, [data]);
 
-  const handleRowClick = (log: any) => {
+  const handleRowClick = (log: AuditLog) => {
     setSelectedLog(log);
     setDetailsOpen(true);
   };

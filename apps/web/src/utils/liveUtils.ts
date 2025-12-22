@@ -59,4 +59,3 @@ export function generateStepLabel(type: string | undefined, originalLabel: strin
   const number = verseType === 'chorus' ? '1' : '1';
   return `${prefix}${number}`;
 }
-

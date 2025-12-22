@@ -21,12 +21,9 @@ import {
   getVerseTypePrefix,
   normalizeVerseIdentifier,
   combineVersesToXml,
+  type ParsedVerse,
 } from '../utils/verseParser';
-import {
-  useSongFormData,
-  type VerseFormData,
-  type SongFormData,
-} from '../hooks/useSongFormData';
+import { useSongFormData, type VerseFormData, type SongFormData } from '../hooks/useSongFormData';
 import { useVerseManagement } from '../hooks/useVerseManagement';
 
 interface SongFormProps {
@@ -131,7 +128,7 @@ export default function SongForm({
       }
 
       // Parse order string to get execution order
-      let executionVerses;
+      let executionVerses: ParsedVerse[];
       if (data.verseOrder.trim()) {
         try {
           executionVerses = parseVerseOrderString(
@@ -150,20 +147,22 @@ export default function SongForm({
         } catch (error) {
           console.error('Error parsing verse order:', error);
           // Fallback to source verses in order
-          executionVerses = validSourceVerses.map(v => ({
+          executionVerses = validSourceVerses.map((v) => ({
             order: v.order,
             content: v.content,
             label: v.label ?? null,
             type: v.type ?? 'verse',
+            originalLabel: v.sourceId || undefined,
           }));
         }
       } else {
         // No order string, use source verses in their order
-        executionVerses = validSourceVerses.map(v => ({
+        executionVerses = validSourceVerses.map((v) => ({
           order: v.order,
           content: v.content,
           label: v.label ?? null,
           type: v.type ?? 'verse',
+          originalLabel: v.sourceId || undefined,
         }));
       }
 
@@ -173,14 +172,11 @@ export default function SongForm({
       // But we preserve originalLabel for each verse to match verseOrder
       const uniqueVersesMap = new Map<string, VerseDto>();
       executionVerses.forEach((v, index) => {
-        const originalLabel = (v as any).originalLabel || normalizeVerseIdentifier(
-          undefined,
-          v.label,
-          v.type ?? 'verse',
-          index + 1
-        );
+        const originalLabel =
+          v.originalLabel ||
+          normalizeVerseIdentifier(undefined, v.label, v.type ?? 'verse', index + 1);
         const key = originalLabel.toLowerCase();
-        
+
         // Only keep first occurrence of each unique verse (by originalLabel)
         if (!uniqueVersesMap.has(key)) {
           uniqueVersesMap.set(key, {
@@ -191,9 +187,11 @@ export default function SongForm({
           });
         }
       });
-      
+
       // Convert map to array, sorted by order
-      const versesToSave: VerseDto[] = Array.from(uniqueVersesMap.values()).sort((a, b) => a.order - b.order);
+      const versesToSave: VerseDto[] = Array.from(uniqueVersesMap.values()).sort(
+        (a, b) => a.order - b.order
+      );
 
       // Generate lyricsXml from execution verses (preserves OpenLP XML format)
       // parseVerseOrderString returns ParsedVerse[] with originalLabel preserved
@@ -203,12 +201,9 @@ export default function SongForm({
         content: v.content.trim(),
         label: v.label ?? null,
         type: v.type ?? 'verse',
-        originalLabel: (v as any).originalLabel || normalizeVerseIdentifier(
-          undefined,
-          v.label,
-          v.type ?? 'verse',
-          index + 1
-        ),
+        originalLabel:
+          v.originalLabel ||
+          normalizeVerseIdentifier(undefined, v.label, v.type ?? 'verse', index + 1),
       }));
       const lyricsXml = combineVersesToXml(parsedVersesForXml);
 
@@ -304,9 +299,7 @@ export default function SongForm({
               const sourceVerseIds = new Set(
                 sourceVerses
                   .filter(v => v.content.trim().length > 0) // Only check verses with content
-                  .map(v =>
-                    normalizeVerseIdentifier(v.sourceId, v.label, v.type, v.order)
-                  )
+                  .map(v => normalizeVerseIdentifier(v.sourceId, v.label, v.type, v.order))
               );
 
               // Check if all verses mentioned in order exist in sourceVerses
@@ -504,10 +497,10 @@ export default function SongForm({
 
           <Stack spacing={1}>
             {sourceVerses.map((verse, index) => (
-              <Paper 
-                key={index} 
-                variant="outlined" 
-                sx={{ 
+              <Paper
+                key={index}
+                variant="outlined"
+                sx={{
                   p: { xs: 0.75, sm: 1 },
                   position: 'relative',
                 }}
@@ -515,7 +508,7 @@ export default function SongForm({
                 <Typography
                   variant="body2"
                   color="text.secondary"
-                  sx={{ 
+                  sx={{
                     fontSize: { xs: '0.75rem', sm: '0.8rem' },
                     bgcolor: 'background.paper',
                     px: 0.5,
@@ -559,7 +552,6 @@ export default function SongForm({
                   <DeleteIcon fontSize="small" />
                 </IconButton>
                 <Stack spacing={1}>
-
                   <Controller
                     name={`sourceVerses.${index}.type`}
                     control={control}

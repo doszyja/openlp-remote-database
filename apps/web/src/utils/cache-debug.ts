@@ -23,12 +23,20 @@ export function checkCacheStatus() {
   return status;
 }
 
+// Extend Window interface for development utilities
+interface WindowWithCacheDebug extends Window {
+  checkCacheStatus?: () => ReturnType<typeof checkCacheStatus>;
+  clearSongsCache?: () => void;
+  songsCache?: typeof songsCache;
+}
+
 // Make it available globally in development
 if (import.meta.env.DEV) {
-  (window as any).checkCacheStatus = checkCacheStatus;
-  (window as any).clearSongsCache = () => {
+  const win = window as WindowWithCacheDebug;
+  win.checkCacheStatus = checkCacheStatus;
+  win.clearSongsCache = () => {
     songsCache.clearCache();
     console.log('Songs cache cleared');
   };
-  (window as any).songsCache = songsCache;
+  win.songsCache = songsCache;
 }

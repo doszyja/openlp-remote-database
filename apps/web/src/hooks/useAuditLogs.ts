@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
+import type { AuditLog } from '@openlp/shared';
 
 interface AuditLogsResponse {
-  data: any[];
+  data: AuditLog[];
   total: number;
   page: number;
   limit: number;

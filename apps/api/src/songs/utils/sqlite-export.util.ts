@@ -61,8 +61,8 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
     if (song.verseOrder) {
       // Parse verseOrder string (e.g., "v1 c1 v2 c1")
       const verseOrderParts = song.verseOrder.split(/\s+/);
-      const verseMap = new Map<string, typeof sortedVerses[0]>();
-      
+      const verseMap = new Map<string, (typeof sortedVerses)[0]>();
+
       // Build map of unique verses by their originalLabel (lowercase for matching)
       // IMPORTANT: Only store first occurrence of each verse to prevent duplicates
       sortedVerses.forEach((verse) => {
@@ -100,7 +100,9 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
         if (verse.originalLabel) {
           const labelKey = verse.originalLabel.toLowerCase();
           if (!addedVerses.has(labelKey)) {
-            const { type, label: verseNum } = parseVerseLabel(verse.originalLabel);
+            const { type, label: verseNum } = parseVerseLabel(
+              verse.originalLabel,
+            );
             parts.push(formatVerseXml(type, verseNum, verse.content));
             addedVerses.add(labelKey);
           }
@@ -121,16 +123,19 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
     const verseRegex =
       /<verse\s+(?:type=["']([^"']+)["']\s+)?label=["']([^"']+)["'][^>]*>([\s\S]*?)<\/verse>/gi;
     const verseMatches = Array.from(lyricsText.matchAll(verseRegex));
-    
+
     // Create a map of unique verses by label (lowercase for matching)
-    const uniqueVersesMap = new Map<string, { label: string; content: string }>();
-    
+    const uniqueVersesMap = new Map<
+      string,
+      { label: string; content: string }
+    >();
+
     verseMatches.forEach((match) => {
       const label = match[2]?.trim() || '';
       let content = match[3]?.trim() || '';
-      
+
       if (!label || !content) return;
-      
+
       // Extract CDATA if present
       const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/i);
       if (cdataMatch && cdataMatch[1]) {
@@ -144,19 +149,19 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
           .replace(/&quot;/g, '"')
           .replace(/&apos;/g, "'");
       }
-      
+
       const labelKey = label.toLowerCase();
       // Only store first occurrence of each verse (prevent duplicates)
       if (!uniqueVersesMap.has(labelKey)) {
         uniqueVersesMap.set(labelKey, { label, content });
       }
     });
-    
+
     // If verseOrder is available, use it to determine order
     if (song.verseOrder) {
       const verseOrderParts = song.verseOrder.split(/\s+/);
       const addedVerses = new Set<string>();
-      
+
       verseOrderParts.forEach((label) => {
         const labelKey = label.toLowerCase();
         const verse = uniqueVersesMap.get(labelKey);
@@ -166,7 +171,7 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
           addedVerses.add(labelKey);
         }
       });
-      
+
       // Add any verses not in verseOrder
       uniqueVersesMap.forEach((verse, labelKey) => {
         if (!addedVerses.has(labelKey)) {
@@ -184,7 +189,9 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
   } else if (typeof song.verses === 'string' && song.verses.trim()) {
     // Fallback: parse verses string - split by double newlines to get individual verses
     const versesString = song.verses;
-    const verseBlocks = versesString.split(/\n\n+/).filter((block) => block.trim());
+    const verseBlocks = versesString
+      .split(/\n\n+/)
+      .filter((block) => block.trim());
 
     if (verseBlocks.length > 0) {
       // Each block becomes a verse (v1, v2, v3, etc.)
@@ -202,7 +209,7 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
   if (parts.length > 0) {
     return `<?xml version='1.0' encoding='UTF-8'?>\n<song version="1.0"><lyrics>${parts.join('')}</lyrics></song>`;
   }
-  
+
   return '';
 }
 
@@ -222,17 +229,22 @@ function escapeXml(text: string): string {
  * Parse verse label (e.g., "v1", "c1", "b1") into type and label
  * Returns { type: "v"|"c"|"b"|"p", label: "1" }
  */
-function parseVerseLabel(originalLabel: string): { type: string; label: string } {
+function parseVerseLabel(originalLabel: string): {
+  type: string;
+  label: string;
+} {
   const lower = originalLabel.toLowerCase().trim();
-  
+
   // Match patterns like "v1", "c1", "b1", "p1", "verse1", "chorus1", etc.
-  const match = lower.match(/^(v|verse|c|chorus|b|bridge|p|pre-chorus|prechorus)(\d+)$/);
+  const match = lower.match(
+    /^(v|verse|c|chorus|b|bridge|p|pre-chorus|prechorus)(\d+)$/,
+  );
   if (match) {
     const typeChar = match[1].charAt(0); // First character
     const label = match[2];
     return { type: typeChar, label };
   }
-  
+
   // If no match, try to extract type and number separately
   if (lower.startsWith('v')) {
     const num = lower.replace(/^v/, '') || '1';
@@ -247,7 +259,7 @@ function parseVerseLabel(originalLabel: string): { type: string; label: string }
     const num = lower.replace(/^p/, '') || '1';
     return { type: 'p', label: num };
   }
-  
+
   // Default to verse
   return { type: 'v', label: '1' };
 }
@@ -433,8 +445,7 @@ export async function createOpenLPSqliteDatabase(
       const copyright = song.copyright || null;
       const comments = song.comments || null;
       const ccliNumber = song.ccliNumber || song.number || null;
-      const searchTitle =
-        song.searchTitle || song.title.toLowerCase().trim();
+      const searchTitle = song.searchTitle || song.title.toLowerCase().trim();
       const searchLyrics =
         song.searchLyrics ||
         (typeof song.verses === 'string'
@@ -449,16 +460,16 @@ export async function createOpenLPSqliteDatabase(
 
       // Insert in the same order as column list (matching OpenLP structure)
       insertSongStmt.run(
-        song.title,           // title
-        alternateTitle,       // alternate_title
-        lyrics,              // lyrics
+        song.title, // title
+        alternateTitle, // alternate_title
+        lyrics, // lyrics
         song.verseOrder || null, // verse_order
-        copyright,           // copyright
-        comments,            // comments
-        ccliNumber,          // ccli_number
-        themeName,           // theme_name
-        searchTitle,         // search_title
-        searchLyrics,        // search_lyrics
+        copyright, // copyright
+        comments, // comments
+        ccliNumber, // ccli_number
+        themeName, // theme_name
+        searchTitle, // search_title
+        searchLyrics, // search_lyrics
         // create_date and last_modified are set by datetime('now') in SQL
         // temporary is set to 0 (false) in SQL
       );
@@ -486,9 +497,11 @@ export async function createOpenLPSqliteDatabase(
   );
 
   // Get the default author ID
-  const defaultAuthor = getAuthorIdStmt.get(defaultAuthorDisplayName) as {
-    id: number;
-  } | undefined;
+  const defaultAuthor = getAuthorIdStmt.get(defaultAuthorDisplayName) as
+    | {
+        id: number;
+      }
+    | undefined;
 
   if (defaultAuthor && insertedSongIds.length > 0) {
     // Assign all songs to the default author
@@ -505,4 +518,3 @@ export async function createOpenLPSqliteDatabase(
 
   return tempFile;
 }
-

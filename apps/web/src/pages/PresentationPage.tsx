@@ -10,6 +10,22 @@ import { useSong } from '../hooks';
 import { parseVerses } from '../utils/verseParser';
 import { useTheme } from '@mui/material/styles';
 
+// Fullscreen API vendor prefixes
+interface DocumentWithFullscreen extends Document {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+  mozCancelFullScreen?: () => Promise<void>;
+  msExitFullscreen?: () => Promise<void>;
+}
+
+interface ElementWithFullscreen extends Element {
+  webkitRequestFullscreen?: () => Promise<void>;
+  mozRequestFullScreen?: () => Promise<void>;
+  msRequestFullscreen?: () => Promise<void>;
+}
+
 export default function PresentationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -26,8 +42,8 @@ export default function PresentationPage() {
     ? parseVerses(
         song.verses as unknown as string,
         song.verseOrder || null,
-        (song as any).lyricsXml || null,
-        (song as any).versesArray || null
+        song.lyricsXml || null,
+        song.versesArray || null
       ).filter(v => v.content && v.content.trim())
     : [];
 
@@ -382,14 +398,15 @@ export default function PresentationPage() {
     const enterFullscreen = async () => {
       try {
         if (containerRef.current) {
-          if (containerRef.current.requestFullscreen) {
-            await containerRef.current.requestFullscreen();
-          } else if ((containerRef.current as any).webkitRequestFullscreen) {
-            await (containerRef.current as any).webkitRequestFullscreen();
-          } else if ((containerRef.current as any).mozRequestFullScreen) {
-            await (containerRef.current as any).mozRequestFullScreen();
-          } else if ((containerRef.current as any).msRequestFullscreen) {
-            await (containerRef.current as any).msRequestFullscreen();
+          const element = containerRef.current as ElementWithFullscreen;
+          if (element.requestFullscreen) {
+            await element.requestFullscreen();
+          } else if (element.webkitRequestFullscreen) {
+            await element.webkitRequestFullscreen();
+          } else if (element.mozRequestFullScreen) {
+            await element.mozRequestFullScreen();
+          } else if (element.msRequestFullscreen) {
+            await element.msRequestFullscreen();
           }
         }
       } catch (err) {
@@ -400,11 +417,12 @@ export default function PresentationPage() {
     enterFullscreen();
 
     const handleFullscreenChange = () => {
+      const doc = document as DocumentWithFullscreen;
       const isCurrentlyFullscreen = !!(
         document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
       );
 
       if (!isCurrentlyFullscreen) {
@@ -431,14 +449,15 @@ export default function PresentationPage() {
     if (currentVerseIndex >= allContent.length - 1) {
       // On last slide, close presentation
       try {
+        const doc = document as DocumentWithFullscreen;
         if (document.exitFullscreen) {
           await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).mozCancelFullScreen) {
-          await (document as any).mozCancelFullScreen();
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        } else if (doc.mozCancelFullScreen) {
+          await doc.mozCancelFullScreen();
+        } else if (doc.msExitFullscreen) {
+          await doc.msExitFullscreen();
         }
       } catch (err) {
         console.error('Error exiting fullscreen:', err);
@@ -461,14 +480,15 @@ export default function PresentationPage() {
       // Escape always closes presentation
       if (e.key === 'Escape') {
         try {
+          const doc = document as DocumentWithFullscreen;
           if (document.exitFullscreen) {
             await document.exitFullscreen();
-          } else if ((document as any).webkitExitFullscreen) {
-            await (document as any).webkitExitFullscreen();
-          } else if ((document as any).mozCancelFullScreen) {
-            await (document as any).mozCancelFullScreen();
-          } else if ((document as any).msExitFullscreen) {
-            await (document as any).msExitFullscreen();
+          } else if (doc.webkitExitFullscreen) {
+            await doc.webkitExitFullscreen();
+          } else if (doc.mozCancelFullScreen) {
+            await doc.mozCancelFullScreen();
+          } else if (doc.msExitFullscreen) {
+            await doc.msExitFullscreen();
           }
         } catch (err) {
           console.error('Error exiting fullscreen:', err);
@@ -487,14 +507,15 @@ export default function PresentationPage() {
       if (currentVerseIndex >= allContent.length - 1) {
         // On last slide, close presentation
         try {
+          const doc = document as DocumentWithFullscreen;
           if (document.exitFullscreen) {
             await document.exitFullscreen();
-          } else if ((document as any).webkitExitFullscreen) {
-            await (document as any).webkitExitFullscreen();
-          } else if ((document as any).mozCancelFullScreen) {
-            await (document as any).mozCancelFullScreen();
-          } else if ((document as any).msExitFullscreen) {
-            await (document as any).msExitFullscreen();
+          } else if (doc.webkitExitFullscreen) {
+            await doc.webkitExitFullscreen();
+          } else if (doc.mozCancelFullScreen) {
+            await doc.mozCancelFullScreen();
+          } else if (doc.msExitFullscreen) {
+            await doc.msExitFullscreen();
           }
         } catch (err) {
           console.error('Error exiting fullscreen:', err);

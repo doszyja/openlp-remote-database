@@ -5,6 +5,7 @@
 ### Krok 1: Sprawdź czy API działa
 
 1. Uruchom serwer API (jeśli jeszcze nie działa):
+
    ```bash
    cd apps/api
    pnpm dev
@@ -21,11 +22,13 @@
 1. Uruchom skrypt testowy:
 
    **W PowerShell:**
+
    ```powershell
    .\test-sync.ps1
    ```
 
    **W Git Bash:**
+
    ```bash
    ./test-sync.sh
    # lub
@@ -41,6 +44,7 @@
 #### Metoda 2: Test ręczny w przeglądarce
 
 1. Otwórz w przeglądarce:
+
    ```
    http://localhost:3000/api/songs/export/sqlite
    ```
@@ -86,6 +90,7 @@ sqlite3 test-songs.sqlite ".schema songs"
 1. **Zamknij OpenLP** (jeśli jest uruchomione)
 
 2. **Uruchom skrypt synchronizacji**:
+
    ```powershell
    .\sync-sqlite.ps1 -ApiUrl "http://localhost:3000/api"
    ```
@@ -131,11 +136,13 @@ sqlite3 test-songs.sqlite ".schema songs"
 ### Problem: API nie odpowiada
 
 **Sprawdź:**
+
 - Czy serwer API jest uruchomiony?
 - Czy port 3000 jest dostępny?
 - Czy nie ma błędów w konsoli serwera?
 
 **Rozwiązanie:**
+
 ```bash
 # Sprawdź czy serwer działa
 curl http://localhost:3000/api/songs
@@ -147,10 +154,12 @@ curl http://localhost:3000/api/songs
 ### Problem: Plik SQLite jest pusty lub uszkodzony
 
 **Sprawdź:**
+
 - Czy w MongoDB są piosenki?
 - Czy piosenki nie są oznaczone jako usunięte (`deletedAt: null`)?
 
 **Rozwiązanie:**
+
 ```powershell
 # Sprawdź zawartość MongoDB
 # Użyj MongoDB Compass lub:
@@ -160,18 +169,20 @@ curl http://localhost:3000/api/songs
 ### Problem: OpenLP nie widzi piosenek po synchronizacji
 
 **Sprawdź:**
+
 - Czy plik został poprawnie zastąpiony?
 - Czy OpenLP jest zamknięte podczas synchronizacji?
 - Czy masz uprawnienia do zapisu w katalogu OpenLP?
 
 **Rozwiązanie:**
-1. Sprawdź czy plik istnieje: 
+
+1. Sprawdź czy plik istnieje:
    ```powershell
    Test-Path "$env:APPDATA\openlp\data\songs.sqlite"
    # lub jeśli używasz niestandardowej ścieżki:
    Test-Path "C:\Users\Dominik\AppData\Roaming\openlp\data\songs.sqlite"
    ```
-2. Sprawdź rozmiar pliku: 
+2. Sprawdź rozmiar pliku:
    ```powershell
    (Get-Item "$env:APPDATA\openlp\data\songs.sqlite").Length
    ```
@@ -180,6 +191,7 @@ curl http://localhost:3000/api/songs
 ### Problem: Błąd "OpenLP jest uruchomiony"
 
 **Rozwiązanie:**
+
 - Zamknij OpenLP całkowicie
 - Sprawdź w Menedżerze zadań czy proces `OpenLP.exe` nie działa w tle
 - Uruchom skrypt ponownie
@@ -193,21 +205,24 @@ curl http://localhost:3000/api/songs
    - Skopiuj plik `songs.sqlite` do lokalizacji testowej
 
 2. **Porównaj strukturę**:
+
    ```powershell
    # Sprawdź strukturę tabeli w oryginalnym pliku
    sqlite3 "oryginalny-songs.sqlite" ".schema songs"
-   
+
    # Sprawdź strukturę tabeli w wyeksportowanym pliku
    sqlite3 "test-songs.sqlite" ".schema songs"
    ```
 
 3. **Sprawdź format XML w lyrics**:
+
    ```powershell
    # Pokaż przykładowy XML
    sqlite3 test-songs.sqlite "SELECT lyrics FROM songs LIMIT 1;"
    ```
-   
+
    Powinien wyglądać tak:
+
    ```xml
    <verse label="v1">Tekst wersu 1</verse><verse label="v2">Tekst wersu 2</verse>
    ```
@@ -228,15 +243,17 @@ curl http://localhost:3000/api/songs
 ## Test automatycznego uruchamiania
 
 1. **Skonfiguruj automatyczne uruchamianie**:
+
    ```powershell
    .\setup-autostart.ps1
    ```
 
 2. **Przetestuj zadanie**:
+
    ```powershell
    # Uruchom zadanie ręcznie
    Start-ScheduledTask -TaskName "OpenLP Database Sync"
-   
+
    # Sprawdź historię
    # Otwórz Harmonogram zadań i sprawdź historię zadania
    ```
@@ -265,4 +282,3 @@ Jeśli wszystkie testy przeszły pomyślnie:
 2. ✅ Zaktualizuj URL API w skrypcie (jeśli używasz zdalnego serwera)
 3. ✅ Przetestuj na komputerze zborowym
 4. ✅ Przekaż instrukcje użytkownikom
-

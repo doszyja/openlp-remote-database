@@ -27,6 +27,22 @@ import { useActiveSong } from '../hooks/useServicePlans';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
 import { useResponsiveFontSizes } from '../hooks/useResponsiveFontSizes';
 
+// Fullscreen API vendor prefixes
+interface DocumentWithFullscreen extends Document {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+  mozCancelFullScreen?: () => Promise<void>;
+  msExitFullscreen?: () => Promise<void>;
+}
+
+interface ElementWithFullscreen extends Element {
+  webkitRequestFullscreen?: () => Promise<void>;
+  mozRequestFullScreen?: () => Promise<void>;
+  msRequestFullscreen?: () => Promise<void>;
+}
+
 export default function LivePage() {
   const navigate = useNavigate();
   // WebSocket for low-latency updates; HTTP polling as graceful fallback
@@ -70,8 +86,8 @@ export default function LivePage() {
     const parsed = parseVerses(
       versesString,
       song.verseOrder || null,
-      (song as any).lyricsXml || null,
-      (song as any).versesArray || null
+      song.lyricsXml || null,
+      song.versesArray || null
     );
     const filtered = parsed.filter(v => v.content && v.content.trim());
 
@@ -79,7 +95,7 @@ export default function LivePage() {
       total: parsed.length,
       filtered: filtered.length,
       verseOrder: song.verseOrder,
-      hasLyricsXml: !!(song as any).lyricsXml,
+      hasLyricsXml: !!song.lyricsXml,
       verses: filtered.map(v => ({
         type: v.type,
         label: v.label,
@@ -88,7 +104,7 @@ export default function LivePage() {
     });
 
     return filtered;
-  }, [song?.verses, song?.verseOrder, (song as any)?.lyricsXml, song?.id]);
+  }, [song?.verses, song?.verseOrder, song?.lyricsXml, song?.id]);
 
   // Helper function to determine if label should be displayed
   const shouldDisplayLabel = (label: string | null, type: string): boolean => {
@@ -103,7 +119,6 @@ export default function LivePage() {
     if (lowerLabel.includes('pre-chorus') || lowerLabel.includes('tag')) return true;
     return !lowerLabel.match(/^verse\s*\d+$/i);
   };
-
 
   const allContent = useMemo(() => {
     if (!song) return [];
@@ -134,24 +149,25 @@ export default function LivePage() {
   // Track fullscreen state (including when user presses Esc)
   useEffect(() => {
     const handleFullscreenChange = () => {
+      const doc = document as DocumentWithFullscreen;
       const fsElement =
         document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement;
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement;
       setIsFullscreen(!!fsElement);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as any);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange as any);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange as any);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange as any);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange as any);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange as any);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
   }, []);
 
@@ -221,14 +237,15 @@ export default function LivePage() {
         // jeśli nie, wyjdź z podstrony "Na żywo".
         if (isFullscreen) {
           try {
+            const doc = document as DocumentWithFullscreen;
             if (document.exitFullscreen) {
               await document.exitFullscreen();
-            } else if ((document as any).webkitExitFullscreen) {
-              await (document as any).webkitExitFullscreen();
-            } else if ((document as any).mozCancelFullScreen) {
-              await (document as any).mozCancelFullScreen();
-            } else if ((document as any).msExitFullscreen) {
-              await (document as any).msExitFullscreen();
+            } else if (doc.webkitExitFullscreen) {
+              await doc.webkitExitFullscreen();
+            } else if (doc.mozCancelFullScreen) {
+              await doc.mozCancelFullScreen();
+            } else if (doc.msExitFullscreen) {
+              await doc.msExitFullscreen();
             }
           } catch (err) {
             console.error('Error exiting fullscreen:', err);
@@ -272,24 +289,27 @@ export default function LivePage() {
   const handleToggleFullscreen = async () => {
     try {
       if (!isFullscreen) {
-        const element = containerRef.current || document.documentElement;
+        const element = (containerRef.current || document.documentElement) as ElementWithFullscreen;
         if (element.requestFullscreen) {
           await element.requestFullscreen();
-        } else if ((element as any).webkitRequestFullscreen) {
-          await (element as any).webkitRequestFullscreen();
-        } else if ((element as any).mozRequestFullScreen) {
-          await (element as any).mozRequestFullScreen();
-        } else if ((element as any).msRequestFullscreen) {
-          await (element as any).msRequestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+          await element.webkitRequestFullscreen();
+        } else if (element.mozRequestFullScreen) {
+          await element.mozRequestFullScreen();
+        } else if (element.msRequestFullscreen) {
+          await element.msRequestFullscreen();
         }
-      } else if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        await (document as any).webkitExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen) {
-        await (document as any).mozCancelFullScreen();
-      } else if ((document as any).msExitFullscreen) {
-        await (document as any).msExitFullscreen();
+      } else {
+        const doc = document as DocumentWithFullscreen;
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        } else if (doc.mozCancelFullScreen) {
+          await doc.mozCancelFullScreen();
+        } else if (doc.msExitFullscreen) {
+          await doc.msExitFullscreen();
+        }
       }
     } catch (err) {
       console.error('Error toggling fullscreen:', err);

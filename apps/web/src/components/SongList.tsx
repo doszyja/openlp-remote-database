@@ -175,29 +175,29 @@ export default function SongList({
   useEffect(() => {
     if (calculateHeight && !height) {
       let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-      
+
       const updateHeight = () => {
         if (!containerRef.current) return;
-        
+
         const viewportHeight = window.innerHeight;
         const searchInputHeight = showSearch ? 60 : 0;
-        
+
         // Always use viewport height as the base for minimum height calculation
         // This ensures the list always fills at least the viewport height
         // Use viewport height minus typical header/navbar height (64px) and search input if shown
         const minViewportHeight = viewportHeight - 64 - searchInputHeight;
-        
+
         const containerRect = containerRef.current.getBoundingClientRect();
         let newHeight: number;
-        
+
         if (containerRect.height > 0) {
           // Use container height directly, minus search input height if search is shown
           const availableHeight = containerRect.height - searchInputHeight;
-          
+
           // If calculateHeight is provided, use it to adjust the height (e.g., subtract padding)
           // Otherwise, use available height directly
           const calculatedHeight = calculateHeight(availableHeight);
-          
+
           // Always use the maximum of calculated height and minimum viewport height
           // This ensures the list always has at least the viewport height, even if content is smaller
           newHeight = Math.max(calculatedHeight, minViewportHeight);
@@ -206,12 +206,12 @@ export default function SongList({
           const calculatedHeight = calculateHeight(viewportHeight);
           newHeight = Math.max(calculatedHeight, minViewportHeight);
         }
-        
+
         // Never decrease height - always use the maximum of new height, minimum viewport height, and current height
         // This ensures the list never shrinks below its current size or minimum viewport height
         const currentHeight = lastHeightRef.current;
         const finalHeight = Math.max(newHeight, minViewportHeight, currentHeight);
-        
+
         // Only update if there's a significant change (more than 10px) to prevent jitter
         if (Math.abs(finalHeight - currentHeight) > 10) {
           lastHeightRef.current = finalHeight;
@@ -229,7 +229,7 @@ export default function SongList({
 
       // Initial calculation
       const timeoutId = setTimeout(updateHeight, 0);
-      
+
       // Use ResizeObserver to watch container size changes
       // Use debounced version to prevent excessive updates
       let resizeObserver: ResizeObserver | null = null;
@@ -237,7 +237,7 @@ export default function SongList({
         resizeObserver = new ResizeObserver(debouncedUpdateHeight);
         resizeObserver.observe(containerRef.current);
       }
-      
+
       window.addEventListener('resize', debouncedUpdateHeight);
       return () => {
         clearTimeout(timeoutId);

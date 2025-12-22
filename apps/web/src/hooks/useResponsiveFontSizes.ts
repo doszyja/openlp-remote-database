@@ -49,4 +49,3 @@ export function useResponsiveFontSizes(): FontSizes {
 
   return fontSizes;
 }
-

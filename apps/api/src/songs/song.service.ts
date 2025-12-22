@@ -11,9 +11,7 @@ import { AuditLogAction } from '../schemas/audit-log.schema';
 import { SongsVersionService } from './songs-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
-import {
-  createOpenLPSqliteDatabase,
-} from './utils/sqlite-export.util';
+import { createOpenLPSqliteDatabase } from './utils/sqlite-export.util';
 import * as fs from 'fs';
 
 interface SqliteCacheEntry {

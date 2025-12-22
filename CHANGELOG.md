@@ -10,4 +10,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed TypeScript error in `LivePage.tsx` where `song.verses.trim()` was called on a type that TypeScript inferred as `never`. Added proper type assertions to handle both array and string types for the `verses` property, ensuring compatibility with runtime data that may be a string despite the type definition specifying an array.
-
