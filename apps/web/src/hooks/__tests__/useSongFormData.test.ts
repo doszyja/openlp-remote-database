@@ -11,7 +11,6 @@ import {
   extractUniqueSourceVerses,
   extractVersesString,
 } from '../useSongFormData';
-import type { VerseFormData } from '../useSongFormData';
 
 // Simple test framework for environments without vitest
 function describe(name: string, fn: () => void) {

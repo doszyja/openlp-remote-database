@@ -214,17 +214,18 @@ export default function SongSearchModal({
     const searchLower = searchValue.toLowerCase();
     return songs.filter(song => {
       // Search in title (use searchTitle if available for faster matching)
-      const title = (song as any).searchTitle || song.title?.toLowerCase() || '';
-      const matchesTitle = title.includes(searchLower) || song.title?.toLowerCase().includes(searchLower);
-      
+      const title = song.searchTitle || song.title?.toLowerCase() || '';
+      const matchesTitle =
+        title.includes(searchLower) || song.title?.toLowerCase().includes(searchLower);
+
       // Search in number
       const number = song.number?.toLowerCase() || '';
       const matchesNumber = number.includes(searchLower);
-      
+
       // Search in lyrics (use searchLyrics if available for faster matching)
-      const lyrics = (song as any).searchLyrics || '';
+      const lyrics = song.searchLyrics || '';
       const matchesLyrics = lyrics && lyrics.includes(searchLower);
-      
+
       return matchesTitle || matchesNumber || matchesLyrics;
     });
   }, [songs, searchValue]);

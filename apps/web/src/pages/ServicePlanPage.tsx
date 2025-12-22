@@ -547,9 +547,9 @@ export default function ServicePlanPage() {
         // Use verseOrder and lyricsXml from song if available (1:1 transparent with SQLite)
         const parsed = parseVerses(
           verses,
-          (song as any).verseOrder || null,
-          (song as any).lyricsXml || null,
-          (song as any).versesArray || null
+          song.verseOrder || null,
+          song.lyricsXml || null,
+          song.versesArray || null
         ).filter(v => v.content && v.content.trim());
         const allVerses = parsed.map((v, idx) => {
           // Hide technical labels like \"v1\", \"v2\" etc. in the service plan view.
@@ -1107,10 +1107,15 @@ export default function ServicePlanPage() {
     }
 
     const parsedVerses = parseVerses(
-      song.verses,
+      song.verses?.map(v => ({ ...v, label: v.label ?? null })) ?? null,
       song.verseOrder || null,
-      (song as any).lyricsXml || null,
-      (song as any).versesArray || null
+      song.lyricsXml || null,
+      song.versesArray?.map(
+        (v: { order: number; content: string; label?: string; originalLabel?: string }) => ({
+          ...v,
+          label: v.label ?? undefined,
+        })
+      ) ?? null
     ).filter(v => v.content && v.content.trim());
     const allContent = parsedVerses.map(v => {
       const stepLabel = getVerseDisplayLabel(v, parsedVerses.indexOf(v));

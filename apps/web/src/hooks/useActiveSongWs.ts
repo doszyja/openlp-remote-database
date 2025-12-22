@@ -36,7 +36,7 @@ export function useActiveSongWs(): UseActiveSongWsResult {
     const wsUrl = `${baseWsUrl}/ws/service-plans`;
 
     let isUnmounted = false;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 10;
     const baseReconnectDelay = 2000;

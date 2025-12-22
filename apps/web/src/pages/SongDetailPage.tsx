@@ -316,7 +316,7 @@ export default function SongDetailPage() {
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/songs/${id}/edit`)}
                   size="small"
-                  style={{marginRight: 8}}
+                  style={{ marginRight: 8 }}
                   sx={{
                     fontSize: { xs: '0.75rem', sm: '0.875rem' },
                     px: { xs: 1, sm: 1.5 },
@@ -508,19 +508,22 @@ export default function SongDetailPage() {
   const activeSongVerses = useMemo(() => {
     if (!isAuthenticated || !activeSong) return [];
     // Normalize verses to convert undefined labels to null (parseVerses expects label: string | null when verses is an array)
-    const normalizedVerses: string | Array<{
-      order: number;
-      content: string;
-      label: string | null;
-      originalLabel?: string;
-    }> = typeof activeSong.verses === 'string'
-      ? activeSong.verses
-      : activeSong.verses.map(v => ({
-          order: v.order,
-          content: v.content,
-          label: v.label ?? null,
-          originalLabel: v.originalLabel,
-        }));
+    const normalizedVerses:
+      | string
+      | Array<{
+          order: number;
+          content: string;
+          label: string | null;
+          originalLabel?: string;
+        }> =
+      typeof activeSong.verses === 'string'
+        ? activeSong.verses
+        : activeSong.verses.map(v => ({
+            order: v.order,
+            content: v.content,
+            label: v.label ?? null,
+            originalLabel: v.originalLabel,
+          }));
     // Normalize versesArray to convert undefined labels to null
     const normalizedVersesArray: Array<{
       order: number;

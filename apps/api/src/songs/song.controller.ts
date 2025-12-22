@@ -193,14 +193,17 @@ export class SongController {
       );
 
       // Set cache control headers
-      res.setHeader('Cache-Control', `public, max-age=${cacheMaxAge}, must-revalidate`);
+      res.setHeader(
+        'Cache-Control',
+        `public, max-age=${cacheMaxAge}, must-revalidate`,
+      );
       res.setHeader('Expires', expiresDate.toUTCString());
-      
+
       // Set ETag based on file modification time for cache validation
       const stats = fs.statSync(sqlitePath);
       const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
       res.setHeader('ETag', etag);
-      
+
       // Check If-None-Match header for cache validation
       const ifNoneMatch = (res.req as any).headers['if-none-match'];
       if (ifNoneMatch === etag) {

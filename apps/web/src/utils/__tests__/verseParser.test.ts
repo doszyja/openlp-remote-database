@@ -278,4 +278,3 @@ describe('getVerseTypePrefix', () => {
     expect(getVerseTypePrefix(undefined)).toBe('v');
   });
 });
-

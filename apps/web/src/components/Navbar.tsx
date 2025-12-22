@@ -9,7 +9,6 @@ import {
   MenuItem,
   Divider,
   Button,
-  ListItemIcon,
   ListItemText,
   useMediaQuery,
   useTheme,
@@ -207,9 +206,7 @@ export function UserMenu({
               sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}
             >
               Zalogowano jako{' '}
-              <strong style={{ fontWeight: 600, userSelect: 'none' }}>
-                {user.username}
-              </strong>
+              <strong style={{ fontWeight: 600, userSelect: 'none' }}>{user.username}</strong>
             </Typography>
           </Box>
         </MenuItem>
@@ -231,7 +228,7 @@ export function UserMenu({
           allPlans={allPlans}
           planId={planId}
           isServicePlansPage={isServicePlansPage}
-          onNavigate={(path) => {
+          onNavigate={path => {
             onPlansMenuClose();
             onClose();
             onNavigate(path);
@@ -401,7 +398,12 @@ export function RightSideContent({
   settingsDialogRef,
 }: {
   isAuthenticated: boolean;
-  user: { username?: string; avatar?: string | null; discordId: string; discordRoles?: string[] | null } | null;
+  user: {
+    username?: string;
+    avatar?: string | null;
+    discordId: string;
+    discordRoles?: string[] | null;
+  } | null;
   isLoading: boolean;
   hasToken: boolean;
   isApiError: boolean;
@@ -455,12 +457,7 @@ export function RightSideContent({
         </>
       ) : !hasToken && !isLoading ? (
         <>
-          <Button
-            variant="contained"
-            onClick={onDiscordLogin}
-            disabled={isApiError}
-            size="small"
-          >
+          <Button variant="contained" onClick={onDiscordLogin} disabled={isApiError} size="small">
             Zaloguj
           </Button>
           <Box sx={{ display: 'none' }}>
@@ -479,7 +476,6 @@ export default function Navbar() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [homeMenuAnchorEl, setHomeMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
@@ -523,14 +519,6 @@ export default function Navbar() {
 
   const handlePlansMenuClose = () => {
     setPlansMenuAnchorEl(null);
-  };
-
-  const handleHomeMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setHomeMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleHomeMenuClose = () => {
-    setHomeMenuAnchorEl(null);
   };
 
   const handleExportZip = useCallback(async () => {

@@ -31,7 +31,8 @@ export function useVerseManagement(
           : 1;
 
       const newSourceId = `${prefix}${newNumber}`;
-      const newOrder = sourceVerses.length > 0 ? Math.max(...sourceVerses.map(v => v.order)) + 1 : 1;
+      const newOrder =
+        sourceVerses.length > 0 ? Math.max(...sourceVerses.map(v => v.order)) + 1 : 1;
 
       const newVerse: VerseFormData = {
         order: newOrder,
@@ -106,4 +107,3 @@ export function useVerseManagement(
     removeVerse,
   };
 }
-

@@ -66,6 +66,7 @@ param(
 ### Metoda 3: Uruchomienie w Git Bash / Terminal
 
 **W Git Bash:**
+
 ```bash
 ./sync-sqlite.sh
 # lub bezpośrednio:
@@ -73,6 +74,7 @@ powershell.exe -ExecutionPolicy Bypass -File "./sync-sqlite.ps1"
 ```
 
 **W PowerShell:**
+
 ```powershell
 .\sync-sqlite.ps1
 ```
@@ -115,7 +117,8 @@ powershell.exe -ExecutionPolicy Bypass -File "./sync-sqlite.ps1"
 
 ### Błąd: "Katalog OpenLP nie istnieje"
 
-**Rozwiązanie:** 
+**Rozwiązanie:**
+
 - Skrypt automatycznie wykrywa standardową lokalizację OpenLP (`%APPDATA%\openlp\data\songs.sqlite`)
 - Jeśli OpenLP jest w innej lokalizacji, podaj ścieżkę ręcznie:
   ```powershell
@@ -125,6 +128,7 @@ powershell.exe -ExecutionPolicy Bypass -File "./sync-sqlite.ps1"
 ### Błąd: "Nie można zastąpić pliku"
 
 **Rozwiązanie:**
+
 - Upewnij się, że OpenLP jest zamknięty
 - Sprawdź, czy masz uprawnienia do zapisu w katalogu OpenLP
 - Uruchom PowerShell jako administrator
@@ -232,6 +236,7 @@ Aby sprawdzić, czy zadanie działa:
 **Problem**: Zadanie nie uruchamia się przy starcie
 
 **Rozwiązania**:
+
 - Sprawdź, czy ścieżka do skryptu jest poprawna
 - Upewnij się, że zaznaczono "Uruchom niezależnie od tego, czy użytkownik jest zalogowany"
 - Sprawdź historię zadania w Harmonogramie zadań, aby zobaczyć błędy
@@ -240,14 +245,15 @@ Aby sprawdzić, czy zadanie działa:
 
 **Problem**: Skrypt uruchamia się, ale nie może zastąpić pliku
 
-**Rozwiązanie**: 
+**Rozwiązanie**:
+
 - Zaznacz "Uruchom z najwyższymi uprawnieniami" w ustawieniach zadania
 - Upewnij się, że OpenLP jest zamknięty przed synchronizacją (możesz dodać opóźnienie w skrypcie)
 
 ## Wsparcie
 
 W razie problemów:
+
 1. Sprawdź logi w konsoli PowerShell
 2. Sprawdź, czy serwer API jest dostępny
 3. Skontaktuj się z administratorem systemu
-

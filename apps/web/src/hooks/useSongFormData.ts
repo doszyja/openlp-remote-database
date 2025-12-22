@@ -1,11 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { UseFormReset, UseFormSetValue } from 'react-hook-form';
 import type { SongResponseDto } from '@openlp/shared';
-import {
-  parseVerses,
-  generateVerseOrderString,
-  getVerseTypePrefix,
-} from '../utils/verseParser';
+import { parseVerses, generateVerseOrderString, getVerseTypePrefix } from '../utils/verseParser';
 
 /**
  * Verse type for form data
@@ -278,4 +274,3 @@ export function useSongFormData(
     }
   }, [sourceVerses, verseOrder, setValue]);
 }
-

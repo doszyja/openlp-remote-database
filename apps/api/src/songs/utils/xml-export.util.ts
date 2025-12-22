@@ -36,9 +36,7 @@ function formatVerseLines(content: string): string {
 
   // Join lines with <br /> (with spaces around) and wrap in <lines> tag
   // Format: <lines> Line 1 <br /> Line 2 <br /> Line 3 </lines>
-  const linesContent = lines
-    .map((line) => escapeXml(line))
-    .join(' <br /> ');
+  const linesContent = lines.map((line) => escapeXml(line)).join(' <br /> ');
 
   return `<lines> ${linesContent} </lines>`;
 }
@@ -88,7 +86,16 @@ function getVerseName(verse: any): string {
 
   // Generate from type and order
   const type = verse.type || 'verse';
-  const prefix = type === 'chorus' ? 'c' : type === 'bridge' ? 'b' : type === 'pre-chorus' ? 'p' : type === 'tag' ? 't' : 'v';
+  const prefix =
+    type === 'chorus'
+      ? 'c'
+      : type === 'bridge'
+        ? 'b'
+        : type === 'pre-chorus'
+          ? 'p'
+          : type === 'tag'
+            ? 't'
+            : 'v';
   const num = verse.order || 1;
   return `${prefix}${num}`;
 }
@@ -98,7 +105,10 @@ function getVerseName(verse: any): string {
  * Handles both new format (array of objects with order) and legacy format (string)
  * Returns format: <verse name="v1"><lines>...</lines></verse>
  */
-function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): string {
+function parseVersesToOpenLyricsXml(
+  verses: any,
+  verseOrder?: string | null,
+): string {
   if (!verses) {
     return '';
   }
@@ -162,7 +172,7 @@ function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): st
   if (verseOrder && verseOrder.trim() && versesToProcess.length > 0) {
     const orderParts = verseOrder.trim().split(/\s+/);
     const verseMap = new Map<string, any>();
-    
+
     // Build map of all available verses by name (use originalLabel as primary key)
     versesToProcess.forEach((v) => {
       // PRIORITY 1: Use originalLabel if available (e.g., "v1", "c1") - this is the source of truth
@@ -172,7 +182,7 @@ function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): st
       } else {
         name = (v.name || getVerseName(v)).toLowerCase();
       }
-      
+
       // Store verse in map (if multiple verses with same name, keep the first one with content)
       if (!verseMap.has(name) || (v.content && v.content.trim())) {
         verseMap.set(name, {
@@ -185,10 +195,10 @@ function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): st
     // Build ordered verses list - only unique verses (first occurrence from verseOrder)
     const orderedVerses: any[] = [];
     const addedVerses = new Set<string>(); // Track which verses have been added
-    
+
     orderParts.forEach((part) => {
       const partLower = part.toLowerCase();
-      
+
       // Only add verse if it hasn't been added yet (prevent duplicates)
       if (!addedVerses.has(partLower)) {
         const verse = verseMap.get(partLower);
@@ -200,7 +210,9 @@ function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): st
           addedVerses.add(partLower); // Mark as added
         } else {
           // Verse not found in map - log warning but continue
-          console.warn(`[xml-export] Verse "${part}" from verseOrder not found in verses array`);
+          console.warn(
+            `[xml-export] Verse "${part}" from verseOrder not found in verses array`,
+          );
         }
       }
     });
@@ -229,7 +241,9 @@ function parseVersesToOpenLyricsXml(verses: any, verseOrder?: string | null): st
 
     const name = verse.name || getVerseName(verse);
     const lines = formatVerseLines(verse.content);
-    parts.push(`        <verse name="${name}">\n            ${lines}\n        </verse>`);
+    parts.push(
+      `        <verse name="${name}">\n            ${lines}\n        </verse>`,
+    );
   });
 
   return parts.join('\n');
@@ -260,18 +274,24 @@ export function generateSongXml(song: {
     if (typeof song.tags[0] === 'string') {
       songbookNames.push(...(song.tags as string[]));
     } else {
-      songbookNames.push(...(song.tags as Array<{ name: string }>).map((t) => t.name));
+      songbookNames.push(
+        ...(song.tags as Array<{ name: string }>).map((t) => t.name),
+      );
     }
   }
 
   // Get verseOrder or generate from verses
   let verseOrderString = song.verseOrder || null;
-  if (!verseOrderString && Array.isArray(song.verses) && song.verses.length > 0) {
+  if (
+    !verseOrderString &&
+    Array.isArray(song.verses) &&
+    song.verses.length > 0
+  ) {
     // Generate verseOrder from verses array
-    const sortedVerses = [...song.verses].sort((a, b) => (a.order || 0) - (b.order || 0));
-    verseOrderString = sortedVerses
-      .map((v) => getVerseName(v))
-      .join(' ');
+    const sortedVerses = [...song.verses].sort(
+      (a, b) => (a.order || 0) - (b.order || 0),
+    );
+    verseOrderString = sortedVerses.map((v) => getVerseName(v)).join(' ');
   }
 
   // Generate lyrics XML
@@ -279,11 +299,15 @@ export function generateSongXml(song: {
   if (song.lyricsXml && song.lyricsXml.trim()) {
     // If lyricsXml exists, try to extract verses from it
     const lyricsXmlContent = song.lyricsXml.trim();
-    
+
     // Check if it's OpenLyrics format with <verse name="..."><lines>...</lines></verse>
-    if (lyricsXmlContent.includes('<verse') && lyricsXmlContent.includes('<lines>')) {
+    if (
+      lyricsXmlContent.includes('<verse') &&
+      lyricsXmlContent.includes('<lines>')
+    ) {
       // Extract verses from OpenLyrics format
-      const verseRegex = /<verse\s+name=["']([^"']+)["'][^>]*>[\s\S]*?<lines>([\s\S]*?)<\/lines>[\s\S]*?<\/verse>/gi;
+      const verseRegex =
+        /<verse\s+name=["']([^"']+)["'][^>]*>[\s\S]*?<lines>([\s\S]*?)<\/lines>[\s\S]*?<\/verse>/gi;
       const verses: any[] = [];
       let match;
       while ((match = verseRegex.exec(lyricsXmlContent)) !== null) {
@@ -314,15 +338,17 @@ export function generateSongXml(song: {
   const xmlParts: string[] = [];
   xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
   xmlParts.push(
-    `<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8" createdIn="OpenLP 3.0.2" modifiedIn="OpenLP 3.0.2" modifiedDate="${modifiedDate}">`
+    `<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8" createdIn="OpenLP 3.0.2" modifiedIn="OpenLP 3.0.2" modifiedDate="${modifiedDate}">`,
   );
   xmlParts.push('    <properties>');
   xmlParts.push('        <titles>');
   xmlParts.push(`            <title>${escapeXml(song.title)}</title>`);
   xmlParts.push('        </titles>');
-  
+
   if (verseOrderString) {
-    xmlParts.push(`        <verseOrder>${escapeXml(verseOrderString)}</verseOrder>`);
+    xmlParts.push(
+      `        <verseOrder>${escapeXml(verseOrderString)}</verseOrder>`,
+    );
   }
 
   // Add authors (always use "Nieznany" to match SQLite default author)
