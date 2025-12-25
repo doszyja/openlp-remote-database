@@ -43,7 +43,7 @@ export function useRestoreVersion() {
   return useMutation({
     mutationFn: ({ songId, version }: { songId: string; version: number }) =>
       api.songs.restoreVersion(songId, version),
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate song queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['song', variables.songId] });
       queryClient.invalidateQueries({ queryKey: ['song-versions', variables.songId] });

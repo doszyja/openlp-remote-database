@@ -165,7 +165,7 @@ export const api = {
       return response.blob();
     },
 
-    getVersion: (): Promise<{ version: number }> => {
+    getCollectionVersion: (): Promise<{ version: number }> => {
       return request('/songs/version');
     },
 
