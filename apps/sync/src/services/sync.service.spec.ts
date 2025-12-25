@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SyncService, SyncResult } from './sync.service';
-import { ApiClientService } from './api-client.service';
-import { OpenLPDatabaseService } from './openlp-db.service';
+import { SyncService } from './sync.service';
+import type { ApiClientService } from './api-client.service';
+import type { OpenLPDatabaseService } from './openlp-db.service';
 import type { SongResponseDto } from '@openlp/shared';
 
 describe('SyncService', () => {
@@ -29,7 +29,10 @@ describe('SyncService', () => {
       close: vi.fn(),
     };
 
-    syncService = new SyncService(mockApiClient as any, mockOpenlpDb as any);
+    syncService = new SyncService(
+      mockApiClient as unknown as ApiClientService,
+      mockOpenlpDb as unknown as OpenLPDatabaseService
+    );
   });
 
   afterEach(() => {

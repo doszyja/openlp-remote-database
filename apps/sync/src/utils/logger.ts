@@ -26,12 +26,14 @@ export class Logger {
 
   info(message: string, ...args: unknown[]): void {
     if (this.level >= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.log(`[INFO] ${message}`, ...args);
     }
   }
 
   debug(message: string, ...args: unknown[]): void {
     if (this.level >= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.log(`[DEBUG] ${message}`, ...args);
     }
   }

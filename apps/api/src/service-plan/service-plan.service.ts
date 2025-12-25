@@ -19,6 +19,12 @@ import { SetActiveSongDto } from './dto/set-active-song.dto';
 import { SetActiveVerseDto } from './dto/set-active-verse.dto';
 import { ServicePlanGateway } from './service-plan.gateway';
 import { WebSocketServerService } from './websocket-server.service';
+import {
+  exportServicePlanToOpenLP,
+  exportServicePlanToOsz,
+} from './utils/export-service-plan.util';
+import * as crypto from 'crypto';
+import * as archiver from 'archiver';
 
 @Injectable()
 export class ServicePlanService {
@@ -359,5 +365,249 @@ export class ServicePlanService {
     }
     await this.websocketServer.broadcastActiveSong();
     return result;
+  }
+
+  /**
+   * Export service plan to OpenLP XML format
+   */
+  async exportToOpenLP(id: string): Promise<string> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    const planForExport = {
+      id: servicePlan._id.toString(),
+      name: servicePlan.name,
+      date: servicePlan.date,
+      items: servicePlan.items.map((item: any) => ({
+        songId: item.songId,
+        songTitle: item.songTitle,
+        order: item.order,
+        notes: item.notes,
+      })),
+    };
+
+    return exportServicePlanToOpenLP(planForExport);
+  }
+
+  /**
+   * Export service plan to OpenLP .osz format (ZIP archive)
+   */
+  async exportToOsz(id: string): Promise<archiver.Archiver> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    // Fetch full song data for all items
+    this.logger.log(
+      `[exportToOsz] Fetching songs for ${servicePlan.items.length} items`,
+    );
+    const itemsWithSongs = await Promise.all(
+      servicePlan.items.map(async (item: any) => {
+        this.logger.debug(`[exportToOsz] Fetching song ${item.songId}`);
+        const song = await this.songModel.findById(item.songId).exec();
+        if (!song) {
+          this.logger.warn(
+            `[exportToOsz] Song with ID ${item.songId} not found for service plan ${id}`,
+          );
+          return {
+            songId: item.songId,
+            songTitle: item.songTitle,
+            order: item.order,
+            notes: item.notes,
+            song: undefined,
+          };
+        }
+
+        this.logger.debug(
+          `[exportToOsz] Found song: ${song.title}, verses count: ${Array.isArray(song.verses) ? song.verses.length : 0}`,
+        );
+
+        // Ensure verses is an array
+        const verses = Array.isArray(song.verses) ? song.verses : [];
+
+        return {
+          songId: item.songId,
+          songTitle: item.songTitle,
+          order: item.order,
+          notes: item.notes,
+          song: {
+            title: song.title,
+            verses: verses,
+            verseOrder: song.verseOrder || null,
+            lyricsXml: song.lyricsXml || null,
+            copyright: song.copyright || null,
+            comments: song.comments || null,
+            ccliNumber: song.ccliNumber || null,
+            authors: '', // OpenLP stores authors separately, we don't have this field
+            alternateTitle: song.number || null,
+            openlpId: (song.openlpMapping as any)?.openlpId || null, // OpenLP database ID if available
+          },
+        };
+      }),
+    );
+
+    this.logger.log(
+      `[exportToOsz] Fetched ${itemsWithSongs.filter((i) => i.song).length} songs with data`,
+    );
+
+    const planForExport = {
+      id: servicePlan._id.toString(),
+      name: servicePlan.name,
+      date: servicePlan.date,
+      items: itemsWithSongs,
+    };
+
+    return exportServicePlanToOsz(planForExport);
+  }
+
+  /**
+   * Generate or get share token for a service plan
+   */
+  async generateShareToken(
+    id: string,
+    expiresInDays?: number,
+  ): Promise<string> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    // Generate a secure random token
+    const token = crypto.randomBytes(32).toString('base64url');
+
+    // Calculate expiration date if provided
+    const expiresAt = expiresInDays
+      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+      : undefined;
+
+    servicePlan.shareToken = token;
+    servicePlan.shareTokenExpiresAt = expiresAt;
+    await servicePlan.save();
+
+    return token;
+  }
+
+  /**
+   * Revoke share token
+   */
+  async revokeShareToken(id: string): Promise<void> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    servicePlan.shareToken = undefined;
+    servicePlan.shareTokenExpiresAt = undefined;
+    await servicePlan.save();
+  }
+
+  /**
+   * Get service plan by share token
+   */
+  async findByShareToken(token: string): Promise<any> {
+    const servicePlan = await this.servicePlanModel
+      .findOne({
+        shareToken: token,
+        $or: [
+          { shareTokenExpiresAt: { $exists: false } },
+          { shareTokenExpiresAt: null },
+          { shareTokenExpiresAt: { $gt: new Date() } },
+        ],
+      })
+      .exec();
+
+    if (!servicePlan) {
+      throw new NotFoundException('Invalid or expired share token');
+    }
+
+    return this.transformServicePlan(servicePlan);
+  }
+
+  /**
+   * Generate or get control token for mobile control
+   */
+  async generateControlToken(
+    id: string,
+    expiresInDays?: number,
+  ): Promise<string> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    // Generate a secure random token
+    const token = crypto.randomBytes(32).toString('base64url');
+
+    // Calculate expiration date if provided
+    const expiresAt = expiresInDays
+      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+      : undefined;
+
+    servicePlan.controlToken = token;
+    servicePlan.controlTokenExpiresAt = expiresAt;
+    await servicePlan.save();
+
+    return token;
+  }
+
+  /**
+   * Revoke control token
+   */
+  async revokeControlToken(id: string): Promise<void> {
+    const servicePlan = await this.servicePlanModel.findById(id).exec();
+    if (!servicePlan) {
+      throw new NotFoundException(`Service plan with ID ${id} not found`);
+    }
+
+    servicePlan.controlToken = undefined;
+    servicePlan.controlTokenExpiresAt = undefined;
+    await servicePlan.save();
+  }
+
+  /**
+   * Verify control token and get plan ID
+   */
+  async verifyControlToken(token: string): Promise<string> {
+    const servicePlan = await this.servicePlanModel
+      .findOne({
+        controlToken: token,
+        $or: [
+          { controlTokenExpiresAt: { $exists: false } },
+          { controlTokenExpiresAt: null },
+          { controlTokenExpiresAt: { $gt: new Date() } },
+        ],
+      })
+      .exec();
+
+    if (!servicePlan) {
+      throw new NotFoundException('Invalid or expired control token');
+    }
+
+    return servicePlan._id.toString();
+  }
+
+  /**
+   * Control active song via control token (for mobile)
+   */
+  async controlActiveSong(
+    controlToken: string,
+    setActiveDto: SetActiveSongDto,
+  ): Promise<any> {
+    const planId = await this.verifyControlToken(controlToken);
+    return this.setActiveSong(planId, setActiveDto);
+  }
+
+  /**
+   * Control active verse via control token (for mobile)
+   */
+  async controlActiveVerse(
+    controlToken: string,
+    setActiveVerseDto: SetActiveVerseDto,
+  ): Promise<any> {
+    const planId = await this.verifyControlToken(controlToken);
+    return this.setActiveVerse(planId, setActiveVerseDto);
   }
 }

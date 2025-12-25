@@ -80,3 +80,7 @@ export const SongSchema = SchemaFactory.createForClass(Song);
 SongSchema.index({ deletedAt: 1 });
 SongSchema.index({ searchTitle: 1 }); // For OpenLP-compatible searching
 SongSchema.index({ searchLyrics: 1 }); // For OpenLP-compatible lyrics searching
+SongSchema.index({ tags: 1 }); // For tag filtering
+SongSchema.index({ language: 1, deletedAt: 1 }); // Compound index for language queries
+SongSchema.index({ createdAt: -1 }); // For sorting by creation date
+SongSchema.index({ title: 1, deletedAt: 1 }); // Compound index for title queries

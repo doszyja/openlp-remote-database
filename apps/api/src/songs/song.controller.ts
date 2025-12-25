@@ -12,11 +12,21 @@ import {
   Req,
   Res,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import { SongService } from './song.service';
+import { SongVersionService } from './song-version.service';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
@@ -28,10 +38,12 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditLogAction } from '../schemas/audit-log.schema';
 import type { UserResponseDto } from '../auth/dto/user-response.dto';
 
+@ApiTags('songs')
 @Controller('songs')
 export class SongController {
   constructor(
     private readonly songService: SongService,
+    private readonly songVersionService: SongVersionService,
     private readonly auditLogService: AuditLogService,
   ) {}
 
@@ -246,5 +258,120 @@ export class SongController {
         fs.unlink(sqlitePath, () => {});
       }
     }
+  }
+
+  // Version history endpoints
+  @Get(':id/versions')
+  @Public() // Public: Anyone can view version history
+  @ApiOperation({ summary: 'Get version history for a song' })
+  @ApiParam({ name: 'id', description: 'Song ID' })
+  @ApiResponse({ status: 200, description: 'List of song versions' })
+  async getVersions(@Param('id') id: string) {
+    return this.songVersionService.getVersions(id);
+  }
+
+  // IMPORTANT: This endpoint must be BEFORE ':id/versions/:version' to avoid routing conflicts
+  @Get(':id/versions/compare')
+  @Public() // Public: Anyone can compare versions
+  @ApiOperation({ summary: 'Compare two versions of a song' })
+  @ApiParam({ name: 'id', description: 'Song ID' })
+  @ApiQuery({ name: 'v1', description: 'First version number' })
+  @ApiQuery({ name: 'v2', description: 'Second version number' })
+  @ApiResponse({ status: 200, description: 'Comparison result' })
+  async compareVersions(
+    @Param('id') id: string,
+    @Query('v1') v1: string,
+    @Query('v2') v2: string,
+  ) {
+    if (!v1 || !v2 || v1.trim() === '' || v2.trim() === '') {
+      throw new BadRequestException(
+        'Both v1 and v2 query parameters are required',
+      );
+    }
+    const version1 = parseInt(v1, 10);
+    const version2 = parseInt(v2, 10);
+    if (isNaN(version1) || version1 < 1 || isNaN(version2) || version2 < 1) {
+      throw new BadRequestException(
+        `Invalid version numbers: v1=${v1}, v2=${v2}. Both must be positive integers.`,
+      );
+    }
+    return this.songVersionService.compareVersions(id, version1, version2);
+  }
+
+  @Get(':id/versions/:version')
+  @Public() // Public: Anyone can view a specific version
+  @ApiOperation({ summary: 'Get a specific version of a song' })
+  @ApiParam({ name: 'id', description: 'Song ID' })
+  @ApiParam({ name: 'version', description: 'Version number' })
+  @ApiResponse({ status: 200, description: 'Song version data' })
+  async getSongVersion(
+    @Param('id') id: string,
+    @Param('version') version: string,
+  ) {
+    if (!version || version.trim() === '') {
+      throw new BadRequestException('Version parameter is required');
+    }
+    const versionNum = parseInt(version, 10);
+    if (isNaN(versionNum) || versionNum < 1) {
+      throw new BadRequestException(
+        `Invalid version number: ${version}. Version must be a positive integer.`,
+      );
+    }
+    return this.songVersionService.getVersion(id, versionNum);
+  }
+
+  @Post(':id/versions/:version/restore')
+  @UseGuards(EditPermissionGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Restore a song to a specific version' })
+  @ApiParam({ name: 'id', description: 'Song ID' })
+  @ApiParam({ name: 'version', description: 'Version number to restore' })
+  @ApiResponse({ status: 200, description: 'Song restored successfully' })
+  // Protected: Only authenticated users with edit permission can restore versions
+  async restoreVersion(
+    @Param('id') id: string,
+    @Param('version') version: string,
+    @CurrentUser() user: UserResponseDto,
+    @Req() req: Request,
+  ) {
+    if (!version || version.trim() === '') {
+      throw new BadRequestException('Version parameter is required');
+    }
+    const versionNum = parseInt(version, 10);
+    if (isNaN(versionNum) || versionNum < 1) {
+      throw new BadRequestException(
+        `Invalid version number: ${version}. Version must be a positive integer.`,
+      );
+    }
+
+    const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+    const userAgent = req.get('user-agent') || undefined;
+
+    const restoredSong = await this.songVersionService.restoreVersion(
+      id,
+      versionNum,
+      user?.id,
+      user?.username,
+      user?.discordId,
+    );
+
+    // Log audit trail
+    if (user?.id && user?.username) {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_EDIT, user.id, user.username, {
+          discordId: user.discordId,
+          songId: id,
+          songTitle: restoredSong.title,
+          metadata: {
+            action: 'restore_version',
+            restoredFromVersion: versionNum,
+          },
+          ipAddress,
+          userAgent,
+        })
+        .catch((err) => console.error('Failed to log audit trail:', err));
+    }
+
+    return restoredSong;
   }
 }

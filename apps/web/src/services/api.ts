@@ -13,6 +13,7 @@ import type {
   SetActiveSongDto,
   SetActiveVerseDto,
 } from '@openlp/shared';
+import type { SongVersion, VersionComparison } from '../hooks/useSongVersions';
 
 // In development, use relative paths (via Vite proxy)
 // In production, use full API URL
@@ -171,6 +172,21 @@ export const api = {
     getAllForCache: (): Promise<{ version: number; songs: SongListCacheItem[] }> => {
       return request('/songs/all');
     },
+    // Version history
+    getVersions: (songId: string): Promise<SongVersion[]> => {
+      return request(`/songs/${songId}/versions`);
+    },
+    getVersion: (songId: string, version: number): Promise<SongVersion> => {
+      return request(`/songs/${songId}/versions/${version}`);
+    },
+    restoreVersion: (songId: string, version: number): Promise<SongResponseDto> => {
+      return request(`/songs/${songId}/versions/${version}/restore`, {
+        method: 'POST',
+      });
+    },
+    compareVersions: (songId: string, v1: number, v2: number): Promise<VersionComparison> => {
+      return request(`/songs/${songId}/versions/compare?v1=${v1}&v2=${v2}`);
+    },
   },
   auditLogs: {
     getAll: (
@@ -271,6 +287,106 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
+    },
+    exportToOpenLP: async (id: string): Promise<Blob> => {
+      const url = `${API_URL}/service-plans/${id}/export/openlp`;
+      const token = localStorage.getItem(STORAGE_KEY);
+
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          errorData.message || `HTTP ${response.status}`,
+          response.status,
+          errorData
+        );
+      }
+
+      return response.blob();
+    },
+
+    exportToOsz: async (id: string): Promise<Blob> => {
+      const url = `${API_URL}/service-plans/${id}/export/osz`;
+      const token = localStorage.getItem(STORAGE_KEY);
+
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(
+          errorData.message || `HTTP ${response.status}`,
+          response.status,
+          errorData
+        );
+      }
+
+      return response.blob();
+    },
+    generateShareToken: (id: string, expiresInDays?: number): Promise<{ shareToken: string }> => {
+      return request(`/service-plans/${id}/share`, {
+        method: 'POST',
+        body: JSON.stringify({ expiresInDays }),
+      });
+    },
+    revokeShareToken: (id: string): Promise<void> => {
+      return request(`/service-plans/${id}/share`, {
+        method: 'DELETE',
+      });
+    },
+    getByShareToken: (token: string): Promise<ServicePlan> => {
+      return request(`/service-plans/shared/${token}`);
+    },
+    generateControlToken: (
+      id: string,
+      expiresInDays?: number
+    ): Promise<{ controlToken: string }> => {
+      return request(`/service-plans/${id}/control`, {
+        method: 'POST',
+        body: JSON.stringify({ expiresInDays }),
+      });
+    },
+    revokeControlToken: (id: string): Promise<void> => {
+      return request(`/service-plans/${id}/control`, {
+        method: 'DELETE',
+      });
+    },
+    controlActiveSong: (token: string, data: SetActiveSongDto): Promise<ServicePlan> => {
+      return request(`/service-plans/control/${token}/active`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    controlActiveVerse: (token: string, data: SetActiveVerseDto): Promise<ServicePlan> => {
+      return request(`/service-plans/control/${token}/active-verse`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    getActiveSongByControlToken: (
+      token: string
+    ): Promise<{
+      servicePlan: { id: string; name: string };
+      item: {
+        id: string;
+        songId: string;
+        songTitle: string;
+        order: number;
+        activeVerseIndex?: number;
+      };
+      song: SongResponseDto;
+    } | null> => {
+      return request(`/service-plans/control/${token}/active`);
     },
   },
 };

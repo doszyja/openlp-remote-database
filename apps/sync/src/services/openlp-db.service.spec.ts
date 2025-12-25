@@ -67,7 +67,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       expect(result.title).toBe('Amazing Grace');
       expect(result.search_title).toBe('amazing grace');
@@ -90,7 +93,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       expect(result.search_title).toBe('test song');
     });
@@ -111,7 +117,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       expect(result.search_lyrics).toBe('verse one\n\nverse two');
     });
@@ -146,7 +155,10 @@ describe('OpenLPDatabaseService', () => {
 
       service.upsertSong(updatedSong, openlpId);
 
-      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT * FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       expect(result.title).toBe('Updated Title');
       expect(result.search_title).toBe('updated title');
@@ -169,7 +181,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       // Should contain XML verse tags
       expect(result.lyrics).toContain('<verse label="c">');
@@ -196,7 +211,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       // Verify order: v1 should come before v2, v2 before v3
       const v1Index = result.lyrics.indexOf('<verse label="v1">');
@@ -225,7 +243,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       // Should still create XML structure even with empty verses
       expect(result.lyrics).toBeDefined();
@@ -247,7 +268,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       // Should have 3 verse tags
       const verseMatches = result.lyrics.match(/<verse label="v\d+">/g);
@@ -270,7 +294,10 @@ describe('OpenLPDatabaseService', () => {
 
       const openlpId = service.upsertSong(song);
 
-      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as any;
+      const result = db.prepare('SELECT lyrics FROM songs WHERE id = ?').get(openlpId) as Record<
+        string,
+        unknown
+      >;
 
       // Should have 1 verse tag
       expect(result.lyrics).toContain('<verse label="v1">');

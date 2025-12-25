@@ -1,4 +1,4 @@
-// @ts-ignore - dotenv has types but TypeScript sometimes doesn't find them
+// @ts-expect-error - dotenv has types but TypeScript sometimes doesn't find them
 import dotenv from 'dotenv';
 import * as path from 'path';
 

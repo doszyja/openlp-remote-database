@@ -446,6 +446,19 @@ export default function SongDetailPage() {
                       }}
                     >
                       {getVerseDisplayLabel(verse, index)}
+                      {verse.originalLabel && (
+                        <Typography
+                          component="span"
+                          sx={{
+                            ml: 0.5,
+                            color: 'text.disabled',
+                            fontSize: '0.6rem',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          ({verse.originalLabel})
+                        </Typography>
+                      )}
                     </Typography>
                     <Paper
                       elevation={0}

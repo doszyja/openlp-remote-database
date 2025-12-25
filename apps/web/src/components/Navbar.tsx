@@ -235,9 +235,86 @@ export function UserMenu({
           }}
         />
         <MenuItem
-          onClick={() => {
+          onClick={async () => {
             onClose();
-            onNavigate('/live');
+            // Open live page in new window on second screen in fullscreen mode
+            const liveUrl = `${window.location.origin}/live`;
+
+            // Detect second screen position
+            let screenLeft = 1920; // Default: assume second screen is to the right
+            let screenWidth = window.screen?.width || 1920;
+            let screenHeight = window.screen?.height || 1080;
+
+            // Try to detect second screen using Screen API (Chrome/Edge)
+            if ('getScreenDetails' in window) {
+              try {
+                // @ts-expect-error - Screen API is experimental
+                const screenDetails = await window.getScreenDetails();
+                if (screenDetails.screens.length > 1) {
+                  // Find the current screen (where main window is)
+                  const currentScreen = screenDetails.currentScreen;
+
+                  // Find a different screen (secondary screen)
+                  const secondaryScreen = screenDetails.screens.find(
+                    (screen: Screen) => screen !== currentScreen
+                  );
+
+                  if (secondaryScreen) {
+                    screenLeft = secondaryScreen.left;
+                    screenWidth = secondaryScreen.width;
+                    screenHeight = secondaryScreen.height;
+                    console.log('Found secondary screen:', {
+                      left: screenLeft,
+                      width: screenWidth,
+                      height: screenHeight,
+                    });
+                  }
+                }
+              } catch (err) {
+                console.log('Screen API not available, trying fallback method:', err);
+              }
+            }
+
+            // Fallback: Try to detect second screen by checking window position
+            // If main window is not at (0,0), there might be a second screen
+            if (screenLeft === 1920) {
+              const mainWindowLeft = window.screenLeft || window.screenX || 0;
+              const mainScreenWidth = window.screen?.width || 1920;
+
+              // If main window is positioned beyond first screen, calculate second screen position
+              if (mainWindowLeft >= mainScreenWidth) {
+                // Main window is already on second screen
+                screenLeft = 0; // Open on first screen
+              } else {
+                // Try to position on second screen (to the right)
+                screenLeft = mainScreenWidth;
+              }
+
+              console.log('Using fallback screen detection:', {
+                mainWindowLeft,
+                mainScreenWidth,
+                calculatedLeft: screenLeft,
+              });
+            }
+
+            // Open window with maximum size, positioned on second screen
+            const windowFeatures = `width=${screenWidth},height=${screenHeight},left=${screenLeft},top=0`;
+
+            const liveWindow = window.open(liveUrl, 'live-presentation', windowFeatures);
+
+            if (liveWindow) {
+              // Send message to new window to trigger fullscreen when ready
+              // The LivePage component will handle entering fullscreen
+              liveWindow.addEventListener('load', () => {
+                // Send message to trigger fullscreen
+                if (liveWindow.postMessage) {
+                  liveWindow.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+                }
+              });
+            } else {
+              // Fallback: navigate in current window if popup blocked
+              onNavigate('/live');
+            }
           }}
           selected={isLivePage}
           sx={{
