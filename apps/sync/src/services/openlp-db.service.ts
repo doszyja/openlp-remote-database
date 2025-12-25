@@ -100,17 +100,17 @@ export class OpenLPDatabaseService {
     const transaction = this.db.transaction(() => {
       // Prepare song data for OpenLP format
       const lyrics = this.formatSongLyrics(song);
-      const searchTitle = (song as any).searchTitle || song.title.toLowerCase().trim();
+      const searchTitle = song.searchTitle || song.title.toLowerCase().trim();
       // Generate search_lyrics from verses (lowercase for searching)
       const searchLyrics =
-        (song as any).searchLyrics ||
+        song.searchLyrics ||
         (typeof song.verses === 'string' ? song.verses.toLowerCase().trim() : '');
 
       // Map MongoDB fields to OpenLP fields
       const alternateTitle = song.number || null;
-      const copyright = (song as any).copyright || null;
-      const comments = (song as any).comments || null;
-      const ccliNumber = (song as any).ccliNumber || song.number || null;
+      const copyright = song.copyright || null;
+      const comments = song.comments || null;
+      const ccliNumber = song.ccliNumber || song.number || null;
 
       if (openlpId) {
         // Update existing song

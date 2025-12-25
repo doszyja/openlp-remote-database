@@ -9,6 +9,7 @@ import { SongModule } from './songs/song.module';
 import { ServicePlanModule } from './service-plan/service-plan.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { TagModule } from './tags/tag.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
@@ -46,6 +47,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     SongModule,
     ServicePlanModule,
     AuditLogModule,
+    TagModule,
   ],
   controllers: [AppController],
   providers: [

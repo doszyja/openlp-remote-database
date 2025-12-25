@@ -34,8 +34,22 @@ export class ServicePlan {
 
   @Prop({ type: [ServicePlanItem], default: [] })
   items: ServicePlanItem[];
+
+  @Prop({ unique: true, sparse: true })
+  shareToken?: string; // Unique token for sharing
+
+  @Prop({ type: Date })
+  shareTokenExpiresAt?: Date; // Optional expiration date for share token
+
+  @Prop({ unique: true, sparse: true })
+  controlToken?: string; // Unique token for mobile control
+
+  @Prop({ type: Date })
+  controlTokenExpiresAt?: Date; // Optional expiration date for control token
 }
 
 export const ServicePlanSchema = SchemaFactory.createForClass(ServicePlan);
 ServicePlanSchema.index({ date: 1 });
 ServicePlanSchema.index({ createdAt: -1 });
+ServicePlanSchema.index({ shareToken: 1 }); // For efficient lookup by share token
+ServicePlanSchema.index({ controlToken: 1 }); // For efficient lookup by control token

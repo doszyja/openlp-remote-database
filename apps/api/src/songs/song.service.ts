@@ -9,6 +9,7 @@ import { QuerySongDto } from './dto/query-song.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditLogAction } from '../schemas/audit-log.schema';
 import { SongsVersionService } from './songs-version.service';
+import { SongVersionService } from './song-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
 import { createOpenLPSqliteDatabase } from './utils/sqlite-export.util';
@@ -30,6 +31,7 @@ export class SongService {
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
     private auditLogService: AuditLogService,
     private songsVersionService: SongsVersionService,
+    private songVersionService: SongVersionService,
   ) {}
 
   async create(createSongDto: CreateSongDto) {
@@ -125,13 +127,18 @@ export class SongService {
     const sort: any = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
+    // Select only needed fields for better performance
+    const selectFields =
+      'title number language verses verseOrder lyricsXml tags copyright comments ccliNumber searchTitle searchLyrics openlpMapping createdAt updatedAt';
+
     const [songs, total] = await Promise.all([
       this.songModel
         .find(filter)
+        .select(selectFields)
         .skip(skip)
         .limit(limit)
         .sort(sort)
-        .populate('tags', 'name')
+        .populate('tags', 'name color parentId') // Include color and parentId for advanced tags
         .lean()
         .exec(),
       this.songModel.countDocuments(filter),
@@ -191,7 +198,7 @@ export class SongService {
   async findOne(id: string) {
     const song = await this.songModel
       .findOne({ _id: id, deletedAt: null })
-      .populate('tags', 'name')
+      .populate('tags', 'name color parentId') // Include color and parentId for advanced tags
       .lean()
       .exec();
 
@@ -384,6 +391,20 @@ export class SongService {
       }
     }
 
+    // Create version snapshot before update (save current state)
+    const currentSongData = existing.toObject();
+    await this.songVersionService
+      .createVersion(
+        id,
+        currentSongData,
+        userId,
+        username,
+        discordId,
+        undefined,
+        Object.keys(changes).length > 0 ? changes : undefined,
+      )
+      .catch((err) => console.error('Failed to create song version:', err));
+
     // Update song
     await this.songModel.updateOne({ _id: id }, updateData);
 
@@ -455,7 +476,7 @@ export class SongService {
       .select(
         'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml',
       )
-      .populate('tags', 'name')
+      .populate('tags', 'name color parentId') // Include color and parentId for advanced tags
       .sort({ title: 1 })
       .lean()
       .exec();

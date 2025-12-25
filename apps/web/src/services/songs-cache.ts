@@ -165,7 +165,7 @@ class SongsCacheService {
     this.pendingVersionCheck = (async () => {
       try {
         console.log('[Songs Cache] Fetching version from /songs/version endpoint...');
-        const { version } = await api.songs.getVersion();
+        const { version } = await api.songs.getCollectionVersion();
         const isValid = version === cachedVersion;
         console.log(
           `[Songs Cache] Version check: cached=${cachedVersion}, server=${version}, valid=${isValid}`

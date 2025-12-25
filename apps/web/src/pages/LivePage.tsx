@@ -53,6 +53,7 @@ export default function LivePage() {
   const fontSizes = useResponsiveFontSizes();
   const [dynamicContentSize, setDynamicContentSize] = useState(32);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -104,7 +105,7 @@ export default function LivePage() {
     });
 
     return filtered;
-  }, [song?.verses, song?.verseOrder, song?.lyricsXml, song?.id]);
+  }, [song]);
 
   // Helper function to determine if label should be displayed
   const shouldDisplayLabel = (label: string | null, type: string): boolean => {
@@ -144,7 +145,50 @@ export default function LivePage() {
     } else {
       setCurrentVerseIndex(0);
     }
-  }, [song?.id, allContent.length, activeSongData?.item?.activeVerseIndex]);
+  }, [song, allContent.length, activeSongData?.item?.activeVerseIndex]);
+
+  // Handle fullscreen for popup windows
+  useEffect(() => {
+    // Check if this is a popup window (opened via window.open)
+    const isPopup = window.opener !== null;
+
+    if (isPopup && containerRef.current) {
+      // Show prompt immediately for popup windows
+      setShowFullscreenPrompt(true);
+
+      // Also try to enter fullscreen on first click anywhere
+      const handleFirstClick = async () => {
+        setShowFullscreenPrompt(false);
+        const element = containerRef.current as ElementWithFullscreen;
+        if (element) {
+          try {
+            if (element.requestFullscreen) {
+              await element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+              await element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+              await element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+              await element.msRequestFullscreen();
+            }
+          } catch (err) {
+            console.log('Fullscreen failed:', err);
+          }
+        }
+        document.removeEventListener('click', handleFirstClick);
+      };
+
+      // Wait a bit for page to load, then listen for clicks
+      const timeout = setTimeout(() => {
+        document.addEventListener('click', handleFirstClick, { once: true });
+      }, 500);
+
+      return () => {
+        clearTimeout(timeout);
+        document.removeEventListener('click', handleFirstClick);
+      };
+    }
+  }, []);
 
   // Track fullscreen state (including when user presses Esc)
   useEffect(() => {
@@ -631,6 +675,66 @@ export default function LivePage() {
         overflow: 'hidden',
       }}
     >
+      {/* Fullscreen Prompt */}
+      {showFullscreenPrompt && !isFullscreen && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 2000,
+            bgcolor: 'rgba(0, 0, 0, 0.9)',
+            color: 'white',
+            p: 4,
+            borderRadius: 3,
+            textAlign: 'center',
+            maxWidth: 500,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+            Tryb Pełnoekranowy
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+            Kliknij przycisk poniżej lub naciśnij F11, aby włączyć tryb pełnoekranowy
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={async () => {
+              setShowFullscreenPrompt(false);
+              const element = containerRef.current as ElementWithFullscreen;
+              if (element) {
+                try {
+                  if (element.requestFullscreen) {
+                    await element.requestFullscreen();
+                  } else if (element.webkitRequestFullscreen) {
+                    await element.webkitRequestFullscreen();
+                  } else if (element.mozRequestFullScreen) {
+                    await element.mozRequestFullScreen();
+                  } else if (element.msRequestFullscreen) {
+                    await element.msRequestFullscreen();
+                  }
+                } catch (err) {
+                  console.log('Fullscreen failed:', err);
+                  alert('Nie udało się włączyć trybu pełnoekranowego. Spróbuj nacisnąć F11.');
+                }
+              }
+            }}
+            sx={{
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
+          >
+            Włącz Tryb Pełnoekranowy
+          </Button>
+        </Box>
+      )}
+
       {/* Controls */}
       <Stack
         direction="row"
@@ -721,32 +825,63 @@ export default function LivePage() {
           width: '100%',
           maxWidth: '1200px',
           textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
         {currentContent && (
-          <Typography
-            variant="body1"
-            component="div"
+          <Box
+            key={`verse-${currentVerseIndex}`}
             sx={{
-              fontSize: `${dynamicContentSize}px`,
-              lineHeight: 1.4,
-              whiteSpace: 'pre-line',
-              px: { xs: 2, sm: 4 },
-              wordBreak: 'break-word',
-              maxWidth: '100%',
+              animation: 'fadeInSlide 0.5s ease-in-out',
+              '@keyframes fadeInSlide': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translateY(20px)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translateY(0)',
+                },
+              },
+              width: '100%',
             }}
           >
-            {currentContent.content}
-          </Typography>
+            <Typography
+              variant="body1"
+              component="div"
+              sx={{
+                fontSize: `${dynamicContentSize}px`,
+                lineHeight: 1.4,
+                whiteSpace: 'pre-line',
+                px: { xs: 2, sm: 4 },
+                wordBreak: 'break-word',
+                maxWidth: '100%',
+                transition: 'opacity 0.3s ease-in-out',
+              }}
+            >
+              {currentContent.content}
+            </Typography>
+          </Box>
         )}
 
         {currentContent?.label && (
           <Typography
+            key={`label-${currentVerseIndex}`}
             variant="h6"
             sx={{
               mt: 2,
               opacity: 0.7,
               fontSize: { xs: '0.875rem', sm: '1rem' },
+              animation: 'fadeIn 0.5s ease-in-out 0.2s both',
+              '@keyframes fadeIn': {
+                '0%': {
+                  opacity: 0,
+                },
+                '100%': {
+                  opacity: 0.7,
+                },
+              },
             }}
           >
             {currentContent.label}

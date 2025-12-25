@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 import { ApiClientService } from './api-client.service';
 import type { SongResponseDto, PaginatedResponseDto, SongQueryDto } from '@openlp/shared';
 
@@ -30,8 +30,8 @@ describe('ApiClientService', () => {
     delete: ReturnType<typeof vi.fn>;
     patch: ReturnType<typeof vi.fn>;
     request: ReturnType<typeof vi.fn>;
-    defaults: any;
-    interceptors: any;
+    defaults: Record<string, unknown>;
+    interceptors: Record<string, unknown>;
   };
 
   beforeEach(() => {
@@ -46,7 +46,9 @@ describe('ApiClientService', () => {
       interceptors: {},
     };
 
-    vi.mocked(axios.create).mockReturnValue(mockAxiosInstance as any);
+    vi.mocked(axios.create).mockReturnValue(
+      mockAxiosInstance as unknown as ReturnType<typeof axios.create>
+    );
     apiClient = new ApiClientService('http://localhost:3000');
   });
 

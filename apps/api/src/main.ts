@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as express from 'express';
@@ -170,9 +171,38 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix('api');
 
+  // Swagger documentation
+  const config = new DocumentBuilder()
+    .setTitle('OpenLP Database Sync API')
+    .setDescription('API documentation for OpenLP Database Sync application')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addTag('songs', 'Song management endpoints')
+    .addTag('service-plans', 'Service plan management endpoints')
+    .addTag('auth', 'Authentication endpoints')
+    .addTag('audit-logs', 'Audit log endpoints')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'OpenLP API Documentation',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
+
   const port = process.env.PORT || 3000;
   const httpServer = await app.listen(port);
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
 
   // Initialize WebSocket server using the same HTTP server (upgrade requests)
   const wsServer = app.get(WebSocketServerService);

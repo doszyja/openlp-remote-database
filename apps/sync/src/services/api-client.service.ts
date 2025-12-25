@@ -49,16 +49,17 @@ export class ApiClientService {
     const allSongs: SongResponseDto[] = [];
     let page = 1;
     const limit = 100; // Fetch in batches
+    let hasMore = true;
 
-    while (true) {
+    while (hasMore) {
       const response = await this.getAllSongs({ page, limit });
       allSongs.push(...response.data);
 
       if (response.data.length < limit || page >= response.meta.totalPages) {
-        break;
+        hasMore = false;
+      } else {
+        page++;
       }
-
-      page++;
     }
 
     return allSongs;

@@ -16,12 +16,28 @@ import {
   Stack,
   useMediaQuery,
   useTheme,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon,
+  ContentCopy as ContentCopyIcon,
+  LinkOff as LinkOffIcon,
 } from '@mui/icons-material';
 import {
   useServicePlan,
@@ -37,10 +53,12 @@ import {
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { api } from '../services/api';
 import SongSearchModal from '../components/SongSearchModal';
 import SongList from '../components/SongList';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
+import type { ServicePlanItem, SongListCacheItem, ServicePlan } from '@openlp/shared';
 import {
   DndContext,
   closestCenter,
@@ -71,6 +89,10 @@ interface SortableListItemProps {
   hasEditPermission: boolean;
   onSetActive: (itemId: string, isActive: boolean) => void;
   onRemove: (itemId: string) => void;
+  onMoveUp?: (itemId: string) => void;
+  onMoveDown?: (itemId: string) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 function SortableListItem({
@@ -79,10 +101,15 @@ function SortableListItem({
   hasEditPermission,
   onSetActive,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
 }: SortableListItemProps) {
+  // Disable drag and drop on mobile
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    disabled: !hasEditPermission,
+    disabled: !hasEditPermission || isMobile,
   });
 
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -291,7 +318,42 @@ function SortableListItem({
           sx={{ my: 0, flex: 1, minWidth: 0, overflow: 'hidden' }}
         />
         {hasEditPermission && (
-          <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto', flexShrink: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto', flexShrink: 0 }}>
+            {/* Mobile: Show move up/down buttons instead of drag */}
+            {isMobile && onMoveUp && onMoveDown && (
+              <>
+                <IconButton
+                  onClick={e => {
+                    e.stopPropagation();
+                    onMoveUp(item.id);
+                  }}
+                  disabled={!canMoveUp}
+                  size="small"
+                  sx={{
+                    minWidth: { xs: 36, sm: 'auto' },
+                    minHeight: { xs: 36, sm: 'auto' },
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  <ArrowUpwardIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  onClick={e => {
+                    e.stopPropagation();
+                    onMoveDown(item.id);
+                  }}
+                  disabled={!canMoveDown}
+                  size="small"
+                  sx={{
+                    minWidth: { xs: 36, sm: 'auto' },
+                    minHeight: { xs: 36, sm: 'auto' },
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  <ArrowDownwardIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
             <IconButton
               onClick={e => {
                 e.stopPropagation();
@@ -315,7 +377,7 @@ function SortableListItem({
 }
 
 export default function ServicePlanPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, token } = useParams<{ id?: string; token?: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -324,9 +386,30 @@ export default function ServicePlanPage() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const deletePlan = useDeleteServicePlan();
   const [search, setSearch] = useState('');
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharedPlan, setSharedPlan] = useState<ServicePlan | null>(null);
   const hasAutoActivatedRef = useRef(false);
 
+  // Load shared plan if token is provided
+  useEffect(() => {
+    if (token) {
+      api.servicePlans
+        .getByShareToken(token)
+        .then(plan => {
+          setSharedPlan(plan);
+        })
+        .catch(error => {
+          showError('Nieprawidłowy lub wygasły link udostępniania.');
+          console.error(error);
+        });
+    }
+  }, [token, showError]);
+
   const { data: servicePlan, isLoading, error } = useServicePlan(id || '');
+
+  // Use shared plan if available, otherwise use regular plan
+  const currentPlan = token ? sharedPlan : servicePlan;
   const { data: allPlans } = useServicePlans();
   const createPlan = useCreateServicePlan();
   const addSong = useAddSongToPlan();
@@ -358,15 +441,17 @@ export default function ServicePlanPage() {
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!id || !servicePlan || !over || active.id === over.id) return;
+      if (!id || !currentPlan || !over || active.id === over.id) return;
 
-      const oldIndex = servicePlan.items.findIndex(item => item.id === active.id);
-      const newIndex = servicePlan.items.findIndex(item => item.id === over.id);
+      const oldIndex = currentPlan.items.findIndex(
+        (item: ServicePlanItem) => item.id === active.id
+      );
+      const newIndex = currentPlan.items.findIndex((item: ServicePlanItem) => item.id === over.id);
 
       if (oldIndex === -1 || newIndex === -1) return;
 
       // Create new items array with updated order
-      const reorderedItems = arrayMove(servicePlan.items, oldIndex, newIndex);
+      const reorderedItems = arrayMove(currentPlan.items, oldIndex, newIndex);
       const updatedItems = reorderedItems.map((item, index) => ({
         ...item,
         order: index,
@@ -385,7 +470,57 @@ export default function ServicePlanPage() {
         console.error(error);
       }
     },
-    [id, servicePlan, updatePlan, showSuccess, showError]
+    [id, currentPlan, updatePlan, showSuccess, showError]
+  );
+
+  // Handle move up/down for mobile
+  const handleMoveItem = useCallback(
+    async (itemId: string, direction: 'up' | 'down') => {
+      if (!id || !servicePlan || !currentPlan) return;
+
+      const sortedItems = [...currentPlan.items].sort((a, b) => a.order - b.order);
+      const currentIndex = sortedItems.findIndex(item => item.id === itemId);
+
+      if (currentIndex === -1) return;
+
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex < 0 || newIndex >= sortedItems.length) return;
+
+      // Swap items
+      const reorderedItems = arrayMove(sortedItems, currentIndex, newIndex);
+      const updatedItems = reorderedItems.map((item, index) => ({
+        ...item,
+        order: index,
+      }));
+
+      try {
+        await updatePlan.mutateAsync({
+          id,
+          data: {
+            items: updatedItems,
+          },
+        });
+        showSuccess('Kolejność pieśni została zmieniona!');
+      } catch (error) {
+        showError('Nie udało się zmienić kolejności pieśni.');
+        console.error(error);
+      }
+    },
+    [id, servicePlan, currentPlan, updatePlan, showSuccess, showError]
+  );
+
+  const handleMoveUp = useCallback(
+    (itemId: string) => {
+      handleMoveItem(itemId, 'up');
+    },
+    [handleMoveItem]
+  );
+
+  const handleMoveDown = useCallback(
+    (itemId: string) => {
+      handleMoveItem(itemId, 'down');
+    },
+    [handleMoveItem]
   );
 
   const handleCreateNew = useCallback(async () => {
@@ -441,10 +576,10 @@ export default function ServicePlanPage() {
 
   const handleRemoveSong = useCallback(
     async (itemId: string) => {
-      if (!id || !servicePlan) return;
+      if (!id || !servicePlan || !currentPlan) return;
 
       // Check if the song being removed is currently active
-      const removedItem = servicePlan.items.find(item => item.id === itemId);
+      const removedItem = currentPlan.items.find(item => item.id === itemId);
       const wasActive = removedItem?.isActive;
 
       try {
@@ -453,7 +588,7 @@ export default function ServicePlanPage() {
         // If the removed song was active, activate the first remaining song
         if (wasActive) {
           // Get remaining items (excluding the one being removed)
-          const remainingItems = servicePlan.items
+          const remainingItems = currentPlan.items
             .filter(item => item.id !== itemId)
             .sort((a, b) => a.order - b.order);
 
@@ -477,7 +612,7 @@ export default function ServicePlanPage() {
         console.error(error);
       }
     },
-    [id, servicePlan, removeSong, setActiveSong, showSuccess, showError]
+    [id, servicePlan, currentPlan, removeSong, setActiveSong, showSuccess, showError]
   );
 
   const handleSetActive = useCallback(
@@ -524,15 +659,33 @@ export default function ServicePlanPage() {
 
   const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
 
+  // Type for plan songs with verses
+  type PlanSongWithVerses = {
+    itemId: string;
+    songId: string;
+    songTitle: string;
+    songNumber: string | null;
+    isActive: boolean | undefined;
+    verses: Array<{
+      type: 'verse' | 'chorus' | 'bridge' | 'pre-chorus' | 'tag';
+      content: string;
+      label: string | null;
+      stepLabel: string;
+      songId: string;
+      songTitle: string;
+      itemId: string;
+    }>;
+  };
+
   // Get all songs with verses from plan for column 3
   const planSongsWithVerses = useMemo(() => {
-    if (!servicePlan || !allCachedSongs) return [];
+    if (!servicePlan || !allCachedSongs || !currentPlan) return [];
 
-    return servicePlan.items
-      .sort((a, b) => a.order - b.order)
-      .map(item => {
+    return currentPlan.items
+      .sort((a: ServicePlanItem, b: ServicePlanItem) => a.order - b.order)
+      .map((item: ServicePlanItem) => {
         // Use allCachedSongs instead of songsCache.getSongById for better reactivity
-        const song = allCachedSongs.find(s => s.id === item.songId);
+        const song = allCachedSongs.find((s: SongListCacheItem) => s.id === item.songId);
         if (!song) {
           console.warn(`[ServicePlanPage] Song not found in cache: ${item.songId}`);
           return null;
@@ -577,8 +730,8 @@ export default function ServicePlanPage() {
           verses: allVerses,
         };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [servicePlan, allCachedSongs]);
+      .filter((item: PlanSongWithVerses | null): item is PlanSongWithVerses => item !== null);
+  }, [servicePlan, allCachedSongs, currentPlan]);
 
   // Navigation handlers for active song verses
   const handleNextVerse = useCallback(() => {
@@ -712,8 +865,8 @@ export default function ServicePlanPage() {
 
   // Column 2: Plan Songs with Add button (memoized before conditional returns)
   const planSongsColumn = useMemo(() => {
-    if (!servicePlan) return null;
-    const sortedItems = [...servicePlan.items].sort((a, b) => a.order - b.order);
+    if (!currentPlan) return null;
+    const sortedItems = [...currentPlan.items].sort((a, b) => a.order - b.order);
 
     return (
       <Paper
@@ -740,42 +893,175 @@ export default function ServicePlanPage() {
             variant="h6"
             sx={{ fontSize: { xs: '0.875rem', md: '0.95rem' }, fontWeight: 600 }}
           >
-            {servicePlan.name}
+            {currentPlan.name}
           </Typography>
-          {isAuthenticated && (
-            <Button
-              variant="contained"
-              size={isMobile ? 'medium' : 'small'}
-              startIcon={<AddIcon />}
-              onClick={() => setSearchModalOpen(true)}
-              sx={{
-                minWidth: 'auto',
-                px: { xs: 1.5, sm: 1 },
-                py: { xs: 1, sm: 0.5 },
-                fontSize: { xs: '0.875rem', sm: '0.75rem' },
-                minHeight: { xs: 44, sm: 'auto' },
-                touchAction: 'manipulation',
-              }}
-            >
-              Dodaj
-            </Button>
-          )}
+          <Stack direction="row" spacing={0.5}>
+            {id && hasEditPermission && !token && (
+              <>
+                <Tooltip title="Udostępnij plan">
+                  <IconButton
+                    size={isMobile ? 'medium' : 'small'}
+                    onClick={async () => {
+                      try {
+                        if (!shareToken) {
+                          const result = await api.servicePlans.generateShareToken(id);
+                          setShareToken(result.shareToken);
+                        }
+                        setShareDialogOpen(true);
+                      } catch (error) {
+                        showError('Nie udało się wygenerować linku udostępniania.');
+                        console.error(error);
+                      }
+                    }}
+                    sx={{
+                      minWidth: 'auto',
+                      px: { xs: 1.5, sm: 1 },
+                      py: { xs: 1, sm: 0.5 },
+                      fontSize: { xs: '0.875rem', sm: '0.75rem' },
+                      minHeight: { xs: 44, sm: 'auto' },
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    <ShareIcon />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {id && (
+              <>
+                <Tooltip title="Eksportuj do OpenLP (.osz)">
+                  <IconButton
+                    size={isMobile ? 'medium' : 'small'}
+                    onClick={async () => {
+                      try {
+                        const blob = await api.servicePlans.exportToOsz(id);
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${servicePlan?.name.replace(/[^a-z0-9]/gi, '_') || 'plan'}_${new Date().toISOString().split('T')[0]}.osz`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        showSuccess('Plan został wyeksportowany do .osz!');
+                      } catch (error) {
+                        showError('Nie udało się wyeksportować planu.');
+                        console.error(error);
+                      }
+                    }}
+                    sx={{
+                      minWidth: 'auto',
+                      px: { xs: 1.5, sm: 1 },
+                      py: { xs: 1, sm: 0.5 },
+                      fontSize: { xs: '0.875rem', sm: '0.75rem' },
+                      minHeight: { xs: 44, sm: 'auto' },
+                      touchAction: 'manipulation',
+                    }}
+                  >
+                    <DownloadIcon />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            {isAuthenticated && (
+              // Button to open search modal (both mobile and desktop)
+              <Button
+                variant="contained"
+                size={isMobile ? 'medium' : 'small'}
+                startIcon={<AddIcon />}
+                onClick={() => setSearchModalOpen(true)}
+                sx={{
+                  minWidth: 'auto',
+                  px: { xs: 1.5, sm: 1 },
+                  py: { xs: 1, sm: 0.5 },
+                  fontSize: { xs: '0.875rem', sm: '0.75rem' },
+                  minHeight: { xs: 44, sm: 'auto' },
+                  touchAction: 'manipulation',
+                }}
+              >
+                Dodaj
+              </Button>
+            )}
+          </Stack>
         </Box>
-        {servicePlan.date && (
+        {currentPlan.date && (
           <Typography
             variant="caption"
             color="text.secondary"
             sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}
           >
-            {new Date(servicePlan.date).toLocaleDateString('pl-PL')}
+            {new Date(currentPlan.date).toLocaleDateString('pl-PL')}
           </Typography>
+        )}
+        {/* Mobile: Select dropdown to choose active song from plan (outside drag and drop) */}
+        {isMobile && isAuthenticated && sortedItems.length > 0 && (
+          <Box sx={{ mb: 1.5 }}>
+            <FormControl
+              fullWidth
+              size="small"
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '0.75rem' },
+                  minHeight: { xs: 44, sm: 'auto' },
+                },
+              }}
+            >
+              <InputLabel>Wybierz pieśń</InputLabel>
+              <Select
+                value={sortedItems.find(item => item.isActive)?.id || ''}
+                label="Wybierz pieśń"
+                onChange={e => {
+                  const itemId = e.target.value as string;
+                  if (itemId) {
+                    const item = sortedItems.find(i => i.id === itemId);
+                    if (item && !item.isActive) {
+                      handleSetActive(itemId, true);
+                    }
+                  }
+                }}
+                sx={{
+                  touchAction: 'manipulation',
+                }}
+              >
+                {sortedItems.map(item => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.songTitle} {item.notes ? `- ${item.notes}` : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         )}
         <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {sortedItems.length === 0 ? (
             <Alert severity="info" sx={{ mt: 2 }}>
               Brak pieśni w planie
             </Alert>
+          ) : isMobile ? (
+            // Mobile: Simple list without drag and drop
+            <List dense sx={{ padding: { xs: 1, sm: 0.5 } }}>
+              {sortedItems.map((item, index) => (
+                <SortableListItem
+                  key={item.id}
+                  item={{
+                    id: item.id,
+                    songTitle: item.songTitle,
+                    notes: item.notes,
+                    isActive: item.isActive ?? false,
+                  }}
+                  isMobile={isMobile}
+                  hasEditPermission={hasEditPermission}
+                  onSetActive={handleSetActive}
+                  onRemove={handleRemoveSong}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < sortedItems.length - 1}
+                />
+              ))}
+            </List>
           ) : (
+            // Desktop: Drag and drop enabled
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -809,6 +1095,14 @@ export default function ServicePlanPage() {
       </Paper>
     );
   }, [
+    currentPlan,
+    id,
+    shareToken,
+    setShareToken,
+    setShareDialogOpen,
+    showError,
+    showSuccess,
+    token,
     servicePlan,
     isAuthenticated,
     hasEditPermission,
@@ -817,6 +1111,8 @@ export default function ServicePlanPage() {
     isMobile,
     sensors,
     handleDragEnd,
+    handleMoveUp,
+    handleMoveDown,
   ]);
 
   // Column 3: Verses display (only for currently active song, memoized before conditional returns)
@@ -948,7 +1244,9 @@ export default function ServicePlanPage() {
                   onClick={handleNextVerse}
                   disabled={(() => {
                     const activeItem = activeSongData.item;
-                    const activeSong = planSongsWithVerses.find(s => s.itemId === activeItem.id);
+                    const activeSong = planSongsWithVerses.find(
+                      (s: PlanSongWithVerses) => s.itemId === activeItem.id
+                    );
                     if (!activeSong) return true;
                     const currentIndex = activeItem.activeVerseIndex ?? 0;
                     return currentIndex >= activeSong.verses.length - 1;
@@ -1062,6 +1360,7 @@ export default function ServicePlanPage() {
     handlePreviousVerse,
     id,
     setActiveVerse,
+    isMobile,
   ]);
 
   // Column 4: Live Preview (what's displayed on presentation)
@@ -1420,6 +1719,69 @@ export default function ServicePlanPage() {
           handleAddSong(songId);
         }}
       />
+
+      {/* Share Dialog */}
+      <Dialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Udostępnij plan</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Skopiuj poniższy link, aby udostępnić plan innym użytkownikom:
+            </Typography>
+            {shareToken && (
+              <TextField
+                fullWidth
+                value={`${window.location.origin}/service-plans/shared/${shareToken}`}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}/service-plans/shared/${shareToken}`
+                          );
+                          showSuccess('Link skopiowany do schowka!');
+                        }}
+                        edge="end"
+                      >
+                        <ContentCopyIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
+            {id && shareToken && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<LinkOffIcon />}
+                onClick={async () => {
+                  try {
+                    await api.servicePlans.revokeShareToken(id);
+                    setShareToken(null);
+                    showSuccess('Link udostępniania został odwołany.');
+                  } catch (error) {
+                    showError('Nie udało się odwołać linku.');
+                    console.error(error);
+                  }
+                }}
+              >
+                Odwołaj udostępnianie
+              </Button>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareDialogOpen(false)}>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

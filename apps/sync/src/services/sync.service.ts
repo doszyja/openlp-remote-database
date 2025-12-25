@@ -37,12 +37,14 @@ export class SyncService {
     try {
       // Fetch all songs from backend
       if (options.verbose) {
+        // eslint-disable-next-line no-console
         console.log('Fetching songs from backend API...');
       }
       const songs = await this.apiClient.fetchAllSongs();
       result.total = songs.length;
 
       if (options.verbose) {
+        // eslint-disable-next-line no-console
         console.log(`Found ${songs.length} songs to sync`);
       }
 
@@ -56,6 +58,7 @@ export class SyncService {
         } catch (error) {
           result.errors++;
           if (options.verbose) {
+            // eslint-disable-next-line no-console
             console.error(`Error syncing song "${song.title}" (${song.id}):`, error);
           }
         }
@@ -64,6 +67,7 @@ export class SyncService {
       return result;
     } catch (error) {
       if (options.verbose) {
+        // eslint-disable-next-line no-console
         console.error('Fatal error during sync:', error);
       }
       throw error;
@@ -76,6 +80,7 @@ export class SyncService {
   private async syncSong(song: SongResponseDto, options: SyncOptions): Promise<void> {
     if (options.dryRun) {
       if (options.verbose) {
+        // eslint-disable-next-line no-console
         console.log(`[DRY RUN] Would sync: ${song.title}`);
       }
       return;
@@ -91,8 +96,10 @@ export class SyncService {
 
     if (options.verbose) {
       if (openlpIdNumber) {
+        // eslint-disable-next-line no-console
         console.log(`Updated song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
       } else {
+        // eslint-disable-next-line no-console
         console.log(`Created song: ${song.title} (OpenLP ID: ${newOpenlpId})`);
       }
     }
@@ -107,6 +114,7 @@ export class SyncService {
       await this.syncSong(song, options);
     } catch (error) {
       if (options.verbose) {
+        // eslint-disable-next-line no-console
         console.error(`Error syncing song ${songId}:`, error);
       }
       throw error;
