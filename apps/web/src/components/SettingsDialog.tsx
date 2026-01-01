@@ -195,40 +195,52 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   );
 }
 
-const SettingsDialog = forwardRef<SettingsDialogRef>((_props, ref) => {
-  const [open, setOpen] = useState(false);
+export interface SettingsDialogProps {
+  small?: boolean;
+}
 
-  useImperativeHandle(ref, () => ({
-    open: () => setOpen(true),
-  }));
+const SettingsDialog = forwardRef<SettingsDialogRef, SettingsDialogProps>(
+  ({ small = false }, ref) => {
+    const [open, setOpen] = useState(false);
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+    useImperativeHandle(ref, () => ({
+      open: () => setOpen(true),
+    }));
 
-  return (
-    <>
-      <Tooltip title="Ustawienia">
-        <IconButton onClick={handleOpen} color="inherit" aria-label="settings">
-          <SettingsIcon />
-        </IconButton>
-      </Tooltip>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            m: { xs: 1, sm: 2 },
-            maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)' },
-          },
-        }}
-      >
-        <SettingsDialogContent onClose={handleClose} />
-      </Dialog>
-    </>
-  );
-});
+    const handleOpen = () => setOpen(true);
+    const handleClose = () => setOpen(false);
+
+    return (
+      <>
+        <Tooltip title="Ustawienia">
+          <IconButton
+            onClick={handleOpen}
+            color="inherit"
+            aria-label="settings"
+            size={small ? 'small' : 'medium'}
+            sx={small ? { p: 0.5 } : undefined}
+          >
+            <SettingsIcon fontSize={small ? 'small' : 'medium'} />
+          </IconButton>
+        </Tooltip>
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              m: { xs: 1, sm: 2 },
+              maxHeight: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)' },
+            },
+          }}
+        >
+          <SettingsDialogContent onClose={handleClose} />
+        </Dialog>
+      </>
+    );
+  }
+);
 
 SettingsDialog.displayName = 'SettingsDialog';
 

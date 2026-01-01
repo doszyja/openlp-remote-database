@@ -24,6 +24,7 @@ import {
   InputLabel,
   useMediaQuery,
   useTheme,
+  Tooltip,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,6 +33,9 @@ import {
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
   ArrowBack as ArrowBackIcon,
+  ContentCopy as ContentCopyIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useDeleteSong } from '../hooks';
@@ -64,6 +68,13 @@ export default function SongDetailPage() {
   const [showLoading, setShowLoading] = useState(false);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Detect if user is on Mac (for keyboard shortcut display)
+  const isMac = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return /Mac|iPhone|iPad|iPod/.test(navigator.platform) || /Mac/.test(navigator.userAgent);
+  }, []);
 
   // Get all cached songs to ensure cache is loaded
   const { songs: allCachedSongs, isLoading: isCacheLoading } = useCachedSongs();
@@ -158,13 +169,34 @@ export default function SongDetailPage() {
 
   const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
 
+  // Get first song from list for navigation after delete/edit
+  const getFirstSongId = useCallback(() => {
+    if (!allCachedSongs || allCachedSongs.length === 0) {
+      return null;
+    }
+    // Return first song ID (sorted by title or order)
+    const sortedSongs = [...allCachedSongs].sort((a, b) => {
+      // Sort by title alphabetically
+      return a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' });
+    });
+    return sortedSongs[0]?.id || null;
+  }, [allCachedSongs]);
+
   const handleDelete = async () => {
     if (!id || deleteSong.isPending) return;
 
     try {
       await deleteSong.mutateAsync(id);
       showSuccess('Pieśń została usunięta pomyślnie!');
-      navigate('/');
+
+      // Navigate to first song from list
+      const firstSongId = getFirstSongId();
+      if (firstSongId) {
+        navigate(`/songs/${firstSongId}`);
+      } else {
+        // If no songs left, go to home
+        navigate('/');
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Nie udało się usunąć pieśni. Spróbuj ponownie.';
@@ -372,18 +404,87 @@ export default function SongDetailPage() {
                 : '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' },
-              fontWeight: 500,
-              mb: 0.5,
-              lineHeight: 1.3,
-            }}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={1}
+            sx={{ mb: 0.5 }}
           >
-            {song.title}
-          </Typography>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' },
+                fontWeight: 500,
+                lineHeight: 1.3,
+                flex: 1,
+              }}
+            >
+              {song.title}
+            </Typography>
+            <IconButton
+              onClick={async () => {
+                if (!song) return;
+
+                try {
+                  // Format song text: title + verses
+                  let songText = song.title;
+
+                  // Use parsedVerses if available (already parsed with labels)
+                  if (parsedVerses && parsedVerses.length > 0) {
+                    songText += '\n\n';
+                    songText += parsedVerses
+                      .map((verse, index) => {
+                        const label = getVerseDisplayLabel(verse, index);
+                        const content = verse.content.replace(/<br\s*\/?>/gi, '\n').trim();
+                        return label ? `${label}\n${content}` : content;
+                      })
+                      .join('\n\n');
+                  } else if (
+                    song.versesArray &&
+                    Array.isArray(song.versesArray) &&
+                    song.versesArray.length > 0
+                  ) {
+                    // Fallback: use versesArray directly
+                    const sortedVerses = [...song.versesArray].sort((a, b) => a.order - b.order);
+                    songText += '\n\n';
+                    songText += sortedVerses
+                      .map(v => {
+                        const label = v.originalLabel || v.label || '';
+                        const content = v.content.replace(/<br\s*\/?>/gi, '\n').trim();
+                        return label ? `${label}\n${content}` : content;
+                      })
+                      .join('\n\n');
+                  } else if (typeof song.verses === 'string' && song.verses.trim()) {
+                    // Last resort: use verses string
+                    songText += '\n\n' + song.verses.replace(/<br\s*\/?>/gi, '\n');
+                  }
+
+                  // Copy to clipboard
+                  await navigator.clipboard.writeText(songText);
+                  showSuccess('Tekst pieśni został skopiowany do schowka');
+                } catch (error) {
+                  console.error('[SongDetailPage] Error copying song to clipboard:', error);
+                  showError('Nie udało się skopiować tekstu pieśni do schowka');
+                }
+              }}
+              size="small"
+              sx={{
+                opacity: 0.5,
+                transition: 'opacity 0.2s ease',
+                '&:hover': {
+                  opacity: 0.9,
+                },
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.125rem',
+                },
+              }}
+              aria-label="Kopiuj tekst pieśni do schowka"
+            >
+              <ContentCopyIcon />
+            </IconButton>
+          </Box>
 
           <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap" mt={1}>
             {song.number && (
@@ -408,17 +509,25 @@ export default function SongDetailPage() {
         </Paper>
 
         <Box>
-          <Typography
-            variant="subtitle2"
+          <Box
             sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               mb: 1.5,
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: '0.875rem',
             }}
           >
-            Zwrotki ({parsedVerses.filter(v => v.content && v.content.trim()).length})
-          </Typography>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+              }}
+            >
+              Zwrotki ({parsedVerses.filter(v => v.content && v.content.trim()).length})
+            </Typography>
+          </Box>
           {parsedVerses.filter(v => v.content && v.content.trim()).length === 0 ? (
             <Alert severity="info" sx={{ py: 0.5 }}>
               Brak zwrotek.
@@ -503,18 +612,12 @@ export default function SongDetailPage() {
     id,
     hasEditPermission,
     navigate,
+    isMobile,
+    sortOrder,
+    setSortOrder,
+    showSuccess,
+    showError,
   ]);
-
-  // Calculate list height for SongDetailPage - use full available height
-  // Note: viewportHeight is now the container height, not window.innerHeight
-  const calculateListHeight = useCallback((containerHeight: number) => {
-    // Container height already accounts for available space, just subtract minimal padding
-    // Search input height is already handled in SongList component
-    const padding = 20; // Minimal padding for visual spacing
-    const calculatedHeight = containerHeight - padding;
-    // Use full container height minus minimal overhead
-    return Math.max(300, calculatedHeight);
-  }, []);
 
   // Service view: Get active song and prepare verse content (only for authenticated users)
   const activeSong = isAuthenticated ? activeSongData?.song : null;
@@ -645,19 +748,44 @@ export default function SongDetailPage() {
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
-            Szukaj Pieśni
-          </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{
-              fontSize: { xs: '0.7rem', md: '0.75rem' },
-              fontStyle: 'italic',
-            }}
-          >
-            Ctrl+F / Cmd+F
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }}>
+              Szukaj Pieśni
+            </Typography>
+            <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>
+              <IconButton
+                onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                size="small"
+                sx={{
+                  width: { xs: 28, md: 20 },
+                  height: { xs: 28, md: 20 },
+                  opacity: 0.6,
+                  transition: 'opacity 0.2s ease',
+                  '&:hover': {
+                    opacity: 1,
+                  },
+                  '& .MuiSvgIcon-root': {
+                    fontSize: { xs: '1rem', md: '0.875rem' },
+                  },
+                }}
+                aria-label={sortOrder === 'asc' ? 'Sortuj rosnąco' : 'Sortuj malejąco'}
+              >
+                {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+          {!isMobile && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                fontStyle: 'italic',
+              }}
+            >
+              {isMac ? 'Cmd+F' : 'Ctrl+F'}
+            </Typography>
+          )}
         </Box>
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <SongList
@@ -672,7 +800,9 @@ export default function SongDetailPage() {
             onSearchChange={setSearch}
             isLoading={isSearchLoadingState}
             emptyMessage="Nie znaleziono pieśni."
-            calculateHeight={calculateListHeight}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            showSortButton={isMobile}
           />
         </Box>
       </Paper>
@@ -684,7 +814,10 @@ export default function SongDetailPage() {
       id,
       handleSongClick,
       navigate,
-      calculateListHeight,
+      sortOrder,
+      isMobile,
+      isMac,
+      setSortOrder,
     ]
   );
 

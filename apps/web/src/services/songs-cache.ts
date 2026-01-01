@@ -361,8 +361,27 @@ class SongsCacheService {
       return matchesSearch && matchesLanguage && matchesTags;
     });
 
-    // Sort by title
-    results.sort((a, b) => a.title.localeCompare(b.title));
+    // Sort: prioritize title prefix matches, then title contains, then lyrics-only matches
+    results.sort((a, b) => {
+      const aTitle = a.searchTitle || a.title.toLowerCase();
+      const bTitle = b.searchTitle || b.title.toLowerCase();
+
+      const aStartsWith = aTitle.startsWith(lowerQuery);
+      const bStartsWith = bTitle.startsWith(lowerQuery);
+      const aTitleContains = aTitle.includes(lowerQuery);
+      const bTitleContains = bTitle.includes(lowerQuery);
+
+      // Priority 1: Title starts with query
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+
+      // Priority 2: Title contains query (but doesn't start with)
+      if (aTitleContains && !bTitleContains) return -1;
+      if (!aTitleContains && bTitleContains) return 1;
+
+      // Same priority level: sort alphabetically
+      return a.title.localeCompare(b.title, 'pl');
+    });
 
     const duration = performance.now() - startTime;
     const titleMatches = results.filter(

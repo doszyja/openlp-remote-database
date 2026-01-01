@@ -13,12 +13,16 @@ import {
   ListItemText,
   useMediaQuery,
   useTheme,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Download as DownloadIcon,
   ErrorOutline as ErrorOutlineIcon,
   Refresh as RefreshIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,17 +30,56 @@ import { useExportZip } from '../hooks/useExportZip';
 import { useNotification } from '../contexts/NotificationContext';
 import SongList from '../components/SongList';
 
+// Session storage keys for remembering state
+const SEARCH_STORAGE_KEY = 'songListSearch';
+const SELECTED_SONG_STORAGE_KEY = 'songListSelectedSong';
+
 export default function SongListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { hasEditPermission } = useAuth();
+  const { hasEditPermission, isAuthenticated } = useAuth();
   const { showSuccess, showError } = useNotification();
+
+  // Initialize search from sessionStorage (for remembering search when coming back)
   const [search, setSearch] = useState('');
+
+  // Track the last selected song ID for highlighting
+  const [lastSelectedSongId, setLastSelectedSongId] = useState<string | null>(null);
+
+  // Restore state from sessionStorage on mount (only on mobile)
+  useEffect(() => {
+    if (isMobile) {
+      const savedSearch = sessionStorage.getItem(SEARCH_STORAGE_KEY);
+      const savedSongId = sessionStorage.getItem(SELECTED_SONG_STORAGE_KEY);
+
+      if (savedSearch) {
+        setSearch(savedSearch);
+      }
+      if (savedSongId) {
+        setLastSelectedSongId(savedSongId);
+        // Clear the stored song ID after restoring (so it doesn't persist forever)
+        // But keep it in state for highlighting
+        sessionStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
+      }
+    }
+  }, [isMobile]);
+
+  // Clear the highlighting after a delay
+  useEffect(() => {
+    if (lastSelectedSongId) {
+      const timer = setTimeout(() => {
+        setLastSelectedSongId(null);
+      }, 3000); // Clear highlighting after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [lastSelectedSongId]);
+
   const [isExporting, setIsExporting] = useState(false);
   const [lastExportTime, setLastExportTime] = useState<number>(0);
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const exportZip = useExportZip();
   const hasAutoNavigatedRef = useRef(false);
 
@@ -93,16 +136,6 @@ export default function SongListPage() {
     // Use replace: true to avoid adding to history and prevent visual jump
     navigate(`/songs/${firstSongId}`, { replace: true });
   }, [shouldAutoNavigate, firstSongId, navigate]);
-
-  // Calculate list height based on viewport
-  const calculateListHeight = useCallback((viewportHeight: number) => {
-    // Account for header, search box, padding, and buttons
-    const headerHeight = 80;
-    const searchHeight = 80;
-    const padding = 40;
-    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
-    return Math.min(calculatedHeight, 800);
-  }, []);
 
   // Debounce loading animation - only show if request takes longer than 300ms
   useEffect(() => {
@@ -283,11 +316,18 @@ export default function SongListPage() {
   return (
     <Box
       sx={{
-        py: { xs: 1.5, sm: 2.5, md: 4 },
-        px: { xs: 1.5, sm: 2.5, md: 4, lg: 6 },
+        py: { xs: 1, sm: 2.5, md: 4 },
+        px: { xs: 1, sm: 2.5, md: 4, lg: 6 },
         position: 'relative',
         maxWidth: { xs: '100%', sm: '100%', md: '100%' },
         width: '100%',
+        boxSizing: 'border-box',
+        // On mobile: use flex to fill available space automatically
+        flex: { xs: 1, sm: 'none' },
+        minHeight: { xs: 0, sm: 'auto' },
+        overflow: { xs: 'hidden', sm: 'visible' },
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Skeleton loading for list items - only show after debounce delay */}
@@ -379,20 +419,48 @@ export default function SongListPage() {
             display="flex"
             justifyContent="space-between"
             alignItems="center"
-            mb={2}
+            mb={{ xs: 1, sm: 2 }}
             flexWrap="wrap"
-            gap={1}
+            gap={{ xs: 0.5, sm: 1 }}
+            flexShrink={0}
           >
-            <Typography
-              variant="h5"
-              component="h1"
-              sx={{
-                fontWeight: 500,
-                fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
-              }}
-            >
-              Pieśni
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {isAuthenticated && (
+                <Typography
+                  variant="h5"
+                  component="h1"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
+                  }}
+                >
+                  Pieśni
+                </Typography>
+              )}
+              {isMobile && isAuthenticated && (
+                <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>
+                  <IconButton
+                    onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                    size="small"
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      opacity: 0.6,
+                      transition: 'opacity 0.2s ease',
+                      '&:hover': {
+                        opacity: 1,
+                      },
+                      '& .MuiSvgIcon-root': {
+                        fontSize: '0.875rem',
+                      },
+                    }}
+                    aria-label={sortOrder === 'asc' ? 'Sortuj rosnąco' : 'Sortuj malejąco'}
+                  >
+                    {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
             <Box display="flex" gap={0.75} flexWrap="wrap">
               {hasEditPermission && (
                 <Button
@@ -447,7 +515,7 @@ export default function SongListPage() {
           <Paper
             elevation={0}
             sx={{
-              p: { xs: 1.5, sm: 2 },
+              p: { xs: 1, sm: 2 },
               bgcolor: 'background.paper',
               boxShadow: theme =>
                 theme.palette.mode === 'dark'
@@ -457,22 +525,45 @@ export default function SongListPage() {
                 theme.palette.mode === 'dark'
                   ? '1px solid rgba(255, 255, 255, 0.1)'
                   : '1px solid rgba(0, 0, 0, 0.05)',
+              // On mobile: flex to fill remaining space
+              flex: { xs: 1, sm: 'none' },
+              minHeight: { xs: 0, sm: 'auto' },
+              display: { xs: 'flex', sm: 'block' },
+              flexDirection: { xs: 'column', sm: 'row' },
+              overflow: { xs: 'hidden', sm: 'visible' },
             }}
           >
             <SongList
               songs={displaySongs}
-              onSongClick={songId => navigate(`/songs/${songId}`)}
-              currentSongId={firstSongId}
+              onSongClick={songId => {
+                // Save selected song ID on mobile for highlighting when coming back
+                if (isMobile) {
+                  sessionStorage.setItem(SELECTED_SONG_STORAGE_KEY, songId);
+                }
+                navigate(`/songs/${songId}`);
+              }}
+              currentSongId={isMobile && lastSelectedSongId ? lastSelectedSongId : firstSongId}
               showSearch={true}
               searchValue={search}
-              onSearchChange={setSearch}
+              onSearchChange={value => {
+                setSearch(value);
+                // Save search to sessionStorage on mobile
+                if (isMobile) {
+                  if (value) {
+                    sessionStorage.setItem(SEARCH_STORAGE_KEY, value);
+                  } else {
+                    sessionStorage.removeItem(SEARCH_STORAGE_KEY);
+                  }
+                }
+              }}
               isLoading={isLoading}
               emptyMessage={
                 cachedSongs && cachedSongs.length === 0
                   ? 'Nie znaleziono pieśni. Utwórz pierwszą pieśń!'
                   : 'Nie znaleziono pieśni.'
               }
-              calculateHeight={calculateListHeight}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
             />
           </Paper>
         </>

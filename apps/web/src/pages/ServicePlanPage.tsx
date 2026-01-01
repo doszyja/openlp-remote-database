@@ -800,15 +800,6 @@ export default function ServicePlanPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [hasEditPermission, activeSongData, handleNextVerse, handlePreviousVerse]);
 
-  // Calculate list height
-  const calculateListHeight = useCallback((viewportHeight: number) => {
-    const headerHeight = 60;
-    const searchHeight = 120;
-    const padding = 40;
-    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
-    return Math.max(300, calculatedHeight);
-  }, []);
-
   // Column 1: Song List (memoized before conditional returns)
   const songListColumn = useMemo(
     () => (
@@ -847,7 +838,6 @@ export default function ServicePlanPage() {
             onSearchChange={setSearch}
             isLoading={isSearchLoadingState}
             emptyMessage="Nie znaleziono pieśni."
-            calculateHeight={calculateListHeight}
           />
         </Box>
       </Paper>
@@ -858,7 +848,6 @@ export default function ServicePlanPage() {
       allSearchSongs,
       hasEditPermission,
       navigate,
-      calculateListHeight,
       handleAddSong,
     ]
   );

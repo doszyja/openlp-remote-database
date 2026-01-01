@@ -11,7 +11,31 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const isSongListPage = location.pathname === '/songs'; // Only exact /songs, not /songs/:id
   const [isErrorState, setIsErrorState] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  // Track actual viewport height for mobile browsers (handles Chrome's dynamic UI)
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      // Use visualViewport if available (better for mobile)
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setViewportHeight(vh);
+      // Also set CSS custom property for use in styles
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    updateViewportHeight();
+
+    // Listen to both resize and visualViewport changes
+    window.addEventListener('resize', updateViewportHeight);
+    window.visualViewport?.addEventListener('resize', updateViewportHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportHeight);
+      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
+    };
+  }, []);
 
   // Check if body has error-state class
   useEffect(() => {
@@ -38,6 +62,16 @@ export default function Layout({ children }: LayoutProps) {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
+        // Only constrain height on /songs page (mobile), other pages scroll normally
+        // Use actual viewport height from JS for mobile (handles Chrome's dynamic URL bar)
+        height: {
+          xs: isSongListPage ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : 'auto',
+          sm: 'auto',
+        },
+        maxHeight: {
+          xs: isSongListPage ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : 'none',
+          sm: 'none',
+        },
         background: !isHomePage
           ? theme =>
               theme.palette.mode === 'dark'
@@ -45,7 +79,7 @@ export default function Layout({ children }: LayoutProps) {
                 : '#ffffff'
           : 'transparent',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: { xs: isSongListPage ? 'hidden' : 'visible', sm: 'visible' },
       }}
     >
       {!isHomePage && (

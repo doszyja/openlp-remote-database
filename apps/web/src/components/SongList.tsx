@@ -9,8 +9,15 @@ import {
   ListItemButton,
   ListItemText,
   CircularProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { MusicNote as MusicNoteIcon } from '@mui/icons-material';
+import {
+  MusicNote as MusicNoteIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Clear as ClearIcon,
+} from '@mui/icons-material';
 import type { SongListCacheItem } from '@openlp/shared';
 import SongSearchModal from './SongSearchModal';
 
@@ -25,7 +32,9 @@ export interface SongListProps {
   isLoading?: boolean;
   emptyMessage?: string;
   itemSize?: number;
-  calculateHeight?: (viewportHeight: number) => number;
+  sortOrder?: 'asc' | 'desc';
+  onSortOrderChange?: (order: 'asc' | 'desc') => void;
+  showSortButton?: boolean; // Show sort button in the list (for mobile)
 }
 
 // Virtualized list row component
@@ -150,6 +159,8 @@ const VirtualizedRow = memo(
 
 VirtualizedRow.displayName = 'VirtualizedRow';
 
+type SortOrder = 'asc' | 'desc';
+
 export default function SongList({
   songs,
   onSongClick,
@@ -161,99 +172,56 @@ export default function SongList({
   isLoading = false,
   emptyMessage = 'Nie znaleziono pieśni.',
   itemSize = 48,
-  calculateHeight,
+  sortOrder: externalSortOrder,
+  onSortOrderChange: _onSortOrderChange, // Used when sort button is in parent component
+  showSortButton = false, // Show sort button in the list (for mobile)
 }: SongListProps) {
   const [listHeight, setListHeight] = useState(height || 600);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1); // -1 means input is focused
+  const [_internalSortOrder, _setInternalSortOrder] = useState<SortOrder>('asc'); // Used when sortOrder is not provided externally
+  const sortOrder = externalSortOrder ?? _internalSortOrder;
   const listRef = useRef<FixedSizeList>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastHeightRef = useRef<number>(height || 600);
 
-  // Calculate list height based on container or viewport if calculateHeight function is provided
+  const listContainerRef = useRef<HTMLDivElement>(null);
+
+  // Measure container height using ResizeObserver - container has flex:1 so it fills available space
   useEffect(() => {
-    if (calculateHeight && !height) {
-      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-      const updateHeight = () => {
-        if (!containerRef.current) return;
-
-        const viewportHeight = window.innerHeight;
-        const searchInputHeight = showSearch ? 60 : 0;
-
-        // Always use viewport height as the base for minimum height calculation
-        // This ensures the list always fills at least the viewport height
-        // Use viewport height minus typical header/navbar height (64px) and search input if shown
-        const minViewportHeight = viewportHeight - 64 - searchInputHeight;
-
-        const containerRect = containerRef.current.getBoundingClientRect();
-        let newHeight: number;
-
-        if (containerRect.height > 0) {
-          // Use container height directly, minus search input height if search is shown
-          const availableHeight = containerRect.height - searchInputHeight;
-
-          // If calculateHeight is provided, use it to adjust the height (e.g., subtract padding)
-          // Otherwise, use available height directly
-          const calculatedHeight = calculateHeight(availableHeight);
-
-          // Always use the maximum of calculated height and minimum viewport height
-          // This ensures the list always has at least the viewport height, even if content is smaller
-          newHeight = Math.max(calculatedHeight, minViewportHeight);
-        } else {
-          // Fallback to viewport-based calculation if container height not available yet
-          const calculatedHeight = calculateHeight(viewportHeight);
-          newHeight = Math.max(calculatedHeight, minViewportHeight);
-        }
-
-        // Never decrease height - always use the maximum of new height, minimum viewport height, and current height
-        // This ensures the list never shrinks below its current size or minimum viewport height
-        const currentHeight = lastHeightRef.current;
-        const finalHeight = Math.max(newHeight, minViewportHeight, currentHeight);
-
-        // Only update if there's a significant change (more than 10px) to prevent jitter
-        if (Math.abs(finalHeight - currentHeight) > 10) {
-          lastHeightRef.current = finalHeight;
-          setListHeight(finalHeight);
-        }
-      };
-
-      // Debounced update function to prevent too frequent recalculations
-      const debouncedUpdateHeight = () => {
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-        debounceTimer = setTimeout(updateHeight, 100);
-      };
-
-      // Initial calculation
-      const timeoutId = setTimeout(updateHeight, 0);
-
-      // Use ResizeObserver to watch container size changes
-      // Use debounced version to prevent excessive updates
-      let resizeObserver: ResizeObserver | null = null;
-      if (containerRef.current && typeof ResizeObserver !== 'undefined') {
-        resizeObserver = new ResizeObserver(debouncedUpdateHeight);
-        resizeObserver.observe(containerRef.current);
-      }
-
-      window.addEventListener('resize', debouncedUpdateHeight);
-      return () => {
-        clearTimeout(timeoutId);
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-        window.removeEventListener('resize', debouncedUpdateHeight);
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-        }
-      };
-    } else if (height) {
+    if (height) {
       setListHeight(height);
-      lastHeightRef.current = height;
+      return;
     }
-  }, [height, calculateHeight, showSearch]);
+
+    const updateHeight = () => {
+      if (listContainerRef.current) {
+        const containerHeight = listContainerRef.current.clientHeight;
+        if (containerHeight > 50 && Math.abs(containerHeight - lastHeightRef.current) > 2) {
+          lastHeightRef.current = containerHeight;
+          setListHeight(containerHeight);
+        }
+      }
+    };
+
+    // Initial measurement after DOM is ready
+    requestAnimationFrame(updateHeight);
+
+    // Watch for container size changes
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (listContainerRef.current) {
+      resizeObserver.observe(listContainerRef.current);
+    }
+
+    // Also listen to visualViewport for mobile Chrome UI changes
+    window.visualViewport?.addEventListener('resize', updateHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.visualViewport?.removeEventListener('resize', updateHeight);
+    };
+  }, [height]);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,34 +237,71 @@ export default function SongList({
     searchInputRef.current?.focus();
   }, []);
 
+  // Sort songs by title - but preserve search result order when searching
+  const sortedSongs = useMemo(() => {
+    // If there's an active search, preserve the search result order (already sorted by relevance)
+    if (searchValue && searchValue.trim()) {
+      return songs;
+    }
+    // Otherwise, sort alphabetically
+    const sorted = [...songs].sort((a, b) => {
+      const titleA = a.title.toLowerCase();
+      const titleB = b.title.toLowerCase();
+      if (sortOrder === 'asc') {
+        return titleA.localeCompare(titleB, 'pl', { sensitivity: 'base' });
+      } else {
+        return titleB.localeCompare(titleA, 'pl', { sensitivity: 'base' });
+      }
+    });
+    return sorted;
+  }, [songs, sortOrder, searchValue]);
+
+  // Scroll to currentSongId when it changes (for highlighting selected song when coming back)
+  useEffect(() => {
+    if (currentSongId && listRef.current && sortedSongs.length > 0) {
+      const songIndex = sortedSongs.findIndex(song => song.id === currentSongId);
+      if (songIndex !== -1) {
+        // Scroll to the song with a small delay to ensure the list is rendered
+        setTimeout(() => {
+          listRef.current?.scrollToItem(songIndex, 'center');
+        }, 100);
+      }
+    }
+  }, [currentSongId, sortedSongs]);
+
+  // Reset selection when sort order changes
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [sortOrder]);
+
   // Scroll to selected item when it changes
   useEffect(() => {
-    if (selectedIndex >= 0 && selectedIndex < songs.length) {
+    if (selectedIndex >= 0 && selectedIndex < sortedSongs.length) {
       listRef.current?.scrollToItem(selectedIndex, 'smart');
     }
-  }, [selectedIndex, songs.length]);
+  }, [selectedIndex, sortedSongs.length]);
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (songs.length > 0) {
+        if (sortedSongs.length > 0) {
           setSelectedIndex(0);
         }
-      } else if (e.key === 'Enter' && songs.length > 0) {
+      } else if (e.key === 'Enter' && sortedSongs.length > 0) {
         e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < songs.length) {
+        if (selectedIndex >= 0 && selectedIndex < sortedSongs.length) {
           // Activate selected item
           if (onSongClick) {
-            onSongClick(songs[selectedIndex].id);
+            onSongClick(sortedSongs[selectedIndex].id);
           }
         } else if (onSongClick) {
           // Activate first item if nothing selected
-          onSongClick(songs[0].id);
+          onSongClick(sortedSongs[0].id);
         }
       }
     },
-    [songs, selectedIndex, onSongClick]
+    [sortedSongs, selectedIndex, onSongClick]
   );
 
   // Handle Ctrl+F / Cmd+F to open search modal
@@ -318,23 +323,30 @@ export default function SongList({
 
   const listData = useMemo(
     () => ({
-      songs,
+      songs: sortedSongs,
       onSongClick,
       currentSongId,
       selectedIndex,
       onSelectIndex: setSelectedIndex,
       onFocusInput: handleFocusInput,
     }),
-    [songs, onSongClick, currentSongId, selectedIndex, handleFocusInput]
+    [sortedSongs, onSongClick, currentSongId, selectedIndex, handleFocusInput]
   );
 
   return (
     <Box
       ref={containerRef}
-      sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        flex: 1,
+        overflow: 'hidden',
+      }}
     >
       {showSearch && (
-        <Box sx={{ mb: { xs: 1.5, sm: 2 }, flexShrink: 0 }}>
+        <Box sx={{ mb: { xs: 1, sm: 2 }, flexShrink: 0 }}>
           <TextField
             inputRef={searchInputRef}
             fullWidth
@@ -350,6 +362,30 @@ export default function SongList({
                   <MusicNoteIcon fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment: searchValue ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="Wyczyść wyszukiwanie"
+                    onClick={() => {
+                      if (onSearchChange) {
+                        onSearchChange('');
+                      }
+                      searchInputRef.current?.focus();
+                    }}
+                    edge="end"
+                    size="small"
+                    sx={{
+                      p: 0.5,
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'text.primary',
+                      },
+                    }}
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
             }}
             sx={{
               '& .MuiInputBase-input': {
@@ -358,6 +394,34 @@ export default function SongList({
               },
             }}
           />
+          {showSortButton && (
+            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+              <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>
+                <IconButton
+                  onClick={() => {
+                    const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                    if (_onSortOrderChange) {
+                      _onSortOrderChange(newOrder);
+                    } else {
+                      _setInternalSortOrder(newOrder);
+                    }
+                    setSelectedIndex(-1);
+                  }}
+                  size="small"
+                  sx={{
+                    opacity: 0.7,
+                    transition: 'opacity 0.2s ease',
+                    '&:hover': {
+                      opacity: 1,
+                    },
+                  }}
+                  aria-label={sortOrder === 'asc' ? 'Sortuj rosnąco' : 'Sortuj malejąco'}
+                >
+                  {sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
         </Box>
       )}
 
@@ -367,14 +431,16 @@ export default function SongList({
         </Box>
       )}
 
-      {!isLoading && songs.length === 0 && (
+      {!isLoading && sortedSongs.length === 0 && (
         <Alert severity="info" sx={{ mt: 2 }}>
           {emptyMessage}
         </Alert>
       )}
 
-      {!isLoading && songs.length > 0 && (
+      {!isLoading && sortedSongs.length > 0 && (
         <Box
+          ref={listContainerRef}
+          data-list-container
           sx={{
             flex: 1,
             minHeight: 0,
@@ -422,8 +488,8 @@ export default function SongList({
         >
           <FixedSizeList
             ref={listRef}
-            height={listHeight}
-            itemCount={songs.length}
+            height={Math.min(listHeight, sortedSongs.length * itemSize)}
+            itemCount={sortedSongs.length}
             itemSize={itemSize}
             width="100%"
             itemData={listData}
@@ -437,7 +503,7 @@ export default function SongList({
       <SongSearchModal
         open={searchModalOpen}
         onClose={handleModalClose}
-        songs={songs}
+        songs={sortedSongs}
         onSongClick={onSongClick}
         currentSongId={currentSongId}
       />

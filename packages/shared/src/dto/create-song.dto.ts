@@ -19,6 +19,11 @@ export interface CreateSongDto {
   verseOrder?: string | null; // verse_order string from OpenLP SQLite (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
   lyricsXml?: string | null; // Exact XML from SQLite lyrics column - 1:1 transparent with SQLite (preserves CDATA, type/label attributes, etc.)
   tags?: string[];
+  // OpenLP compatibility fields
+  copyright?: string; // OpenLP copyright field
+  comments?: string; // OpenLP comments field
+  ccliNumber?: string; // OpenLP ccli_number field
+  searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
 }
 
 /**
