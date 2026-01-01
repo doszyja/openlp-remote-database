@@ -580,6 +580,8 @@ export default function SongListPage() {
               }}
               currentSongId={lastSelectedSongId || firstSongId}
               showSearch={true}
+              showAddSong={hasEditPermission}
+              onAddSong={() => navigate('/songs/new')}
               searchValue={search}
               onSearchChange={value => {
                 setSearch(value);

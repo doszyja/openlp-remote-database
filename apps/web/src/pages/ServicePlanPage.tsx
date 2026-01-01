@@ -870,6 +870,8 @@ export default function ServicePlanPage() {
             isLoading={isSearchLoadingState}
             emptyMessage="Nie znaleziono pieśni."
             hasActiveFilter={!!songbookFilter}
+            showAddSong={hasEditPermission}
+            onAddSong={() => navigate('/songs/new')}
             filterContent={
               <>
                 {SONGBOOK_OPTIONS.map(option => (

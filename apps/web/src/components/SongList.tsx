@@ -12,12 +12,14 @@ import {
   IconButton,
   Tooltip,
   Typography,
+  Stack,
 } from '@mui/material';
 import {
   MusicNote as MusicNoteIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
   Clear as ClearIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import type { SongListCacheItem } from '@openlp/shared';
 import SongSearchModal from './SongSearchModal';
@@ -38,6 +40,8 @@ export interface SongListProps {
   showSortButton?: boolean; // Show sort button in the list (for mobile)
   filterContent?: React.ReactNode; // Content to render below search box (e.g., filter chips)
   hasActiveFilter?: boolean; // Show clear button when filter is active
+  onAddSong?: () => void; // Callback for "Add Song" action
+  showAddSong?: boolean; // Show "Add Song" element at the bottom
 }
 
 // Virtualized list row component
@@ -180,6 +184,8 @@ export default function SongList({
   showSortButton = false, // Show sort button in the list (for mobile)
   filterContent,
   hasActiveFilter = false,
+  onAddSong,
+  showAddSong = false,
 }: SongListProps) {
   const [listHeight, setListHeight] = useState(height || 600);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -533,6 +539,42 @@ export default function SongList({
           >
             {VirtualizedRow}
           </FixedSizeList>
+        </Box>
+      )}
+
+      {/* Add Song element at the bottom */}
+      {showAddSong && onAddSong && (
+        <Box
+          sx={{
+            mt: 0.5,
+            pt: 0.75,
+            borderTop: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.1)'
+                : '1px solid rgba(0, 0, 0, 0.1)',
+            flexShrink: 0,
+          }}
+        >
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            onClick={onAddSong}
+            sx={{
+              cursor: 'pointer',
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+              Dodaj Pieśń
+            </Typography>
+          </Stack>
         </Box>
       )}
 

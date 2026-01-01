@@ -38,6 +38,7 @@ import {
   ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import clipboardCopy from 'clipboard-copy';
 import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useNotification } from '../contexts/NotificationContext';
@@ -573,12 +574,14 @@ export default function SongDetailPage() {
                     songText += '\n\n' + song.verses.replace(/<br\s*\/?>/gi, '\n');
                   }
 
-                  // Copy to clipboard
-                  await navigator.clipboard.writeText(songText);
+                  // Copy to clipboard using clipboard-copy library (handles all fallbacks)
+                  await clipboardCopy(songText);
                   showSuccess('Tekst pieśni został skopiowany do schowka');
                 } catch (error) {
                   console.error('[SongDetailPage] Error copying song to clipboard:', error);
-                  showError('Nie udało się skopiować tekstu pieśni do schowka');
+                  showError(
+                    'Nie udało się skopiować tekstu pieśni do schowka. Spróbuj zaznaczyć tekst ręcznie.'
+                  );
                 }
               }}
               size="small"
@@ -946,6 +949,8 @@ export default function SongDetailPage() {
             onSortOrderChange={setSortOrder}
             showSortButton={isMobile}
             hasActiveFilter={!!songbookFilter}
+            showAddSong={hasEditPermission}
+            onAddSong={() => navigate('/songs/new')}
             filterContent={
               <>
                 {SONGBOOK_OPTIONS.map(option => (
