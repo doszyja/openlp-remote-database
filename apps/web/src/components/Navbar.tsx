@@ -460,6 +460,8 @@ export function RightSideContent({
   planId,
   isServicePlansPage,
   isLivePage,
+  isSongListPage,
+  isSongDetailPage,
   isAdmin,
   isExporting,
   exportZipIsFetching,
@@ -475,6 +477,8 @@ export function RightSideContent({
   settingsDialogRef,
 }: {
   isAuthenticated: boolean;
+  isSongListPage: boolean;
+  isSongDetailPage: boolean;
   user: {
     username?: string;
     avatar?: string | null;
@@ -534,12 +538,22 @@ export function RightSideContent({
         </>
       ) : !hasToken && !isLoading ? (
         <>
-          <Button variant="contained" onClick={onDiscordLogin} disabled={isApiError} size="small">
-            Zaloguj
-          </Button>
-          <Box sx={{ display: 'none' }}>
-            <SettingsDialog ref={settingsDialogRef} />
-          </Box>
+          {!isSongListPage && !isSongDetailPage && (
+            <Button
+              variant="contained"
+              onClick={onDiscordLogin}
+              disabled={isApiError}
+              size="small"
+              sx={{
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 1.5 },
+                py: { xs: 0.5, sm: 0.75 },
+              }}
+            >
+              Zaloguj
+            </Button>
+          )}
+          <SettingsDialog ref={settingsDialogRef} small={isSongListPage || isSongDetailPage} />
         </>
       ) : null}
     </Box>
@@ -647,6 +661,8 @@ export default function Navbar() {
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
   const isServicePlanDetailPage = /^\/service-plans\/[^/]+$/.test(location.pathname);
   const isLivePage = location.pathname === '/live';
+  const isSongListPage = location.pathname === '/songs';
+  const isSongDetailPage = /^\/songs\/[^/]+$/.test(location.pathname);
 
   // Get service plan ID from URL if on detail page
   const planIdMatch = location.pathname.match(/^\/service-plans\/([^/]+)$/);
@@ -722,6 +738,8 @@ export default function Navbar() {
             planId={planId}
             isServicePlansPage={isServicePlansPage}
             isLivePage={isLivePage}
+            isSongListPage={isSongListPage}
+            isSongDetailPage={isSongDetailPage}
             isAdmin={isAdmin}
             isExporting={isExporting}
             exportZipIsFetching={exportZip.isFetching}
@@ -848,6 +866,8 @@ export default function Navbar() {
           planId={planId}
           isServicePlansPage={isServicePlansPage}
           isLivePage={isLivePage}
+          isSongListPage={isSongListPage}
+          isSongDetailPage={isSongDetailPage}
           isAdmin={isAdmin}
           isExporting={isExporting}
           exportZipIsFetching={exportZip.isFetching}

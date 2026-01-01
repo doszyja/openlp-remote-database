@@ -94,6 +94,7 @@ export class SongService {
       search,
       sortBy = 'title',
       sortOrder = 'asc',
+      songbook,
     } = query;
     const skip = (page - 1) * limit;
 
@@ -103,6 +104,16 @@ export class SongService {
 
     if (language) {
       filter.language = language;
+    }
+
+    // Filter by songbook (category)
+    if (songbook) {
+      if (songbook === 'zborowe') {
+        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
+        filter.songbook = { $nin: ['pielgrzym', 'zielony', 'wedrowiec'] };
+      } else {
+        filter.songbook = songbook;
+      }
     }
 
     if (tags && tags.length > 0) {
@@ -129,7 +140,7 @@ export class SongService {
 
     // Select only needed fields for better performance
     const selectFields =
-      'title number language verses verseOrder lyricsXml tags copyright comments ccliNumber searchTitle searchLyrics openlpMapping createdAt updatedAt';
+      'title number language verses verseOrder lyricsXml tags copyright comments ccliNumber searchTitle searchLyrics openlpMapping songbook createdAt updatedAt';
 
     const [songs, total] = await Promise.all([
       this.songModel
@@ -179,6 +190,7 @@ export class SongService {
         searchTitle: song.searchTitle,
         searchLyrics: song.searchLyrics,
         openlpMapping: song.openlpMapping,
+        songbook: song.songbook || null, // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
         createdAt: song.createdAt,
         updatedAt: song.updatedAt,
       };
@@ -252,6 +264,7 @@ export class SongService {
       searchTitle: song.searchTitle,
       searchLyrics: song.searchLyrics,
       openlpMapping: song.openlpMapping,
+      songbook: (song as any).songbook || null, // Songbook category: 'pielgrzym', 'zielony', 'zborowe'
       createdAt: (song as any).createdAt || new Date(),
       updatedAt: (song as any).updatedAt || new Date(),
     };
@@ -474,7 +487,7 @@ export class SongService {
     const songs = await this.songModel
       .find({ deletedAt: null })
       .select(
-        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml',
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook',
       )
       .populate('tags', 'name color parentId') // Include color and parentId for advanced tags
       .sort({ title: 1 })
@@ -505,6 +518,7 @@ export class SongService {
       lyricsXml: song.lyricsXml || null, // Exact XML from SQLite lyrics column (1:1 transparent)
       searchTitle: song.searchTitle,
       searchLyrics: song.searchLyrics,
+      songbook: song.songbook || null, // Songbook category: 'pielgrzym', 'zielony', 'zborowe'
     }));
 
     return transformedSongs;

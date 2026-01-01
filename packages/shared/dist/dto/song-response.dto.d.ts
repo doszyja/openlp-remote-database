@@ -37,5 +37,6 @@ export interface SongListCacheItem {
     lyricsXml?: string | null;
     searchTitle: string | null;
     searchLyrics: string | null;
+    songbook?: string | null;
 }
 //# sourceMappingURL=song-response.dto.d.ts.map

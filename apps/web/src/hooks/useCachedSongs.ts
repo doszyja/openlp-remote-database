@@ -119,6 +119,11 @@ export function useCachedSongSearch(
 ) {
   const { songs, isLoading } = useCachedSongs();
 
+  // Extract options to stable values for dependency array
+  const language = options?.language;
+  const tagsKey = options?.tags?.join(',');
+  const songsCount = songs?.length;
+
   // Use useMemo to prevent unnecessary recalculations and re-renders
   // Only recalculate when query or songs actually change
   const searchResults = useMemo(() => {
@@ -128,7 +133,8 @@ export function useCachedSongSearch(
 
     // Use cache for search - this is synchronous and fast
     return songsCache.searchInCache(query, options);
-  }, [query, songs?.length, options?.language, options?.tags?.join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, songsCount, language, tagsKey]);
 
   return {
     results: searchResults,

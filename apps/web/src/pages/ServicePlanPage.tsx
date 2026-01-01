@@ -26,6 +26,7 @@ import {
   DialogActions,
   TextField,
   InputAdornment,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -58,7 +59,7 @@ import SongSearchModal from '../components/SongSearchModal';
 import SongList from '../components/SongList';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
-import type { ServicePlanItem, SongListCacheItem, ServicePlan } from '@openlp/shared';
+import type { ServicePlanItem, SongListCacheItem, ServicePlan, SongbookSlug } from '@openlp/shared';
 import {
   DndContext,
   closestCenter,
@@ -76,6 +77,14 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// Songbook filter options
+const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
+  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
+  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
+  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
+  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
+];
 
 // Sortable List Item Component
 interface SortableListItemProps {
@@ -389,6 +398,7 @@ export default function ServicePlanPage() {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [sharedPlan, setSharedPlan] = useState<ServicePlan | null>(null);
+  const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
   const hasAutoActivatedRef = useRef(false);
 
   // Load shared plan if token is provided
@@ -651,11 +661,26 @@ export default function ServicePlanPage() {
 
   // Search results for column 1
   const allSearchSongs = useMemo(() => {
-    if (!search.trim()) {
-      return allCachedSongs || [];
+    let songs = !search.trim() ? allCachedSongs || [] : searchResults || [];
+
+    // Apply songbook filter
+    if (songbookFilter) {
+      if (songbookFilter === 'zborowe') {
+        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
+        songs = songs.filter(
+          song =>
+            !song.songbook ||
+            (song.songbook !== 'pielgrzym' &&
+              song.songbook !== 'zielony' &&
+              song.songbook !== 'wedrowiec')
+        );
+      } else {
+        songs = songs.filter(song => song.songbook === songbookFilter);
+      }
     }
-    return searchResults || [];
-  }, [search, searchResults, allCachedSongs]);
+
+    return songs;
+  }, [search, searchResults, allCachedSongs, songbookFilter]);
 
   const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
 
@@ -800,15 +825,6 @@ export default function ServicePlanPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [hasEditPermission, activeSongData, handleNextVerse, handlePreviousVerse]);
 
-  // Calculate list height
-  const calculateListHeight = useCallback((viewportHeight: number) => {
-    const headerHeight = 60;
-    const searchHeight = 120;
-    const padding = 40;
-    const calculatedHeight = viewportHeight - headerHeight - searchHeight - padding;
-    return Math.max(300, calculatedHeight);
-  }, []);
-
   // Column 1: Song List (memoized before conditional returns)
   const songListColumn = useMemo(
     () => (
@@ -844,10 +860,68 @@ export default function ServicePlanPage() {
             }}
             showSearch={true}
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={value => {
+              setSearch(value);
+              // Clear songbook filter when search is cleared
+              if (!value) {
+                setSongbookFilter(null);
+              }
+            }}
             isLoading={isSearchLoadingState}
             emptyMessage="Nie znaleziono pieśni."
-            calculateHeight={calculateListHeight}
+            hasActiveFilter={!!songbookFilter}
+            filterContent={
+              <>
+                {SONGBOOK_OPTIONS.map(option => (
+                  <Chip
+                    key={option.slug}
+                    label={option.label}
+                    size="small"
+                    onClick={() =>
+                      setSongbookFilter(songbookFilter === option.slug ? null : option.slug)
+                    }
+                    sx={{
+                      fontWeight: songbookFilter === option.slug ? 600 : 400,
+                      fontSize: { xs: '0.85rem', sm: '0.7rem' },
+                      height: { xs: 32, sm: 24 },
+                      flexShrink: 0,
+                      backgroundColor:
+                        songbookFilter === option.slug
+                          ? option.color
+                          : theme =>
+                              theme.palette.mode === 'dark' ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
+                      color: songbookFilter === option.slug ? '#fff' : 'text.primary',
+                      border: '1px solid',
+                      borderColor:
+                        songbookFilter === option.slug
+                          ? `${option.color} !important`
+                          : theme =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.1)'
+                                : 'transparent',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor:
+                          songbookFilter === option.slug
+                            ? option.color
+                            : theme =>
+                                theme.palette.mode === 'dark'
+                                  ? 'transparent'
+                                  : 'rgba(0, 0, 0, 0.1)',
+                        borderColor:
+                          songbookFilter === option.slug
+                            ? option.color
+                            : theme =>
+                                theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.1)'
+                                  : 'transparent',
+                      },
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </>
+            }
           />
         </Box>
       </Paper>
@@ -858,8 +932,9 @@ export default function ServicePlanPage() {
       allSearchSongs,
       hasEditPermission,
       navigate,
-      calculateListHeight,
       handleAddSong,
+      songbookFilter,
+      theme,
     ]
   );
 
