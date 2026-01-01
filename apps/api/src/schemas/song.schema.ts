@@ -64,6 +64,9 @@ export class Song {
   ccliNumber?: string; // OpenLP ccli_number field (alternative to number)
 
   @Prop()
+  authors?: string; // OpenLP authors field (comma-separated author names)
+
+  @Prop()
   searchTitle?: string; // OpenLP search_title (lowercase title for searching)
 
   @Prop()

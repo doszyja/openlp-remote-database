@@ -106,7 +106,10 @@ export function exportServicePlanToOsz(
   );
 
   // Add service items (songs)
-  for (const item of sortedItems) {
+  for (let itemIndex = 0; itemIndex < sortedItems.length; itemIndex++) {
+    const item = sortedItems[itemIndex];
+    const itemOrder = itemIndex + 1; // 1-based order for display
+
     console.log(
       `[exportServicePlanToOsz] Processing item: songId=${item.songId}, songTitle=${item.songTitle}, hasSong=${!!item.song}`,
     );
@@ -125,7 +128,78 @@ export function exportServicePlanToOsz(
     const slides: any[] = [];
     const verses = Array.isArray(song.verses) ? song.verses : [];
 
-    if (verses.length === 0) {
+    // Parse verses from lyricsXml if available and verses array is empty or has no content
+    let parsedVerses: Array<{
+      order: number;
+      content: string;
+      label?: string;
+      originalLabel?: string;
+    }> = [];
+
+    if (
+      verses.length > 0 &&
+      verses.some((v) => v.content && v.content.trim())
+    ) {
+      // Use verses array if it has content
+      parsedVerses = verses.map((v) => ({
+        order: v.order || 0,
+        content: v.content || '',
+        label: v.label,
+        originalLabel: v.originalLabel,
+      }));
+    } else if (song.lyricsXml && song.lyricsXml.trim()) {
+      // Parse from lyricsXml if verses array is empty or has no content
+      let lyricsXmlContent = song.lyricsXml.trim();
+
+      // Extract lyrics section if it's a full XML document
+      if (lyricsXmlContent.includes('<lyrics')) {
+        const lyricsMatch = lyricsXmlContent.match(
+          /<lyrics[^>]*>([\s\S]*?)<\/lyrics>/i,
+        );
+        if (lyricsMatch && lyricsMatch[1]) {
+          lyricsXmlContent = lyricsMatch[1].trim();
+        }
+      }
+
+      // Extract verses from OpenLyrics XML format
+      // Match: <verse name="v1"><lines>content</lines></verse>
+      // Also handle CDATA: <verse name="v1"><lines><![CDATA[content]]></lines></verse>
+      const verseRegex =
+        /<verse\s+name=["']([^"']+)["'][^>]*>[\s\S]*?<lines>([\s\S]*?)<\/lines>[\s\S]*?<\/verse>/gi;
+      let match;
+      let verseOrder = 1;
+      while ((match = verseRegex.exec(lyricsXmlContent)) !== null) {
+        const name = match[1]; // e.g., "v1", "c1"
+        let content = match[2];
+
+        // Handle CDATA
+        if (content.includes('<![CDATA[')) {
+          const cdataMatch = content.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
+          if (cdataMatch) {
+            content = cdataMatch[1];
+          }
+        }
+
+        // Decode XML entities and convert <br /> to newlines
+        content = content
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'")
+          .replace(/<br\s*\/?>/gi, '\n')
+          .trim();
+
+        parsedVerses.push({
+          order: verseOrder++,
+          content: content,
+          originalLabel: name,
+          label: name,
+        });
+      }
+    }
+
+    if (parsedVerses.length === 0) {
       console.warn(
         `[exportServicePlanToOsz] Song ${song.title} (${item.songId}) has no verses - adding empty song`,
       );
@@ -136,34 +210,108 @@ export function exportServicePlanToOsz(
         verseTag: 'Z1',
       });
     } else {
-      // Sort verses by order
-      const sortedVerses = [...verses].sort(
-        (a, b) => (a.order || 0) - (b.order || 0),
-      );
+      // Parse verseOrder to get correct order of verses
+      let orderedVerses: Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+      }> = [];
 
-      for (const verse of sortedVerses) {
+      if (song.verseOrder && song.verseOrder.trim()) {
+        // Parse verseOrder string (e.g., "v1 c1 v2 c1 v3 c1")
+        const verseOrderParts = song.verseOrder.trim().split(/\s+/);
+        const verseMap = new Map<string, (typeof parsedVerses)[0]>();
+
+        // Create map of verses by originalLabel (e.g., "v1", "c1")
+        parsedVerses.forEach((verse) => {
+          const key = (
+            verse.originalLabel ||
+            verse.label ||
+            `v${verse.order}`
+          ).toLowerCase();
+          verseMap.set(key, verse);
+        });
+
+        // Build ordered verses based on verseOrder
+        verseOrderParts.forEach((part, index) => {
+          const verse = verseMap.get(part.toLowerCase());
+          if (verse) {
+            orderedVerses.push({
+              ...verse,
+              order: index + 1,
+            });
+          }
+        });
+
+        // If verseOrder parsing didn't work, fall back to sorted verses
+        if (orderedVerses.length === 0) {
+          orderedVerses = [...parsedVerses].sort(
+            (a, b) => (a.order || 0) - (b.order || 0),
+          );
+        }
+      } else {
+        // No verseOrder, sort by order
+        orderedVerses = [...parsedVerses].sort(
+          (a, b) => (a.order || 0) - (b.order || 0),
+        );
+      }
+
+      for (const verse of orderedVerses) {
+        // Ensure content exists
+        const verseContent = verse.content || '';
+
         // Extract first line or first few words for title
-        const firstLine = verse.content.split('\n')[0] || verse.content;
+        const firstLine = verseContent.split('\n')[0] || verseContent;
         const title =
           firstLine.length > 30
             ? firstLine.substring(0, 27) + '...'
             : firstLine;
 
         // Convert <br/> tags to newlines for raw_slide
-        const rawSlide = verse.content.replace(/<br\s*\/?>/gi, '\n');
+        const rawSlide = verseContent.replace(/<br\s*\/?>/gi, '\n');
 
-        // Generate verse tag (Z1, Z2, etc. for verses, or use originalLabel if available)
+        // Generate verse tag based on verseOrder position
+        // v1, v2, v3 -> Z1, Z2, Z3 (zwrotka)
+        // c, c1 -> R1, R2 (refren)
+        // b, b1 -> B1, B2 (bridge)
         let verseTag = `Z${verse.order}`;
-        if (verse.originalLabel) {
-          // Map OpenLP labels to verse tags
-          // v1, v2, v3 -> Z1, Z2, Z3
-          // c, c1 -> C1, C2
-          // b, b1 -> B1, B2
+
+        if (song.verseOrder && song.verseOrder.trim()) {
+          // Extract from verseOrder based on current position in orderedVerses
+          const verseOrderParts = song.verseOrder.trim().split(/\s+/);
+          const currentIndex = orderedVerses.indexOf(verse);
+          if (currentIndex >= 0 && currentIndex < verseOrderParts.length) {
+            const part = verseOrderParts[currentIndex];
+            const match = part.match(/^([vcbpt])(\d*)$/i);
+            if (match) {
+              const type = match[1].toLowerCase();
+              const num = match[2] || '1';
+              // Map: v -> Z, c -> R, b -> B, p -> P, t -> T
+              const tagMap: Record<string, string> = {
+                v: 'Z',
+                c: 'R',
+                b: 'B',
+                p: 'P',
+                t: 'T',
+              };
+              verseTag = (tagMap[type] || 'Z') + num;
+            }
+          }
+        } else if (verse.originalLabel) {
+          // Fallback to originalLabel if verseOrder is not available
           const match = verse.originalLabel.match(/^([vcbpt])(\d*)$/i);
           if (match) {
-            const type = match[1].toUpperCase();
+            const type = match[1].toLowerCase();
             const num = match[2] || '1';
-            verseTag = type + num;
+            const tagMap: Record<string, string> = {
+              v: 'Z',
+              c: 'R',
+              b: 'B',
+              p: 'P',
+              t: 'T',
+            };
+            verseTag = (tagMap[type] || 'Z') + num;
           }
         }
 
@@ -177,32 +325,46 @@ export function exportServicePlanToOsz(
 
     // Build serviceitem
     // Note: 'name' in header is the plugin name ('songs'), not the song title
+    // Title should include order number (e.g., "1. Ach potrzebuję Cię")
+    // Check if title already starts with a number (e.g., "1. Ach potrzebuję Cię")
+    const titleAlreadyHasNumber = /^\d+\.\s/.test(song.title);
+    const songTitleWithOrder = titleAlreadyHasNumber
+      ? song.title
+      : `${itemOrder}. ${song.title}`;
+
     const serviceItem = {
       serviceitem: {
         header: {
           name: 'songs', // Plugin name, not song title
           plugin: 'songs',
           theme: null,
-          title: song.title,
-          footer: [song.title],
+          title: songTitleWithOrder, // Include order number
+          footer: [songTitleWithOrder], // Include order number
           type: 1, // 1 = song
-          audit: [song.title, [], null, 'None'],
+          audit: [songTitleWithOrder, [], null, 'None'], // Include order number
           notes: item.notes || '',
           from_plugin: true,
           capabilities: [2, 1, 5, 8, 9, 13, 22], // Standard song capabilities
-          search: song.title.toLowerCase(),
+          search: '', // Empty string as in original example
           data: {
-            // OpenLP requires id field - it should be the OpenLP database ID
-            // Use openlpId if available (from sync), otherwise null
-            // OpenLP will try to find the song by id first, then by title if id is null
-            id: song.openlpId || null, // OpenLP database ID (null if song doesn't exist in OpenLP DB)
-            title: song.title.toLowerCase(),
+            // Do NOT include id field - original example doesn't have it
+            // Title in data should include order number (as in original: "1. ach potrzebuję cię")
+            title: songTitleWithOrder.toLowerCase(), // Title WITH order number in data (as in original)
             alternate_title: song.alternateTitle || song.ccliNumber || null,
-            authors: song.authors || '',
+            // CRITICAL: Use "Nieznany" as default author (as in original example)
+            // OpenLP expects a non-empty author string to properly handle author relationships
+            authors: song.authors || 'Nieznany',
             ccli_number: song.ccliNumber || null,
             copyright: song.copyright || null,
           },
-          xml_version: song.lyricsXml || generateXmlFromVerses(song),
+          xml_version: (() => {
+            // CRITICAL: Always generate XML from verses instead of using lyricsXml
+            // This ensures we never include <authors> sections that cause OpenLP to try creating author relationships
+            // OpenLP tries to create author from <authors> in XML but doesn't set author_type, causing NOT NULL constraint error
+            // Even after removing <authors> tags, there might be other author-related content that triggers the issue
+            // Generating from verses ensures clean XML without any author information
+            return generateXmlFromVerses(song);
+          })(),
           auto_play_slides_once: false,
           auto_play_slides_loop: false,
           timed_slide_interval: 0,
@@ -224,26 +386,15 @@ export function exportServicePlanToOsz(
     serviceData.push(serviceItem);
   }
 
-  // Generate JSON in single line with Unicode escape sequences for non-ASCII characters
-  // OpenLP uses compact JSON format with escaped Unicode characters (e.g., \u015b for ś)
-  // Use a replacer function to force Unicode escape sequences for all non-ASCII characters
-  // This ensures 1:1 compatibility with OpenLP's JSON format
-  const jsonContent = JSON.stringify(serviceData, (key, value) => {
-    if (typeof value === 'string') {
-      // Escape all non-ASCII characters (outside 0x00-0x7F range) as Unicode escape sequences
-      // This includes Polish characters like ś (\u015b), ą (\u0105), etc.
-      return value.replace(/[\u0080-\uFFFF]/g, (char) => {
-        const code = char.charCodeAt(0);
-        // Format as \uXXXX with uppercase hex (e.g., \u015b not \u015B)
-        return '\\u' + ('0000' + code.toString(16).toLowerCase()).slice(-4);
-      });
-    }
-    return value;
-  });
+  // Generate JSON in single line format
+  // JSON.stringify automatically escapes Unicode characters (e.g., \u0119 for ę)
+  // OpenLP expects standard JSON format with Unicode escape sequences
+  // Do NOT manually escape Unicode - let JSON.stringify handle it automatically
+  const jsonContent = JSON.stringify(serviceData);
 
   // Add the JSON file to the archive
-  // OpenLP uses the plan name or a generic filename
-  archive.append(jsonContent, { name: 'service.osj' });
+  // OpenLP uses service_data.osj as the filename
+  archive.append(jsonContent, { name: 'service_data.osj' });
 
   // Finalize the archive
   archive.finalize();
@@ -263,53 +414,82 @@ function generateXmlFromVerses(song: {
   }>;
   verseOrder?: string | null;
   copyright?: string | null;
+  authors?: string;
 }): string {
   const sortedVerses = [...song.verses].sort((a, b) => a.order - b.order);
+  const modifiedDate = new Date().toISOString().replace(/\.\d{3}Z$/, '');
 
-  let xml = "<?xml version='1.0' encoding='UTF-8'?>\n";
+  // Generate XML in single line format (as in original example)
+  // CRITICAL: Include <authors> section with "Nieznany" to prevent OpenLP from trying to create author relationship without author_type
+  let xml = "<?xml version='1.0' encoding='UTF-8'?>";
   xml +=
     '<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8"';
-  xml += ` createdIn="OpenLP Database" modifiedIn="OpenLP Database"`;
-  xml += ` modifiedDate="${new Date().toISOString()}">\n`;
-  xml += '<properties>\n';
-  xml += `<titles><title>${escapeXmlForOpenLyrics(song.title)}</title></titles>\n`;
-  if (song.verseOrder) {
-    xml += `<verseOrder>${song.verseOrder}</verseOrder>\n`;
+  xml += ` createdIn="OpenLP 3.1.7" modifiedIn="OpenLP 3.1.7"`;
+  xml += ` modifiedDate="${modifiedDate}">`;
+  xml += '<properties>';
+  xml += `<titles><title>${escapeXmlForOpenLyrics(song.title)}</title></titles>`;
+  // CRITICAL: Include <authors> section with "Nieznany" to ensure OpenLP properly handles author relationships
+  // This prevents OpenLP from trying to create author relationship without author_type
+  const authors = song.authors || 'Nieznany';
+  const authorNames = authors
+    .split(',')
+    .map((a) => a.trim())
+    .filter((a) => a.length > 0);
+  if (authorNames.length > 0) {
+    xml += '<authors>';
+    authorNames.forEach((authorName) => {
+      xml += `<author>${escapeXmlForOpenLyrics(authorName)}</author>`;
+    });
+    xml += '</authors>';
+  } else {
+    // Default to "Nieznany" if no authors specified
+    xml += '<authors><author>Nieznany</author></authors>';
   }
-  xml += '</properties>\n';
-  xml += '<lyrics>\n';
+  if (song.verseOrder) {
+    xml += `<verseOrder>${escapeXmlForOpenLyrics(song.verseOrder)}</verseOrder>`;
+  }
+  xml += '</properties>';
+  xml += '<lyrics>';
 
   for (const verse of sortedVerses) {
     const label = verse.originalLabel || `v${verse.order}`;
-    // Convert <br/> to proper XML format
-    const content = verse.content.replace(/<br\s*\/?>/gi, '<br/>');
-    xml += `<verse name="${escapeXmlForOpenLyrics(label)}">\n`;
-    xml += `<lines>${escapeXmlForOpenLyrics(content)}</lines>\n`;
-    xml += '</verse>\n';
+    // Content should have <br/> tags preserved, but escape other XML
+    const content = verse.content || '';
+    xml += `<verse name="${escapeXmlForOpenLyrics(label)}">`;
+    xml += `<lines>${escapeXmlForOpenLyrics(content)}</lines>`;
+    xml += '</verse>';
   }
 
-  xml += '</lyrics>\n';
+  xml += '</lyrics>';
   xml += '</song>';
 
+  // Return XML in single line format (as in original example)
   return xml;
 }
 
 /**
  * Escape XML for OpenLyrics format (preserves <br/> tags)
+ * Important: Must escape & first, then < and >, but preserve <br/> tags
  */
 function escapeXmlForOpenLyrics(text: string): string {
   if (!text) return '';
-  // First replace <br/> with placeholder
-  const withPlaceholder = text.replace(/<br\s*\/?>/gi, '___BR_TAG___');
-  // Escape XML
-  const escaped = withPlaceholder
-    .replace(/&/g, '&amp;')
+
+  // Step 1: Replace <br/> tags with placeholder (case insensitive, handle variations)
+  const brPlaceholder = '___BR_TAG_PLACEHOLDER___';
+  const withPlaceholder = text.replace(/<br\s*\/?>/gi, brPlaceholder);
+
+  // Step 2: Escape XML special characters (must escape & first!)
+  let escaped = withPlaceholder
+    .replace(/&/g, '&amp;') // Must be first!
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
-  // Restore <br/>
-  return escaped.replace(/___BR_TAG___/g, '<br/>');
+
+  // Step 3: Restore <br/> tags (now safe because & is already escaped)
+  escaped = escaped.replace(new RegExp(brPlaceholder, 'g'), '<br/>');
+
+  return escaped;
 }
 
 /**

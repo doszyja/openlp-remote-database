@@ -347,13 +347,19 @@ export default function SongDetailPage() {
                 size="small"
                 sx={{
                   borderColor: theme =>
-                    theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.3)'
+                      : 'rgba(0, 0, 0, 0.23)',
                   color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
                   '&:hover': {
                     borderColor: theme =>
-                      theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.5)'
+                        : 'rgba(0, 0, 0, 0.4)',
                     backgroundColor: theme =>
-                      theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.04)',
                   },
                 }}
               >
@@ -945,9 +951,7 @@ export default function SongDetailPage() {
                         songbookFilter === option.slug
                           ? option.color
                           : theme =>
-                              theme.palette.mode === 'dark'
-                                ? 'transparent'
-                                : 'rgba(0, 0, 0, 0.06)',
+                              theme.palette.mode === 'dark' ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                       color: songbookFilter === option.slug ? '#fff' : 'text.primary',
                       border: '1px solid',
                       borderColor:

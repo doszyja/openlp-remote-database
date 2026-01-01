@@ -42,8 +42,8 @@ async function migrateOpenLPToMongoDB() {
     process.exit(1);
   }
 
-  // Open SQLite database
-  const db = new Database(sqlitePath, { readonly: true });
+  // Open SQLite database in read-write mode to allow adding author relationships
+  const db = new Database(sqlitePath);
 
   try {
     // Check what tables exist
@@ -160,6 +160,55 @@ async function migrateOpenLPToMongoDB() {
     }
 
     console.log(`📊 Found ${openlpSongs.length} songs in OpenLP database`);
+
+    // Get authors for songs - check if authors_songs table exists
+    const hasAuthorsTable = tables.some((t) => t.name === 'authors');
+    const hasAuthorsSongsTable = tables.some((t) => t.name === 'authors_songs');
+    console.log(`ℹ️  Authors table exists: ${hasAuthorsTable}`);
+    console.log(`ℹ️  Authors_songs table exists: ${hasAuthorsSongsTable}`);
+
+    // Prepare statement to get authors for a song
+    let getAuthorsStmt: any = null;
+    if (hasAuthorsTable && hasAuthorsSongsTable) {
+      try {
+        getAuthorsStmt = db.prepare(`
+          SELECT a.display_name
+          FROM authors a
+          INNER JOIN authors_songs as_rel ON a.id = as_rel.author_id
+          WHERE as_rel.song_id = ?
+          ORDER BY a.display_name
+        `);
+        console.log('✅ Authors query prepared successfully');
+      } catch (error) {
+        console.warn('⚠️  Could not prepare authors query:', error);
+      }
+    }
+
+    // Prepare statements to add author relationships to authors_songs table
+    let insertAuthorSongStmt: any = null;
+    let getAuthorIdStmt: any = null;
+    let insertAuthorStmt: any = null;
+    if (hasAuthorsTable && hasAuthorsSongsTable) {
+      try {
+        // Get or create author with ID=1 (default "Nieznany")
+        getAuthorIdStmt = db.prepare(`SELECT id FROM authors WHERE id = 1`);
+        insertAuthorStmt = db.prepare(`
+          INSERT OR IGNORE INTO authors (id, first_name, last_name, display_name)
+          VALUES (1, '', 'Nieznany', 'Nieznany')
+        `);
+        // Insert author relationship: author_id=1, song_id, author_type='words'
+        insertAuthorSongStmt = db.prepare(`
+          INSERT OR IGNORE INTO authors_songs (author_id, song_id, author_type)
+          VALUES (1, ?, 'words')
+        `);
+        console.log('✅ Author relationship statements prepared successfully');
+      } catch (error) {
+        console.warn(
+          '⚠️  Could not prepare author relationship statements:',
+          error,
+        );
+      }
+    }
 
     // Get verses - try different possible table names
     let versesStmt: any = null;
@@ -1096,6 +1145,24 @@ async function migrateOpenLPToMongoDB() {
             ? openlpSong.lyrics.trim()
             : undefined;
 
+        // Get authors for this song
+        let authors: string | undefined = undefined;
+        if (getAuthorsStmt) {
+          try {
+            const authorRows = getAuthorsStmt.all(openlpSong.id) as Array<{
+              display_name: string;
+            }>;
+            if (authorRows && authorRows.length > 0) {
+              authors = authorRows.map((a) => a.display_name).join(', ');
+            }
+          } catch (error) {
+            console.warn(
+              `⚠️  Could not get authors for song ${openlpSong.id}:`,
+              error,
+            );
+          }
+        }
+
         // Create song DTO with OpenLP compatibility fields
         // verses is now an array of objects with order (verse_order from OpenLP)
         const createSongDto = {
@@ -1110,6 +1177,7 @@ async function migrateOpenLPToMongoDB() {
           copyright: openlpSong.copyright || undefined,
           comments: openlpSong.comments || undefined,
           ccliNumber: openlpSong.ccli_number || undefined,
+          authors: authors || undefined, // Authors from OpenLP (comma-separated)
           searchTitle,
           searchLyrics, // Lowercase lyrics for searching
         };
@@ -1134,6 +1202,24 @@ async function migrateOpenLPToMongoDB() {
 
         // Create song in MongoDB
         await songService.create(createSongDto);
+
+        // Add author relationship to authors_songs table in OpenLP SQLite
+        // This ensures every song has author_id=1 (Nieznany) with author_type='words'
+        if (insertAuthorSongStmt && insertAuthorStmt) {
+          try {
+            // Ensure author with ID=1 exists (Nieznany)
+            insertAuthorStmt.run();
+
+            // Add relationship: author_id=1, song_id=openlpSong.id, author_type='words'
+            insertAuthorSongStmt.run(openlpSong.id);
+          } catch (error) {
+            console.warn(
+              `⚠️  Could not add author relationship for song ${openlpSong.id}:`,
+              error,
+            );
+          }
+        }
+
         const chorusCount = verses.filter((v) =>
           v.label?.toLowerCase().includes('chorus'),
         ).length;

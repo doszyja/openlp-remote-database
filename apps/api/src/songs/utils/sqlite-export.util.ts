@@ -306,9 +306,10 @@ export async function createOpenLPSqliteDatabase(
   `);
 
   // Create authors table (OpenLP authors) - matching real structure
+  // CRITICAL: Remove AUTOINCREMENT to allow explicit ID=1 for default author
   db.exec(`
     CREATE TABLE IF NOT EXISTS authors (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY,
       first_name VARCHAR(128),
       last_name VARCHAR(128),
       display_name VARCHAR(255) NOT NULL
@@ -419,18 +420,25 @@ export async function createOpenLPSqliteDatabase(
   `);
 
   // Prepare statements for authors
+  // CRITICAL: Use author_id=1 (Nieznany) for all songs
+  // This ensures compatibility with OpenLP's author system
+  // First check if author with ID=1 exists, if not create it
+  const checkAuthorStmt = db.prepare(`
+    SELECT id FROM authors WHERE id = 1
+  `);
+
   const insertAuthorStmt = db.prepare(`
-    INSERT OR IGNORE INTO authors (first_name, last_name, display_name)
-    VALUES (?, ?, ?)
+    INSERT INTO authors (id, first_name, last_name, display_name)
+    VALUES (1, ?, ?, ?)
   `);
 
   const getAuthorIdStmt = db.prepare(`
-    SELECT id FROM authors WHERE display_name = ?
+    SELECT id FROM authors WHERE id = 1
   `);
 
   const insertAuthorSongStmt = db.prepare(`
     INSERT OR IGNORE INTO authors_songs (author_id, song_id, author_type)
-    VALUES (?, ?, ?)
+    VALUES (1, ?, ?)
   `);
 
   const insertedSongIds: number[] = [];
@@ -459,7 +467,7 @@ export async function createOpenLPSqliteDatabase(
           : null;
 
       // Insert in the same order as column list (matching OpenLP structure)
-      insertSongStmt.run(
+      const result = insertSongStmt.run(
         song.title, // title
         alternateTitle, // alternate_title
         lyrics, // lyrics
@@ -474,44 +482,88 @@ export async function createOpenLPSqliteDatabase(
         // temporary is set to 0 (false) in SQL
       );
 
-      // Get the inserted song ID
-      const songId = db.lastInsertRowid as number;
-      insertedSongIds.push(songId);
+      // Get the inserted song ID from the result
+      // In better-sqlite3, lastInsertRowid is available on the result object
+      const songId = result.lastInsertRowid as number;
+      if (songId) {
+        insertedSongIds.push(songId);
+      }
     }
   });
 
-  transaction(songs);
-
-  // Create default author and assign all songs to it
-  // Use "Nieznany" to match XML export format
+  // Create default author with ID=1 (Nieznany) BEFORE inserting songs
+  // This ensures the author exists when we add relationships
   const defaultAuthorDisplayName = 'Nieznany';
   const defaultAuthorFirstName = '';
   const defaultAuthorLastName = 'Nieznany';
   const defaultAuthorType = 'words'; // Default author type: "words", "music", "words+music", or ""
 
-  // Insert default author (if not exists)
-  insertAuthorStmt.run(
-    defaultAuthorFirstName,
-    defaultAuthorLastName,
-    defaultAuthorDisplayName,
-  );
+  // Check if author with ID=1 exists, if not create it
+  // CRITICAL: Must be done BEFORE inserting songs to ensure foreign key constraint works
+  const existingAuthor = checkAuthorStmt.get() as { id: number } | undefined;
+  if (!existingAuthor) {
+    try {
+      insertAuthorStmt.run(
+        defaultAuthorFirstName,
+        defaultAuthorLastName,
+        defaultAuthorDisplayName,
+      );
+      console.log('✅ Created default author with ID=1 (Nieznany)');
+    } catch (error) {
+      console.warn('⚠️  Could not create default author:', error);
+    }
+  } else {
+    console.log('✅ Author with ID=1 (Nieznany) already exists');
+  }
 
-  // Get the default author ID
-  const defaultAuthor = getAuthorIdStmt.get(defaultAuthorDisplayName) as
+  // Insert all songs
+  transaction(songs);
+
+  // Verify author with ID=1 exists and we have songs
+  const defaultAuthor = getAuthorIdStmt.get() as
     | {
         id: number;
       }
     | undefined;
 
+  if (!defaultAuthor) {
+    console.warn(
+      '⚠️  Author with ID=1 does not exist, cannot add relationships',
+    );
+  }
+
+  if (insertedSongIds.length === 0) {
+    console.warn('⚠️  No songs were inserted, cannot add relationships');
+  }
+
+  // Assign all songs to author_id=1
   if (defaultAuthor && insertedSongIds.length > 0) {
-    // Assign all songs to the default author
+    console.log(
+      `📝 Adding author relationships for ${insertedSongIds.length} songs...`,
+    );
+    // Assign all songs to author_id=1
     const assignAuthorTransaction = db.transaction((songIds: number[]) => {
       for (const songId of songIds) {
-        insertAuthorSongStmt.run(defaultAuthor.id, songId, defaultAuthorType);
+        try {
+          // Use author_id=1 directly (not defaultAuthor.id, which should be 1)
+          insertAuthorSongStmt.run(songId, defaultAuthorType);
+        } catch (error) {
+          console.warn(
+            `⚠️  Could not add author relationship for song ${songId}:`,
+            error,
+          );
+        }
       }
     });
 
     assignAuthorTransaction(insertedSongIds);
+    console.log(
+      `✅ Added author relationships for ${insertedSongIds.length} songs`,
+    );
+  } else {
+    console.warn(
+      `⚠️  Skipping author relationships: author exists=${!!defaultAuthor}, songs count=${insertedSongIds.length}`,
+    );
   }
 
   db.close();

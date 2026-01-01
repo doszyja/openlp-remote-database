@@ -441,7 +441,7 @@ export class ServicePlanService {
             copyright: song.copyright || null,
             comments: song.comments || null,
             ccliNumber: song.ccliNumber || null,
-            authors: '', // OpenLP stores authors separately, we don't have this field
+            authors: song.authors || 'Nieznany', // Authors from MongoDB (comma-separated), default to "Nieznany"
             alternateTitle: song.number || null,
             openlpId: (song.openlpMapping as any)?.openlpId || null, // OpenLP database ID if available
           },
