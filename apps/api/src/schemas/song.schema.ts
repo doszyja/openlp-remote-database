@@ -74,6 +74,9 @@ export class Song {
 
   @Prop({ type: Object, default: null })
   openlpMapping?: OpenLPMapping | null;
+
+  @Prop({ type: String, ref: 'Songbook', index: true })
+  songbook?: string; // Reference to Songbook (by slug: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe')
 }
 
 export const SongSchema = SchemaFactory.createForClass(Song);
@@ -84,3 +87,4 @@ SongSchema.index({ tags: 1 }); // For tag filtering
 SongSchema.index({ language: 1, deletedAt: 1 }); // Compound index for language queries
 SongSchema.index({ createdAt: -1 }); // For sorting by creation date
 SongSchema.index({ title: 1, deletedAt: 1 }); // Compound index for title queries
+SongSchema.index({ songbook: 1, deletedAt: 1 }); // Compound index for songbook filtering

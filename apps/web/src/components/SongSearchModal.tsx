@@ -14,9 +14,18 @@ import {
   ListItemButton,
   ListItemText,
   Box,
+  Chip,
 } from '@mui/material';
 import { Close as CloseIcon, Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
-import type { SongListCacheItem } from '@openlp/shared';
+import type { SongListCacheItem, SongbookSlug } from '@openlp/shared';
+
+// Songbook filter options
+const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
+  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
+  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
+  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
+  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
+];
 
 export interface SongSearchModalProps {
   open: boolean;
@@ -148,9 +157,35 @@ const SearchModalRow = memo(
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    flex: 1,
+                    minWidth: 0,
                   },
                 }}
               />
+              {/* Songbook chip */}
+              {song.songbook && (
+                <Chip
+                  label={
+                    SONGBOOK_OPTIONS.find(opt => opt.slug === song.songbook)?.label || song.songbook
+                  }
+                  size="small"
+                  sx={{
+                    fontSize: '0.65rem',
+                    height: 20,
+                    minWidth: 'auto',
+                    px: 0.5,
+                    '& .MuiChip-label': {
+                      px: 0.75,
+                      fontSize: '0.65rem',
+                      textTransform: 'lowercase',
+                    },
+                    backgroundColor:
+                      SONGBOOK_OPTIONS.find(opt => opt.slug === song.songbook)?.color || 'default',
+                    color: '#fff',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
               {/* Explicit "+" icon – single click also dodaje pieśń */}
               <IconButton
                 edge="end"

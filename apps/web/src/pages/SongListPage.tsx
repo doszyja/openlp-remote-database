@@ -15,6 +15,7 @@ import {
   useTheme,
   IconButton,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -24,6 +25,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
+import type { SongbookSlug } from '@openlp/shared';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useAuth } from '../contexts/AuthContext';
 import { useExportZip } from '../hooks/useExportZip';
@@ -33,17 +35,30 @@ import SongList from '../components/SongList';
 // Session storage keys for remembering state
 const SEARCH_STORAGE_KEY = 'songListSearch';
 const SELECTED_SONG_STORAGE_KEY = 'songListSelectedSong';
+const SONGBOOK_FILTER_STORAGE_KEY = 'songListSongbookFilter';
+
+// Songbook filter options
+const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
+  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
+  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
+  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
+  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
+];
 
 export default function SongListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const showBackButton = useMediaQuery(theme.breakpoints.down(900)); // Show list when search is hidden (below 900px)
   const { hasEditPermission, isAuthenticated } = useAuth();
   const { showSuccess, showError } = useNotification();
 
   // Initialize search from sessionStorage (for remembering search when coming back)
   const [search, setSearch] = useState('');
+
+  // Songbook filter state
+  const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
 
   // Track the last selected song ID for highlighting
   const [lastSelectedSongId, setLastSelectedSongId] = useState<string | null>(null);
@@ -53,6 +68,9 @@ export default function SongListPage() {
     if (isMobile) {
       const savedSearch = sessionStorage.getItem(SEARCH_STORAGE_KEY);
       const savedSongId = sessionStorage.getItem(SELECTED_SONG_STORAGE_KEY);
+      const savedSongbook = sessionStorage.getItem(
+        SONGBOOK_FILTER_STORAGE_KEY
+      ) as SongbookSlug | null;
 
       if (savedSearch) {
         setSearch(savedSearch);
@@ -62,6 +80,9 @@ export default function SongListPage() {
         // Clear the stored song ID after restoring (so it doesn't persist forever)
         // But keep it in state for highlighting
         sessionStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
+      }
+      if (savedSongbook) {
+        setSongbookFilter(savedSongbook);
       }
     }
   }, [isMobile]);
@@ -81,6 +102,16 @@ export default function SongListPage() {
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const exportZip = useExportZip();
+
+  // Auto-set sort order to 'desc' when filtering by 'zborowe'
+  useEffect(() => {
+    if (songbookFilter === 'zborowe') {
+      setSortOrder('desc');
+    } else if (songbookFilter && sortOrder === 'desc') {
+      // Reset to 'asc' when switching to other filters (if currently on 'desc')
+      setSortOrder('asc');
+    }
+  }, [songbookFilter]);
   const hasAutoNavigatedRef = useRef(false);
 
   // Use cached songs for both search and initial list (no API calls needed)
@@ -99,12 +130,28 @@ export default function SongListPage() {
   const isLoading = useCacheForSearch ? isSearchLoading : isCacheLoading;
 
   // Get the songs to display - use search results if searching, otherwise use all cached songs
+  // Also filter by songbook if a filter is selected
   const displaySongs = useMemo(() => {
-    if (useCacheForSearch) {
-      return searchResults || [];
+    let songs = useCacheForSearch ? searchResults || [] : cachedSongs || [];
+
+    // Apply songbook filter
+    if (songbookFilter) {
+      if (songbookFilter === 'zborowe') {
+        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
+        songs = songs.filter(
+          song =>
+            !song.songbook ||
+            (song.songbook !== 'pielgrzym' &&
+              song.songbook !== 'zielony' &&
+              song.songbook !== 'wedrowiec')
+        );
+      } else {
+        songs = songs.filter(song => song.songbook === songbookFilter);
+      }
     }
-    return cachedSongs || [];
-  }, [useCacheForSearch, searchResults, cachedSongs]);
+
+    return songs;
+  }, [useCacheForSearch, searchResults, cachedSongs, songbookFilter]);
 
   // Get first song ID for auto-selection (only when not searching and songs are loaded)
   const firstSongId = useMemo(() => {
@@ -115,17 +162,17 @@ export default function SongListPage() {
   }, [useCacheForSearch, displaySongs]);
 
   // Check if we should auto-navigate (before rendering to prevent visual jump)
-  // Don't auto-navigate on mobile - show list instead
+  // Don't auto-navigate on mobile or when viewport < 900px (search is hidden) - show list instead
   const shouldAutoNavigate = useMemo(() => {
     return (
-      !isMobile && // Don't auto-navigate on mobile
+      !showBackButton && // Don't auto-navigate when viewport < 900px (search is hidden)
       location.pathname === '/songs' &&
       !hasAutoNavigatedRef.current &&
       !isLoading &&
       !useCacheForSearch &&
       !!firstSongId
     );
-  }, [isMobile, location.pathname, isLoading, useCacheForSearch, firstSongId]);
+  }, [showBackButton, location.pathname, isLoading, useCacheForSearch, firstSongId]);
 
   // Auto-navigate to first song on initial load (only if we're on /songs exactly, not /songs/:id)
   // Use useLayoutEffect to navigate synchronously before browser paints, preventing visual jump
@@ -547,12 +594,17 @@ export default function SongListPage() {
               searchValue={search}
               onSearchChange={value => {
                 setSearch(value);
+                // Clear songbook filter when search is cleared
+                if (!value) {
+                  setSongbookFilter(null);
+                }
                 // Save search to sessionStorage on mobile
                 if (isMobile) {
                   if (value) {
                     sessionStorage.setItem(SEARCH_STORAGE_KEY, value);
                   } else {
                     sessionStorage.removeItem(SEARCH_STORAGE_KEY);
+                    sessionStorage.removeItem(SONGBOOK_FILTER_STORAGE_KEY);
                   }
                 }
               }}
@@ -564,6 +616,71 @@ export default function SongListPage() {
               }
               sortOrder={sortOrder}
               onSortOrderChange={setSortOrder}
+              hasActiveFilter={!!songbookFilter}
+              filterContent={
+                <>
+                  {SONGBOOK_OPTIONS.map(option => (
+                    <Chip
+                      key={option.slug}
+                      label={option.label}
+                      size="small"
+                      onClick={() => {
+                        // Toggle off if clicking the same filter
+                        const newFilter = songbookFilter === option.slug ? null : option.slug;
+                        setSongbookFilter(newFilter);
+                        // Save to sessionStorage on mobile
+                        if (isMobile) {
+                          if (newFilter) {
+                            sessionStorage.setItem(SONGBOOK_FILTER_STORAGE_KEY, newFilter);
+                          } else {
+                            sessionStorage.removeItem(SONGBOOK_FILTER_STORAGE_KEY);
+                          }
+                        }
+                      }}
+                      sx={{
+                        fontWeight: songbookFilter === option.slug ? 600 : 400,
+                        fontSize: { xs: '0.85rem', sm: '0.7rem' },
+                        height: { xs: 32, sm: 24 },
+                        flexShrink: 0,
+                        backgroundColor:
+                          songbookFilter === option.slug
+                            ? option.color
+                            : theme =>
+                                theme.palette.mode === 'dark'
+                                  ? 'transparent'
+                                  : 'rgba(0, 0, 0, 0.06)',
+                        color: songbookFilter === option.slug ? '#fff' : 'text.primary',
+                        border: '1px solid',
+                        borderColor:
+                          songbookFilter === option.slug
+                            ? `${option.color} !important`
+                            : theme =>
+                                theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.1)'
+                                  : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor:
+                            songbookFilter === option.slug
+                              ? option.color
+                              : theme =>
+                                  theme.palette.mode === 'dark'
+                                    ? 'transparent'
+                                    : 'rgba(0, 0, 0, 0.1)',
+                          borderColor:
+                            songbookFilter === option.slug
+                              ? option.color
+                              : theme =>
+                                  theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.1)'
+                                    : 'transparent',
+                        },
+                        cursor: 'pointer',
+                      }}
+                    />
+                  ))}
+                </>
+              }
             />
           </Paper>
         </>

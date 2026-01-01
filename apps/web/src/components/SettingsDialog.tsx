@@ -69,6 +69,9 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
 
       // Refresh cache immediately
       await songsCache.refreshCache();
+
+      // Close the dialog after successful cache clear
+      onClose();
     } catch (error) {
       console.error('Failed to clear cache:', error);
       showError('Nie udało się wyczyścić cache. Spróbuj ponownie.');

@@ -33,7 +33,22 @@ export interface Song {
     ccliNumber?: string | null;
     searchTitle?: string | null;
     searchLyrics?: string | null;
+    songbook?: string | null;
 }
+/**
+ * Songbook (category) model
+ */
+export interface Songbook {
+    slug: string;
+    name: string;
+    description?: string;
+    order: number;
+    color?: string;
+}
+/**
+ * Available songbook slugs
+ */
+export type SongbookSlug = 'pielgrzym' | 'zielony' | 'zborowe';
 /**
  * Helper type for frontend: Visual verse representation
  * Used for editing in the UI, but converted to/from single string when saving

@@ -9,6 +9,7 @@
 ### Aplikacja webowa (Frontend)
 
 #### Zarządzanie pieśniami
+
 - ✅ **Przeglądanie pieśni** - Lista wszystkich pieśni z wyszukiwaniem i filtrowaniem
 - ✅ **Szczegóły pieśni** - Widok szczegółowy z pełnym tekstem i metadanymi
 - ✅ **Tworzenie pieśni** - Formularz do dodawania nowych pieśni
@@ -18,6 +19,7 @@
 - ✅ **Eksport ZIP** - Pobieranie wszystkich pieśni w formacie OpenLP XML
 
 #### Edytor wersów
+
 - ✅ **Indywidualne pola tekstowe** dla każdego wersu
 - ✅ **Typy wersów**: zwrotka (v), refren (c), bridge (b), pre-chorus (p), tag (t)
 - ✅ **Kolejność wersów** - Edytowalny string (np. "v1 c1 v2 c1 v3")
@@ -26,6 +28,7 @@
 - ✅ **Parsowanie XML** - Import z formatu OpenLP
 
 #### Wyszukiwanie i nawigacja
+
 - ✅ **Debounced search** - Wyszukiwanie z opóźnieniem 300ms
 - ✅ **Wyszukiwanie w tekście** - Pełnotekstowe wyszukiwanie w tytule i tekście
 - ✅ **Lista boczna** - Panel z listą pieśni na desktopie
@@ -34,6 +37,7 @@
 - ✅ **Auto-scroll** - Automatyczne przewijanie do wybranej pieśni
 
 #### Responsywność i UX
+
 - ✅ **Mobile-first design** - Optymalizacja dla telefonów
 - ✅ **Dark/Light mode** - Przełączanie motywu
 - ✅ **Pełny ekran** - Tryb prezentacji pieśni
@@ -42,6 +46,7 @@
 - ✅ **PWA ready** - Możliwość instalacji jako aplikacja
 
 #### Plan nabożeństwa (Service Plan)
+
 - ✅ **Tworzenie planów** - Lista pieśni na nabożeństwo
 - ✅ **Drag & drop** - Zmiana kolejności pieśni
 - ✅ **Widok prezentacji** - Tryb live z nawigacją między wersami
@@ -52,6 +57,7 @@
 ### Backend API
 
 #### Endpointy CRUD
+
 - ✅ `GET /songs` - Lista pieśni (paginacja, filtry, wyszukiwanie)
 - ✅ `GET /songs/:id` - Szczegóły pieśni
 - ✅ `POST /songs` - Tworzenie pieśni
@@ -60,11 +66,13 @@
 - ✅ `GET /songs/export/zip` - Eksport wszystkich pieśni jako ZIP
 
 #### Wyszukiwanie
+
 - ✅ `GET /songs/search` - Pełnotekstowe wyszukiwanie
 - ✅ Wyszukiwanie w tytule i tekście
 - ✅ Paginacja wyników
 
 #### Bezpieczeństwo
+
 - ✅ **Discord OAuth** - Logowanie przez Discord
 - ✅ **JWT tokens** - Autoryzacja requestów
 - ✅ **Role-based access** - Edycja tylko dla uprawnionych
@@ -74,6 +82,7 @@
 - ✅ **Audit logging** - Logowanie wszystkich zmian
 
 #### Import/Export
+
 - ✅ **OpenLP import** - Migracja z bazy SQLite OpenLP
 - ✅ **ZIP export** - Eksport pieśni w formacie XML OpenLP
 
@@ -82,16 +91,19 @@
 ### Narzędzie synchronizacji (Sync CLI)
 
 #### Komendy
+
 - ✅ `sync` - Pełna synchronizacja backend → OpenLP
 - ✅ `sync-song <id>` - Synchronizacja pojedynczej pieśni
 - ✅ `list` - Lista pieśni z backendu
 
 #### Opcje
+
 - ✅ `--dry-run` - Podgląd zmian bez zapisywania
 - ✅ `--verbose` - Szczegółowe logi
 - ✅ `--force` - Wymuszenie aktualizacji wszystkich pieśni
 
 #### Funkcjonalność
+
 - ✅ **One-way sync** - Backend → OpenLP SQLite
 - ✅ **UUID mapping** - Śledzenie ID między systemami
 - ✅ **Reconciliation** - Wykrywanie zmian (insert/update/delete)
@@ -114,17 +126,20 @@
 ### Styczeń 2025
 
 #### Naprawione błędy TypeScript
+
 - ✅ Naprawiono błąd `calculateHeight` - usunięto nieużywany prop z `SongList`
 - ✅ Naprawiono błąd typowania w `useDuplicateSong.ts` - poprawna asercja typów dla `verses`
 - ✅ Naprawiono błąd w `LivePage.tsx` - obsługa verses jako string i array
 
 #### Ulepszenia UX
+
 - ✅ Usunięto zbędne pola z formularza pieśni (Chorus, Tags, Number)
 - ✅ Dodano responsywne układy przycisków (stos na mobile, rząd na desktop)
 - ✅ Naprawiono problemy z overflow na mobile
 - ✅ Optymalizacja React Query - brak "mrugnięć" podczas nawigacji
 
 #### Edytor wersów
+
 - ✅ Implementacja parsowania XML z OpenLP
 - ✅ Indywidualne pola edycji dla każdego wersu
 - ✅ Wybór typu wersu (zwrotka/refren/bridge/pre-chorus/tag)
@@ -132,11 +147,13 @@
 - ✅ Obsługa powtórzeń w verse order
 
 #### System powiadomień
+
 - ✅ Globalny NotificationContext z Material UI Snackbar
 - ✅ Powiadomienia sukces/błąd we wszystkich stronach
 - ✅ Pozycjonowanie góra-środek z 3s auto-dismiss
 
 #### Plan nabożeństwa
+
 - ✅ Widok prezentacji z nawigacją między wersami
 - ✅ Obsługa klawiatury (strzałki, Enter, Escape)
 - ✅ Drag & drop do zmiany kolejności
@@ -146,42 +163,46 @@
 ## 🛠️ Stos technologiczny
 
 ### Frontend
-| Technologia | Wersja | Opis |
-|-------------|--------|------|
-| React | 18 | Framework UI |
-| Vite | 5 | Build tool |
-| TypeScript | 5 | Język programowania |
-| Material UI | 5 | Komponenty UI |
-| React Router | 6 | Routing |
-| React Query | 5 | Stan serwera |
-| React Hook Form | 7 | Formularze |
+
+| Technologia     | Wersja | Opis                |
+| --------------- | ------ | ------------------- |
+| React           | 18     | Framework UI        |
+| Vite            | 5      | Build tool          |
+| TypeScript      | 5      | Język programowania |
+| Material UI     | 5      | Komponenty UI       |
+| React Router    | 6      | Routing             |
+| React Query     | 5      | Stan serwera        |
+| React Hook Form | 7      | Formularze          |
 
 ### Backend
-| Technologia | Wersja | Opis |
-|-------------|--------|------|
-| NestJS | 10 | Framework |
-| TypeScript | 5 | Język |
-| MongoDB | 7 | Baza danych |
-| Mongoose | 8 | ODM |
-| Passport | - | Autoryzacja |
-| JWT | - | Tokeny |
+
+| Technologia | Wersja | Opis        |
+| ----------- | ------ | ----------- |
+| NestJS      | 10     | Framework   |
+| TypeScript  | 5      | Język       |
+| MongoDB     | 7      | Baza danych |
+| Mongoose    | 8      | ODM         |
+| Passport    | -      | Autoryzacja |
+| JWT         | -      | Tokeny      |
 
 ### Sync Tool
-| Technologia | Opis |
-|-------------|------|
-| Node.js | Runtime |
-| TypeScript | Język |
+
+| Technologia    | Opis          |
+| -------------- | ------------- |
+| Node.js        | Runtime       |
+| TypeScript     | Język         |
 | better-sqlite3 | SQLite driver |
-| axios | HTTP client |
-| commander.js | CLI framework |
-| Vitest | Testy |
+| axios          | HTTP client   |
+| commander.js   | CLI framework |
+| Vitest         | Testy         |
 
 ### DevOps
-| Technologia | Opis |
-|-------------|------|
-| Docker | Konteneryzacja |
-| Docker Compose | Orkiestracja |
-| pnpm | Package manager |
+
+| Technologia    | Opis              |
+| -------------- | ----------------- |
+| Docker         | Konteneryzacja    |
+| Docker Compose | Orkiestracja      |
+| pnpm           | Package manager   |
 | GitHub Actions | CI/CD (planowane) |
 
 ---
@@ -190,23 +211,23 @@
 
 ### Faza 1 (MVP) - ~90% ukończone
 
-| Moduł | Status | Opis |
-|-------|--------|------|
-| Monorepo | ✅ | Workspace, shared types, linting |
-| Backend API | ✅ | CRUD, auth, audit, export |
-| Frontend | ✅ | Pełne CRUD, formularze, UX |
-| Sync Tool | ✅ | CLI, dry-run, testy |
-| Docker | ✅ | Dev i prod setup |
+| Moduł       | Status | Opis                             |
+| ----------- | ------ | -------------------------------- |
+| Monorepo    | ✅     | Workspace, shared types, linting |
+| Backend API | ✅     | CRUD, auth, audit, export        |
+| Frontend    | ✅     | Pełne CRUD, formularze, UX       |
+| Sync Tool   | ✅     | CLI, dry-run, testy              |
+| Docker      | ✅     | Dev i prod setup                 |
 
 ### Faza 2 - W trakcie
 
-| Funkcjonalność | Status |
-|----------------|--------|
-| Error boundaries | ⏳ |
-| Swagger docs | ⏳ |
-| Seed data | ⏳ |
-| CI/CD pipeline | ⏳ |
-| Mobile QA | ⏳ |
+| Funkcjonalność   | Status |
+| ---------------- | ------ |
+| Error boundaries | ⏳     |
+| Swagger docs     | ⏳     |
+| Seed data        | ⏳     |
+| CI/CD pipeline   | ⏳     |
+| Mobile QA        | ⏳     |
 
 ---
 
@@ -232,4 +253,3 @@
 
 **Autor**: Dominik Szyja  
 **Licencja**: MIT
-

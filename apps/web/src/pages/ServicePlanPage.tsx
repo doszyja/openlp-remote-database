@@ -842,14 +842,7 @@ export default function ServicePlanPage() {
         </Box>
       </Paper>
     ),
-    [
-      isSearchLoadingState,
-      search,
-      allSearchSongs,
-      hasEditPermission,
-      navigate,
-      handleAddSong,
-    ]
+    [isSearchLoadingState, search, allSearchSongs, hasEditPermission, navigate, handleAddSong]
   );
 
   // Column 2: Plan Songs with Add button (memoized before conditional returns)

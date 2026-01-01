@@ -34,4 +34,5 @@ export interface SongListCacheItem {
   lyricsXml?: string | null; // Exact XML from SQLite lyrics column - 1:1 transparent (preserves CDATA, type/label attributes, etc.)
   searchTitle: string | null; // For search
   searchLyrics: string | null; // For search in lyrics
+  songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'zborowe'
 }

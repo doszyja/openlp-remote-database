@@ -24,7 +24,24 @@ export interface Song {
   ccliNumber?: string | null; // OpenLP ccli_number field
   searchTitle?: string | null; // OpenLP search_title (lowercase title for searching)
   searchLyrics?: string | null; // OpenLP search_lyrics (lowercase lyrics for searching)
+  songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
 }
+
+/**
+ * Songbook (category) model
+ */
+export interface Songbook {
+  slug: string; // 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
+  name: string; // Display name
+  description?: string;
+  order: number;
+  color?: string;
+}
+
+/**
+ * Available songbook slugs
+ */
+export type SongbookSlug = 'pielgrzym' | 'zielony' | 'wedrowiec' | 'zborowe';
 
 /**
  * Helper type for frontend: Visual verse representation

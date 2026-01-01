@@ -345,7 +345,23 @@ class SongsCacheService {
         (song.searchTitle && song.searchTitle.includes(lowerQuery)) ||
         song.title.toLowerCase().includes(lowerQuery);
 
-      const matchesLyrics = song.searchLyrics && song.searchLyrics.includes(lowerQuery);
+      // Search in lyrics - use searchLyrics if available, otherwise fallback to verses/versesArray
+      let matchesLyrics = false;
+      if (song.searchLyrics) {
+        matchesLyrics = song.searchLyrics.includes(lowerQuery);
+      } else {
+        // Fallback: search in verses string or versesArray
+        if (song.verses && typeof song.verses === 'string') {
+          matchesLyrics = song.verses.toLowerCase().includes(lowerQuery);
+        } else if (song.versesArray && Array.isArray(song.versesArray)) {
+          // Search in versesArray content
+          const allVersesText = song.versesArray
+            .map(v => v.content || '')
+            .join(' ')
+            .toLowerCase();
+          matchesLyrics = allVersesText.includes(lowerQuery);
+        }
+      }
 
       const matchesSearch = matchesTitle || matchesLyrics;
 
@@ -361,21 +377,37 @@ class SongsCacheService {
       return matchesSearch && matchesLanguage && matchesTags;
     });
 
-    // Sort: prioritize title prefix matches, then title contains, then lyrics-only matches
+    // Sort: prioritize exact matches, then word-boundary matches, then contains matches
     results.sort((a, b) => {
       const aTitle = a.searchTitle || a.title.toLowerCase();
       const bTitle = b.searchTitle || b.title.toLowerCase();
 
+      // Check for exact match (title equals query)
+      const aExactMatch = aTitle === lowerQuery;
+      const bExactMatch = bTitle === lowerQuery;
+      if (aExactMatch && !bExactMatch) return -1;
+      if (!aExactMatch && bExactMatch) return 1;
+
+      // Check for starts with query
       const aStartsWith = aTitle.startsWith(lowerQuery);
       const bStartsWith = bTitle.startsWith(lowerQuery);
-      const aTitleContains = aTitle.includes(lowerQuery);
-      const bTitleContains = bTitle.includes(lowerQuery);
-
-      // Priority 1: Title starts with query
       if (aStartsWith && !bStartsWith) return -1;
       if (!aStartsWith && bStartsWith) return 1;
 
-      // Priority 2: Title contains query (but doesn't start with)
+      // Check for word-boundary match (query starts at word/number boundary)
+      // This prevents "80." from matching in "180."
+      const wordBoundaryRegex = new RegExp(
+        `(^|\\s|[^0-9])${lowerQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'i'
+      );
+      const aWordBoundary = wordBoundaryRegex.test(aTitle);
+      const bWordBoundary = wordBoundaryRegex.test(bTitle);
+      if (aWordBoundary && !bWordBoundary) return -1;
+      if (!aWordBoundary && bWordBoundary) return 1;
+
+      // Check for contains (but not at word boundary)
+      const aTitleContains = aTitle.includes(lowerQuery);
+      const bTitleContains = bTitle.includes(lowerQuery);
       if (aTitleContains && !bTitleContains) return -1;
       if (!aTitleContains && bTitleContains) return 1;
 

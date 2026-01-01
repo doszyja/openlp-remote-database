@@ -1,3 +1,4 @@
+import type { VerseDto } from './create-song.dto';
 /**
  * DTO for updating a song (all fields optional)
  */
@@ -5,7 +6,7 @@ export interface UpdateSongDto {
     title?: string;
     number?: string | null;
     language?: string;
-    verses?: string;
+    verses?: VerseDto[];
     verseOrder?: string | null;
     tags?: string[];
 }

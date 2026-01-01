@@ -11,6 +11,7 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import {
   MusicNote as MusicNoteIcon,
@@ -35,6 +36,8 @@ export interface SongListProps {
   sortOrder?: 'asc' | 'desc';
   onSortOrderChange?: (order: 'asc' | 'desc') => void;
   showSortButton?: boolean; // Show sort button in the list (for mobile)
+  filterContent?: React.ReactNode; // Content to render below search box (e.g., filter chips)
+  hasActiveFilter?: boolean; // Show clear button when filter is active
 }
 
 // Virtualized list row component
@@ -175,6 +178,8 @@ export default function SongList({
   sortOrder: externalSortOrder,
   onSortOrderChange: _onSortOrderChange, // Used when sort button is in parent component
   showSortButton = false, // Show sort button in the list (for mobile)
+  filterContent,
+  hasActiveFilter = false,
 }: SongListProps) {
   const [listHeight, setListHeight] = useState(height || 600);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -362,30 +367,31 @@ export default function SongList({
                   <MusicNoteIcon fontSize="small" />
                 </InputAdornment>
               ),
-              endAdornment: searchValue ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="Wyczyść wyszukiwanie"
-                    onClick={() => {
-                      if (onSearchChange) {
-                        onSearchChange('');
-                      }
-                      searchInputRef.current?.focus();
-                    }}
-                    edge="end"
-                    size="small"
-                    sx={{
-                      p: 0.5,
-                      color: 'text.secondary',
-                      '&:hover': {
-                        color: 'text.primary',
-                      },
-                    }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
+              endAdornment:
+                searchValue || hasActiveFilter ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Wyczyść wyszukiwanie"
+                      onClick={() => {
+                        if (onSearchChange) {
+                          onSearchChange('');
+                        }
+                        searchInputRef.current?.focus();
+                      }}
+                      edge="end"
+                      size="small"
+                      sx={{
+                        p: 0.5,
+                        color: 'text.secondary',
+                        '&:hover': {
+                          color: 'text.primary',
+                        },
+                      }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
             sx={{
               '& .MuiInputBase-input': {
@@ -394,6 +400,37 @@ export default function SongList({
               },
             }}
           />
+          {/* Filter content (e.g., songbook filter chips) */}
+          {filterContent && (
+            <Box
+              sx={{
+                mt: 1.5,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: { xs: 1, sm: 0.75 },
+                overflow: 'visible',
+              }}
+            >
+              {filterContent}
+            </Box>
+          )}
+          {/* Results count */}
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              mt: 0.5,
+              display: 'block',
+              textAlign: 'right',
+              opacity: 0.5,
+              fontSize: '10px',
+              userSelect: 'none',
+            }}
+          >
+            {isLoading
+              ? ''
+              : `${sortedSongs.length} ${sortedSongs.length === 1 ? 'pieśń' : 'pieśni'}`}
+          </Typography>
           {showSortButton && (
             <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
               <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>

@@ -43,4 +43,9 @@ export class QuerySongDto {
   @IsString()
   @IsIn(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc' = 'asc';
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['pielgrzym', 'zielony', 'wedrowiec', 'zborowe'])
+  songbook?: 'pielgrzym' | 'zielony' | 'wedrowiec' | 'zborowe';
 }
