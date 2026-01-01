@@ -81,16 +81,6 @@ export default function SongDetailPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
 
-  // Auto-set sort order to 'desc' when filtering by 'zborowe'
-  useEffect(() => {
-    if (songbookFilter === 'zborowe') {
-      setSortOrder('desc');
-    } else if (songbookFilter && sortOrder === 'desc') {
-      // Reset to 'asc' when switching to other filters (if currently on 'desc')
-      setSortOrder('asc');
-    }
-  }, [songbookFilter]);
-
   // Detect if user is on Mac (for keyboard shortcut display)
   const isMac = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -403,6 +393,7 @@ export default function SongDetailPage() {
             spacing={{ xs: 0.5, sm: 1, md: 2 }}
             alignItems="center"
             flexWrap="wrap"
+            className="button-container-small"
             sx={{
               width: { xs: 'auto', sm: 'auto' },
               justifyContent: { xs: 'flex-end', sm: 'flex-end' },
@@ -441,7 +432,7 @@ export default function SongDetailPage() {
               </Button>
             )}
             {hasEditPermission && (
-              <Box display="flex" gap={{ xs: 0.25, sm: 0.5 }}>
+              <Box display="flex" gap={{ xs: 1, sm: 1 }}>
                 <Button
                   variant="contained"
                   startIcon={<EditIcon />}

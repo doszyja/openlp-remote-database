@@ -103,15 +103,6 @@ export default function SongListPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const exportZip = useExportZip();
 
-  // Auto-set sort order to 'desc' when filtering by 'zborowe'
-  useEffect(() => {
-    if (songbookFilter === 'zborowe') {
-      setSortOrder('desc');
-    } else if (songbookFilter && sortOrder === 'desc') {
-      // Reset to 'asc' when switching to other filters (if currently on 'desc')
-      setSortOrder('asc');
-    }
-  }, [songbookFilter]);
   const hasAutoNavigatedRef = useRef(false);
 
   // Use cached songs for both search and initial list (no API calls needed)
