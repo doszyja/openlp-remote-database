@@ -7,6 +7,7 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AuthProvider } from './contexts/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import './utils/cache-debug'; // Initialize cache debug utilities
 import './index.css';
 
@@ -14,6 +15,22 @@ import './index.css';
 if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'manual';
 }
+
+// Global error handlers for unhandled errors and promise rejections
+// These catch errors that ErrorBoundary cannot catch (async code, event handlers, etc.)
+window.addEventListener('error', event => {
+  console.error('[Global Error Handler] Unhandled error:', event.error);
+  // You can log to error reporting service here
+  // Example: logErrorToService(event.error, { type: 'error', filename: event.filename, lineno: event.lineno });
+});
+
+window.addEventListener('unhandledrejection', event => {
+  console.error('[Global Error Handler] Unhandled promise rejection:', event.reason);
+  // You can log to error reporting service here
+  // Example: logErrorToService(event.reason, { type: 'unhandledrejection' });
+  // Prevent default browser behavior (console error)
+  event.preventDefault();
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,13 +63,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </AuthProvider>
-        </NotificationProvider>
+        <ErrorBoundary>
+          <NotificationProvider>
+            <AuthProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </AuthProvider>
+          </NotificationProvider>
+        </ErrorBoundary>
       </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>

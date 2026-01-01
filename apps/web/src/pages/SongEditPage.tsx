@@ -2,11 +2,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSong, useUpdateSong } from '../hooks';
-import { useCachedSongs } from '../hooks/useCachedSongs';
 import SongForm from '../components/SongForm';
 import { useNotification } from '../contexts/NotificationContext';
 import type { UpdateSongDto } from '@openlp/shared';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function SongEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +16,6 @@ export default function SongEditPage() {
   const { showSuccess, showError } = useNotification();
   const [isFormDirty, setIsFormDirty] = useState(false);
   const navigateRef = useRef(navigate);
-  const { songs: allCachedSongs } = useCachedSongs();
 
   // Force refetch on mount to ensure we have the latest data from server
   useEffect(() => {
@@ -84,19 +82,6 @@ export default function SongEditPage() {
     }
   };
 
-  // Get first song from list for navigation after edit
-  const getFirstSongId = useCallback(() => {
-    if (!allCachedSongs || allCachedSongs.length === 0) {
-      return null;
-    }
-    // Return first song ID (sorted by title)
-    const sortedSongs = [...allCachedSongs].sort((a, b) => {
-      // Sort by title alphabetically
-      return a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' });
-    });
-    return sortedSongs[0]?.id || null;
-  }, [allCachedSongs]);
-
   const handleSubmit = async (data: UpdateSongDto) => {
     if (!id || updateSong.isPending) return;
 
@@ -111,14 +96,10 @@ export default function SongEditPage() {
       setIsFormDirty(false);
       showSuccess('Pieśń została zaktualizowana pomyślnie!');
 
-      // Navigate to first song from list
-      const firstSongId = getFirstSongId();
-      if (firstSongId) {
-        navigate(`/songs/${firstSongId}`);
-      } else {
-        // Fallback: navigate to home if no songs
-        navigate('/');
-      }
+      // Save the updated song ID to sessionStorage so it will be selected on the list
+      sessionStorage.setItem('songListSelectedSong', id);
+      // Navigate to the list page - the song will be automatically selected
+      navigate('/songs');
     } catch (error) {
       const errorMessage =
         error instanceof Error
@@ -234,17 +215,15 @@ export default function SongEditPage() {
           >
             Anuluj
           </Button>
-          {isFormDirty && (
-            <Button
-              variant="contained"
-              form="song-form"
-              type="submit"
-              disabled={updateSong.isPending}
-              size="small"
-            >
-              {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            form="song-form"
+            type="submit"
+            disabled={!isFormDirty || updateSong.isPending}
+            size="small"
+          >
+            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
+          </Button>
         </Stack>
       </Box>
 

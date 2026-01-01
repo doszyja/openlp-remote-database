@@ -113,10 +113,11 @@ export default function SongDetailPage() {
   }, [isAuthenticated, activeSongData, selectedPlanId]);
 
   // Get song from cache
+  // Depend on allCachedSongs to ensure we get fresh data after cache updates (e.g., after deletion)
   const song = useMemo(() => {
     if (!id) return null;
     return songsCache.getSongById(id);
-  }, [id]);
+  }, [id, allCachedSongs]);
 
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {
@@ -164,6 +165,41 @@ export default function SongDetailPage() {
     window.scrollTo(0, 0);
   }, [id]);
 
+  // Get first song from list for navigation after delete/edit
+  const getFirstSongId = useCallback(() => {
+    if (!allCachedSongs || allCachedSongs.length === 0) {
+      return null;
+    }
+    // Return first song ID (sorted by title or order)
+    const sortedSongs = [...allCachedSongs].sort((a, b) => {
+      // Sort by title alphabetically
+      return a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' });
+    });
+    return sortedSongs[0]?.id || null;
+  }, [allCachedSongs]);
+
+  // Check if song exists in cache after cache updates (e.g., after deletion)
+  // If song doesn't exist and cache is loaded, redirect to first song or home
+  useEffect(() => {
+    if (!id) return;
+
+    // Only check if cache is loaded (not loading)
+    if (!isCacheLoading && allCachedSongs) {
+      const songExists = allCachedSongs.some(s => s.id === id);
+
+      // If song doesn't exist in cache, redirect
+      if (!songExists) {
+        console.log(`[SongDetailPage] Song ${id} not found in cache, redirecting...`);
+        const firstSongId = getFirstSongId();
+        if (firstSongId) {
+          navigate(`/songs/${firstSongId}`, { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }
+    }
+  }, [id, allCachedSongs, isCacheLoading, navigate, getFirstSongId]);
+
   // Use cached search for instant results when searching, otherwise show all songs
   const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
 
@@ -193,19 +229,6 @@ export default function SongDetailPage() {
   }, [search, searchResults, allCachedSongs, songbookFilter]);
 
   const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
-
-  // Get first song from list for navigation after delete/edit
-  const getFirstSongId = useCallback(() => {
-    if (!allCachedSongs || allCachedSongs.length === 0) {
-      return null;
-    }
-    // Return first song ID (sorted by title or order)
-    const sortedSongs = [...allCachedSongs].sort((a, b) => {
-      // Sort by title alphabetically
-      return a.title.localeCompare(b.title, 'pl', { sensitivity: 'base' });
-    });
-    return sortedSongs[0]?.id || null;
-  }, [allCachedSongs]);
 
   const handleDelete = async () => {
     if (!id || deleteSong.isPending) return;

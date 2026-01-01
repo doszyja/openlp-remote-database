@@ -63,27 +63,25 @@ export default function SongListPage() {
   // Track the last selected song ID for highlighting
   const [lastSelectedSongId, setLastSelectedSongId] = useState<string | null>(null);
 
-  // Restore state from sessionStorage on mount (only on mobile)
+  // Restore state from sessionStorage on mount
   useEffect(() => {
-    if (isMobile) {
-      const savedSearch = sessionStorage.getItem(SEARCH_STORAGE_KEY);
-      const savedSongId = sessionStorage.getItem(SELECTED_SONG_STORAGE_KEY);
-      const savedSongbook = sessionStorage.getItem(
-        SONGBOOK_FILTER_STORAGE_KEY
-      ) as SongbookSlug | null;
+    const savedSearch = sessionStorage.getItem(SEARCH_STORAGE_KEY);
+    const savedSongId = sessionStorage.getItem(SELECTED_SONG_STORAGE_KEY);
+    const savedSongbook = sessionStorage.getItem(
+      SONGBOOK_FILTER_STORAGE_KEY
+    ) as SongbookSlug | null;
 
-      if (savedSearch) {
-        setSearch(savedSearch);
-      }
-      if (savedSongId) {
-        setLastSelectedSongId(savedSongId);
-        // Clear the stored song ID after restoring (so it doesn't persist forever)
-        // But keep it in state for highlighting
-        sessionStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
-      }
-      if (savedSongbook) {
-        setSongbookFilter(savedSongbook);
-      }
+    if (savedSearch && isMobile) {
+      setSearch(savedSearch);
+    }
+    if (savedSongId) {
+      setLastSelectedSongId(savedSongId);
+      // Clear the stored song ID after restoring (so it doesn't persist forever)
+      // But keep it in state for highlighting
+      sessionStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
+    }
+    if (savedSongbook && isMobile) {
+      setSongbookFilter(savedSongbook);
     }
   }, [isMobile]);
 
@@ -580,7 +578,7 @@ export default function SongListPage() {
                 }
                 navigate(`/songs/${songId}`);
               }}
-              currentSongId={isMobile && lastSelectedSongId ? lastSelectedSongId : firstSongId}
+              currentSongId={lastSelectedSongId || firstSongId}
               showSearch={true}
               searchValue={search}
               onSearchChange={value => {

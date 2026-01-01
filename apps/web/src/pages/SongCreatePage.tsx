@@ -19,7 +19,10 @@ export default function SongCreatePage() {
     try {
       const result = await createSong.mutateAsync(data as CreateSongDto);
       showSuccess('Pieśń została utworzona pomyślnie!');
-      navigate(`/songs/${result.id}`);
+      // Save the new song ID to sessionStorage so it will be selected on the list
+      sessionStorage.setItem('songListSelectedSong', result.id);
+      // Navigate to the list page - the song will be automatically selected
+      navigate('/songs');
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Nie udało się utworzyć pieśni. Spróbuj ponownie.';

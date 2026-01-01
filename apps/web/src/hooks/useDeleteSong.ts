@@ -8,9 +8,15 @@ export function useDeleteSong() {
   return useMutation<void, Error, string>({
     mutationFn: id => api.songs.delete(id),
     onSuccess: async () => {
+      // Invalidate all song-related queries
       queryClient.invalidateQueries({ queryKey: ['songs'] });
       // Invalidate export cache when song is deleted
       queryClient.invalidateQueries({ queryKey: ['songs', 'export', 'zip'] });
+
+      // Clear and rebuild cache after deletion
+      // First, clear the cache to ensure we get fresh data
+      songsCache.clearCache();
+
       // Force refresh songs cache (version will be bumped on backend)
       const refreshedSongs = await songsCache
         .forceRefresh()

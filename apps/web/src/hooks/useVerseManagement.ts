@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { UseFormSetValue } from 'react-hook-form';
+import type { UseFormSetValue, UseFormTrigger } from 'react-hook-form';
 import { generateVerseOrderString, getVerseTypePrefix } from '../utils/verseParser';
 import type { VerseFormData, SongFormData, VerseFormType } from './useSongFormData';
 
@@ -9,7 +9,8 @@ import type { VerseFormData, SongFormData, VerseFormType } from './useSongFormDa
 export function useVerseManagement(
   sourceVerses: VerseFormData[],
   verseOrder: string,
-  setValue: UseFormSetValue<SongFormData>
+  setValue: UseFormSetValue<SongFormData>,
+  trigger: UseFormTrigger<SongFormData>
 ) {
   /**
    * Add a new verse to sourceVerses
@@ -19,16 +20,19 @@ export function useVerseManagement(
     (type: VerseFormType = 'verse') => {
       const prefix = getVerseTypePrefix(type);
       const existingOfType = sourceVerses.filter(v => v.type === type);
-      const newNumber =
-        existingOfType.length > 0
-          ? Math.max(
-              ...existingOfType.map(v => {
-                const label = v.label || '';
-                const numMatch = label.match(/\d+/);
-                return numMatch ? parseInt(numMatch[0], 10) : 0;
-              })
-            ) + 1
-          : 1;
+
+      // Extract numbers from sourceId (e.g., "v1" -> 1, "v2" -> 2)
+      // sourceId is more reliable than label because it's always in format "v1", "c1", etc.
+      const existingNumbers = existingOfType
+        .map(v => {
+          // Use sourceId first (most reliable), fallback to label
+          const id = v.sourceId || v.label || '';
+          const numMatch = id.match(/\d+/);
+          return numMatch ? parseInt(numMatch[0], 10) : 0;
+        })
+        .filter(num => num > 0); // Filter out invalid numbers
+
+      const newNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
 
       const newSourceId = `${prefix}${newNumber}`;
       const newOrder =
@@ -42,23 +46,41 @@ export function useVerseManagement(
         sourceId: newSourceId,
       };
 
-      setValue('sourceVerses', [...sourceVerses, newVerse]);
-
-      // Automatically add to order string if it's empty, otherwise append
+      // Calculate new order string first
       const currentOrder = verseOrder.trim();
+      let newOrderString: string;
       if (currentOrder) {
         // Check if already in order string
         const orderPattern = new RegExp(`\\b${newSourceId}\\b`, 'i');
         if (!orderPattern.test(currentOrder)) {
           // Add to the end
-          setValue('verseOrder', `${currentOrder} ${newSourceId}`, { shouldValidate: true });
+          newOrderString = `${currentOrder} ${newSourceId}`;
+        } else {
+          // Already in order, no need to update
+          newOrderString = currentOrder;
         }
       } else {
         // If order string is empty, set it to just this verse
-        setValue('verseOrder', newSourceId, { shouldValidate: true });
+        newOrderString = newSourceId;
       }
+
+      // Update both values in a batch to ensure they're both updated before validation
+      // First, add the new verse to sourceVerses (without validation)
+      setValue('sourceVerses', [...sourceVerses, newVerse], { shouldValidate: false });
+
+      // Then, update verseOrder (without validation)
+      setValue('verseOrder', newOrderString, { shouldValidate: false });
+
+      // Trigger validation after both values are updated
+      // Use requestAnimationFrame to ensure React has processed both setValue calls
+      requestAnimationFrame(() => {
+        // Use another requestAnimationFrame to ensure form state is fully updated
+        requestAnimationFrame(() => {
+          trigger('verseOrder');
+        });
+      });
     },
-    [sourceVerses, verseOrder, setValue]
+    [sourceVerses, verseOrder, setValue, trigger]
   );
 
   /**

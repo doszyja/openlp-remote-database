@@ -65,6 +65,8 @@ export default function SongForm({
     setValue,
     watch,
     reset,
+    trigger,
+    getValues,
   } = useForm<SongFormData>({
     mode: 'onSubmit', // Validate only on submit to allow editing without blocking
     reValidateMode: 'onSubmit', // Re-validate only on submit
@@ -112,7 +114,8 @@ export default function SongForm({
   const { addVerse, removeVerse: removeSourceVerse } = useVerseManagement(
     sourceVerses,
     verseOrder,
-    setValue
+    setValue,
+    trigger
   );
 
   const onSubmitForm = async (data: SongFormData) => {
@@ -308,8 +311,11 @@ export default function SongForm({
           <Controller
             name="songbook"
             control={control}
-            render={({ field }) => (
-              <FormControl fullWidth>
+            rules={{
+              required: 'Śpiewnik jest wymagany',
+            }}
+            render={({ field, fieldState }) => (
+              <FormControl fullWidth required error={!!fieldState.error}>
                 <InputLabel>Śpiewnik</InputLabel>
                 <Select
                   {...field}
@@ -337,6 +343,11 @@ export default function SongForm({
                     </MenuItem>
                   ))}
                 </Select>
+                {fieldState.error && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                    {fieldState.error.message}
+                  </Typography>
+                )}
               </FormControl>
             )}
           />
@@ -351,11 +362,16 @@ export default function SongForm({
                 return 'Kolejność zwrotek jest wymagana';
               }
 
+              // Get current sourceVerses from form (not from closure) to ensure we have the latest values
+              const currentSourceVerses = getValues('sourceVerses');
+
               // Get all source verse identifiers (always in format v1, c1, etc.)
+              // IMPORTANT: Include ALL verses (even empty ones) because newly added verses
+              // may not have content yet, but they should still be considered valid
               const sourceVerseIds = new Set(
-                sourceVerses
-                  .filter(v => v.content.trim().length > 0) // Only check verses with content
-                  .map(v => normalizeVerseIdentifier(v.sourceId, v.label, v.type, v.order))
+                currentSourceVerses.map(v =>
+                  normalizeVerseIdentifier(v.sourceId, v.label, v.type, v.order)
+                )
               );
 
               // Check if all verses mentioned in order exist in sourceVerses
@@ -374,10 +390,13 @@ export default function SongForm({
                 return `Następujące zwrotki nie istnieją w źródłowych zwrotkach: ${nonExistentVerses.join(', ')}`;
               }
 
-              // Check if all source verses are mentioned in the order
-              const missingVerses = Array.from(sourceVerseIds).filter(
-                id => !mentionedVerses.has(id)
-              );
+              // Check if all source verses with content are mentioned in the order
+              // Only check verses with content (empty verses don't need to be in order)
+              const versesWithContent = currentSourceVerses
+                .filter(v => v.content.trim().length > 0)
+                .map(v => normalizeVerseIdentifier(v.sourceId, v.label, v.type, v.order));
+
+              const missingVerses = versesWithContent.filter(id => !mentionedVerses.has(id));
 
               if (missingVerses.length > 0) {
                 return `Następujące zwrotki nie są wymienione w kolejności: ${missingVerses.join(', ')}`;
@@ -387,7 +406,7 @@ export default function SongForm({
               try {
                 parseVerseOrderString(
                   value,
-                  sourceVerses.map(v => ({
+                  currentSourceVerses.map(v => ({
                     order: v.order,
                     content: v.content,
                     label: v.label ?? null,
@@ -406,6 +425,7 @@ export default function SongForm({
             <TextField
               {...field}
               label="Kolejność Zwrotek"
+              required
               fullWidth
               placeholder="np. v1 v2 c1 c3 c1 v2 c1 v1"
               error={!!fieldState.error}
@@ -430,6 +450,12 @@ export default function SongForm({
                       theme.palette.mode === 'dark'
                         ? 'rgba(255, 255, 255, 0.08)'
                         : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  // Ensure error state shows red border
+                  '&.Mui-error': {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'error.main',
+                    },
                   },
                 },
                 '& .MuiInputBase-input': {
@@ -678,7 +704,6 @@ export default function SongForm({
                           required
                           fullWidth
                           multiline
-                          minRows={2}
                           rows={Math.max(2, rows)}
                           placeholder="Wprowadź treść zwrotki..."
                           error={!!errors.sourceVerses?.[index]?.content}
@@ -687,6 +712,12 @@ export default function SongForm({
                           sx={{
                             '& .MuiInputBase-root': {
                               fontSize: '16px', // Always 16px to prevent iOS zoom
+                              // Ensure error state shows red border
+                              '&.Mui-error': {
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: 'error.main',
+                                },
+                              },
                             },
                             '& .MuiInputBase-input': {
                               fontSize: '16px', // Minimum 16px to prevent iOS zoom

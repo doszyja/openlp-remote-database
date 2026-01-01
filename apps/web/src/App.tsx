@@ -19,6 +19,8 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
+const ErrorTestPage = lazy(() => import('./pages/ErrorTestPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -112,6 +114,7 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/help" element={<HelpPage />} />
+                  <Route path="/error-test" element={<ErrorTestPage />} />
                   <Route path="/songs" element={<SongListPage />} />
                   <Route
                     path="/songs/new"
@@ -141,6 +144,7 @@ function App() {
                       </AdminRoute>
                     }
                   />
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
             </Layout>
