@@ -26,6 +26,7 @@ export interface SongFormData {
   title: string;
   sourceVerses: VerseFormData[];
   verseOrder: string;
+  songbook?: string | null;
 }
 
 /**
@@ -240,6 +241,7 @@ export function useSongFormData(
         title: song.title || '',
         sourceVerses: uniqueSourceVerses,
         verseOrder: orderString,
+        songbook: song.songbook || null,
       });
     }
   }, [song, reset]);

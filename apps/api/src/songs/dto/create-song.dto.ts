@@ -58,4 +58,8 @@ export class CreateSongDto {
   @IsOptional()
   @IsString()
   lyricsXml?: string | null; // Exact XML from SQLite lyrics column - 1:1 transparent with SQLite (preserves CDATA, type/label attributes, etc.)
+
+  @IsOptional()
+  @IsString()
+  songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
 }

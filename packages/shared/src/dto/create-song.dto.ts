@@ -24,6 +24,7 @@ export interface CreateSongDto {
   comments?: string; // OpenLP comments field
   ccliNumber?: string; // OpenLP ccli_number field
   searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
+  songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
 }
 
 /**

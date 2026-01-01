@@ -14,7 +14,13 @@ import {
   InputLabel,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import type { CreateSongDto, UpdateSongDto, SongResponseDto, VerseDto } from '@openlp/shared';
+import type {
+  CreateSongDto,
+  UpdateSongDto,
+  SongResponseDto,
+  VerseDto,
+  SongbookSlug,
+} from '@openlp/shared';
 import {
   getVerseDisplayLabel,
   parseVerseOrderString,
@@ -25,6 +31,14 @@ import {
 } from '../utils/verseParser';
 import { useSongFormData, type VerseFormData, type SongFormData } from '../hooks/useSongFormData';
 import { useVerseManagement } from '../hooks/useVerseManagement';
+
+// Songbook options with colors matching filter chips
+const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
+  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
+  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
+  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
+  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
+];
 
 interface SongFormProps {
   song?: SongResponseDto;
@@ -58,6 +72,7 @@ export default function SongForm({
       title: '',
       sourceVerses: [{ order: 1, content: '', label: null, type: 'verse', sourceId: 'v1' }],
       verseOrder: 'v1',
+      songbook: null,
     },
   });
 
@@ -123,6 +138,7 @@ export default function SongForm({
         onSubmit({
           title: data.title,
           verses: [],
+          songbook: data.songbook || null,
         });
         return;
       }
@@ -232,6 +248,7 @@ export default function SongForm({
         verses: versesToSave, // Array of VerseDto objects (order, content, label)
         verseOrder: data.verseOrder || null, // verse_order string (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
         lyricsXml: lyricsXml || null, // XML format string (preserves verse_order and labels)
+        songbook: data.songbook || null, // Songbook category
       });
       // Reset dirty state after successful submission
       reset(data, { keepValues: true });
@@ -285,6 +302,45 @@ export default function SongForm({
             />
           )}
         />
+
+        {/* Songbook selection - only shown when creating new song */}
+        {!song && (
+          <Controller
+            name="songbook"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth>
+                <InputLabel>Śpiewnik</InputLabel>
+                <Select
+                  {...field}
+                  value={field.value || ''}
+                  label="Śpiewnik"
+                  onChange={e => field.onChange(e.target.value || null)}
+                >
+                  <MenuItem value="">
+                    <em>Brak</em>
+                  </MenuItem>
+                  {SONGBOOK_OPTIONS.map(option => (
+                    <MenuItem key={option.slug} value={option.slug}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Box
+                          sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: option.color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span>{option.label}</span>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          />
+        )}
 
         <Controller
           name="verseOrder"
