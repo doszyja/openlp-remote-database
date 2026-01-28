@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrlForOAuth } from '../utils/apiUrl';
 
 export default function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth();
 
   const handleDiscordLogin = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const apiUrl = getApiUrlForOAuth();
     window.location.href = `${apiUrl}/auth/discord`;
   };
 

@@ -56,7 +56,7 @@ export default function HomePage() {
   });
 
   const handleDiscordLogin = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const apiUrl = getApiUrlForOAuth();
     window.location.href = `${apiUrl}/auth/discord`;
   };
 

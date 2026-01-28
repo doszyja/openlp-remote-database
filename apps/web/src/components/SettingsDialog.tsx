@@ -24,6 +24,7 @@ import { useCachedSongs } from '../hooks/useCachedSongs';
 import { songsCache } from '../services/songs-cache';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotification } from '../contexts/NotificationContext';
+import { getApiUrlForOAuth } from '../utils/apiUrl';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -41,7 +42,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const isApiError = !!apiError;
 
   const handleDiscordLogin = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const apiUrl = getApiUrlForOAuth();
     window.location.href = `${apiUrl}/auth/discord`;
   };
 

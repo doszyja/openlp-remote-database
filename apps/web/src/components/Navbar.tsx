@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrlForOAuth } from '../utils/apiUrl';
 import { useCachedSongs } from '../hooks/useCachedSongs';
 import { useServicePlans, useServicePlan } from '../hooks/useServicePlans';
 import { useExportZip } from '../hooks/useExportZip';
@@ -590,7 +591,7 @@ export default function Navbar() {
   });
 
   const handleDiscordLogin = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const apiUrl = getApiUrlForOAuth();
     window.location.href = `${apiUrl}/auth/discord`;
   };
 

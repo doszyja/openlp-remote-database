@@ -1,16 +1,12 @@
 /**
  * Get the API URL based on environment
  * In development, uses relative path (via Vite proxy)
- * In production, uses VITE_API_URL or falls back to localhost
+ * In production, uses relative path (via nginx proxy) to avoid Mixed Content issues
  */
 export function getApiUrl(): string {
-  // In development, use relative paths (via Vite proxy)
-  if (import.meta.env.DEV) {
-    return '/api';
-  }
-
-  // In production, use full API URL from env or fallback
-  return import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  // Always use relative paths - nginx handles proxying to the API
+  // This avoids Mixed Content issues when frontend is served over HTTPS
+  return '/api';
 }
 
 /**

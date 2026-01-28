@@ -53,9 +53,10 @@ COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/nginx-https.conf /etc/nginx/conf.d/nginx-https.conf.template
 
-# Expose port
-EXPOSE 80
+# Expose ports
+EXPOSE 80 443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

@@ -15,11 +15,9 @@ interface User {
  * Caches user data for 10 minutes to avoid unnecessary requests
  */
 export function useAuthUser(token: string | null) {
-  // In development, use relative paths (via Vite proxy)
-  // In production, use full API URL
-  const apiUrl = import.meta.env.DEV
-    ? '/api'
-    : import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  // Always use relative paths - nginx handles proxying to the API
+  // This avoids Mixed Content issues when frontend is served over HTTPS
+  const apiUrl = '/api';
 
   return useQuery<User | null>({
     queryKey: ['auth', 'me', token],
