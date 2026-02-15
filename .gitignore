@@ -43,5 +43,3 @@ certbot/conf/live/
 certbot/conf/archive/
 certbot/conf/renewal/
 # Allow safe config files (options-ssl-nginx.conf, ssl-dhparams.pem)
-!certbot/conf/options-ssl-nginx.conf
-!certbot/conf/ssl-dhparams.pem
