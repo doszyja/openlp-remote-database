@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { SongService } from '../songs/song.service';
+import { normalizeVerseOrderString } from '@openlp/shared';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -286,7 +287,9 @@ async function migrateOpenLPToMongoDB() {
           openlpSong.lyrics
         ) {
           const lyricsText = openlpSong.lyrics.trim();
-          const verseOrderString = openlpSong.verse_order.trim();
+          const verseOrderString = normalizeVerseOrderString(
+            openlpSong.verse_order.trim(),
+          );
 
           // Check if lyrics are in XML format
           if (lyricsText.startsWith('<') && lyricsText.includes('</verse>')) {
@@ -1125,9 +1128,9 @@ async function migrateOpenLPToMongoDB() {
             ? verses.sort((a, b) => a.order - b.order) // Sort by verse_order
             : [];
 
-        // Get verse_order string directly from SQLite (1:1 transparent with SQLite structure)
-        // This is the source of truth for verse sequence (e.g., "v1 c1 v2 c1 v3 c1 v4 c1 v5 c1")
-        const verseOrderString = openlpSong.verse_order || undefined;
+        // Get verse_order string from SQLite and normalize to short format (e.g. "verse 1 verse 2" -> "v1 v2")
+        const verseOrderString =
+          normalizeVerseOrderString(openlpSong.verse_order ?? '') || undefined;
 
         // Generate search_lyrics for OpenLP compatibility
         // Convert verses array to string for search

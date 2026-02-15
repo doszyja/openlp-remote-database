@@ -48,7 +48,7 @@ export interface Songbook {
 /**
  * Available songbook slugs
  */
-export type SongbookSlug = 'pielgrzym' | 'zielony' | 'zborowe';
+export type SongbookSlug = 'pielgrzym' | 'zielony' | 'wedrowiec' | 'zborowe';
 /**
  * Helper type for frontend: Visual verse representation
  * Used for editing in the UI, but converted to/from single string when saving
