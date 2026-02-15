@@ -8,7 +8,13 @@ export interface UpdateSongDto {
     language?: string;
     verses?: VerseDto[];
     verseOrder?: string | null;
+    lyricsXml?: string | null;
     tags?: string[];
+    copyright?: string;
+    comments?: string;
+    ccliNumber?: string;
+    searchLyrics?: string;
+    songbook?: string | null;
 }
 /**
  * @deprecated Use string format for verses instead

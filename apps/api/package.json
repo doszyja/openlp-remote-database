@@ -23,6 +23,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migrate:openlp": "ts-node -r tsconfig-paths/register src/scripts/migrate-openlp.ts",
     "fix:verse-order": "ts-node -r tsconfig-paths/register src/scripts/fix-verse-order.ts",
+    "normalize:verse-order": "ts-node -r tsconfig-paths/register src/scripts/normalize-verse-order-in-db.ts",
+    "list:wrong-verse-order": "ts-node -r tsconfig-paths/register src/scripts/list-wrong-verse-order.ts",
+    "fill-empty-verse-order": "ts-node -r tsconfig-paths/register src/scripts/fill-empty-verse-order.ts",
     "assign:songbooks": "ts-node -r tsconfig-paths/register src/scripts/assign-songbooks.ts",
     "verify:songbooks": "ts-node -r tsconfig-paths/register src/scripts/verify-songbooks.ts"
   },

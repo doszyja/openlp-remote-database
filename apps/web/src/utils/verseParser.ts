@@ -3,6 +3,8 @@
  * Handles both plain string format (with \n\n separators) and XML format (from OpenLP)
  */
 
+import { normalizeVerseOrderString } from '@openlp/shared';
+
 export interface ParsedVerse {
   order: number; // Maps to verse_order in OpenLP SQLite - preserves sequence from XML
   content: string;
@@ -808,13 +810,15 @@ export function generateVerseOrderString(verses: ParsedVerse[]): string {
  * Returns verses with duplicates for repeated references, each with unique order
  */
 export function parseVerseOrderString(orderString: string, verses: ParsedVerse[]): ParsedVerse[] {
+  // Normalize readable format to short format (e.g. "verse 1 verse 2" -> "v1 v2") so parsing works
+  const normalizedOrder = normalizeVerseOrderString(orderString) || orderString.trim();
   // Parse the order string: "v1 c1 v2 c1" -> [{type: 'verse', order: 1}, {type: 'chorus', order: 1}, ...]
   const orderPattern = /([vcbpt])(\d+)/gi;
-  const matches = Array.from(orderString.matchAll(orderPattern));
+  const matches = Array.from(normalizedOrder.matchAll(orderPattern));
 
   if (matches.length === 0) {
     // Invalid format - check if there's any content
-    if (orderString.trim().length > 0) {
+    if (normalizedOrder.length > 0) {
       throw new Error(
         'Invalid verse order format. Expected format: v1 c1 v2 (v=verse, c=chorus, b=bridge, p=pre-chorus, t=tag)'
       );

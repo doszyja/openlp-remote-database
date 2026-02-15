@@ -22,6 +22,7 @@ export interface CreateSongDto {
     comments?: string;
     ccliNumber?: string;
     searchLyrics?: string;
+    songbook?: string | null;
 }
 /**
  * @deprecated Use string format for verses instead

@@ -1,0 +1,47 @@
+
+# Nestjs specific
+/dist
+/node_modules
+/build
+/tmp
+dist/
+
+.venv/
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# dotenv environment variable files
+.env
+.env.development
+.env.test
+.env.production
+
+# temp directory
+.temp
+.tmp
+
+node_modules/
+dist/
+*.d.ts
+*.d.ts.map
+*.js
+*.js.map
+# Environment variables
+.env
+.env.local
+.env.*.local
+.vite/
+
+# Certbot - ignore live certificates and private keys
+certbot/conf/live/
+certbot/conf/archive/
+certbot/conf/renewal/
+# Allow safe config files (options-ssl-nginx.conf, ssl-dhparams.pem)
+!certbot/conf/options-ssl-nginx.conf
+!certbot/conf/ssl-dhparams.pem

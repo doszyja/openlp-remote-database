@@ -13,6 +13,10 @@ import { SongVersionService } from './song-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
 import { createOpenLPSqliteDatabase } from './utils/sqlite-export.util';
+import {
+  normalizeVerseOrderString,
+  defaultVerseOrderFromVerses,
+} from '@openlp/shared';
 import * as fs from 'fs';
 
 interface SqliteCacheEntry {
@@ -64,13 +68,20 @@ export class SongService {
       ? [...verses].sort((a, b) => a.order - b.order)
       : [];
 
+    // verse_order: use provided (normalized), or fill from verses when empty
+    const verseOrderValue =
+      verseOrder != null && String(verseOrder).trim() !== ''
+        ? normalizeVerseOrderString(verseOrder) || null
+        : sortedVerses.length > 0
+          ? defaultVerseOrderFromVerses(sortedVerses)
+          : null;
+
     // Create song - verses is now an array of objects with order
-    // Note: verseOrder (string) and lyricsXml should be provided in songData if available from OpenLP
     const song = await this.songModel.create({
       ...songData,
       language: songData.language || 'en',
       verses: sortedVerses, // Store as array with order preserved
-      verseOrder: verseOrder || null, // verseOrder (string) from DTO or null
+      verseOrder: verseOrderValue, // verse_order in short format (v1 v2 c1), or default from verses
       // lyricsXml (string) is stored directly from SQLite lyrics column (1:1 transparent)
       tags: tagIds,
       searchTitle, // Auto-generate from title
@@ -294,9 +305,11 @@ export class SongService {
       updateData.searchTitle = songData.title.toLowerCase().trim();
     }
 
-    // Handle verseOrder - use from DTO if provided, otherwise generate from verses
+    // Handle verseOrder - use from DTO if provided (normalized), or fill from verses when empty
     if (verseOrder !== undefined) {
-      updateData.verseOrder = verseOrder || null;
+      const trimmed = verseOrder != null ? String(verseOrder).trim() : '';
+      updateData.verseOrder =
+        trimmed !== '' ? normalizeVerseOrderString(verseOrder) || null : null; // null = will be filled from verses below if any
     }
 
     // Handle verses - now an array of objects with order
@@ -306,9 +319,12 @@ export class SongService {
         // Sort verses by order to ensure correct sequence
         const sortedVerses = [...verses].sort((a, b) => a.order - b.order);
         updateData.verses = sortedVerses;
-        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
-        if (verseOrder === undefined) {
-          updateData.verseOrder = sortedVerses.map((v) => v.order);
+        // Fill verseOrder from verses when empty
+        if (
+          (updateData.verseOrder == null || updateData.verseOrder === '') &&
+          sortedVerses.length > 0
+        ) {
+          updateData.verseOrder = defaultVerseOrderFromVerses(sortedVerses);
         }
         // Generate search_lyrics from verse content
         const versesString = sortedVerses.map((v) => v.content).join('\n\n');
@@ -324,12 +340,24 @@ export class SongService {
           content: content.trim(),
         }));
         updateData.verses = convertedVerses;
-        // Only set verseOrder from verses if verseOrder wasn't provided in DTO
-        if (verseOrder === undefined) {
-          updateData.verseOrder = convertedVerses.map((v) => v.order);
+        // Fill verseOrder from verses when empty
+        if (
+          (updateData.verseOrder == null || updateData.verseOrder === '') &&
+          convertedVerses.length > 0
+        ) {
+          updateData.verseOrder = defaultVerseOrderFromVerses(convertedVerses);
         }
         updateData.searchLyrics = (verses as string).toLowerCase().trim();
       }
+    }
+
+    // Fill verseOrder from existing verses when still empty (e.g. PATCH without verses in body)
+    if (
+      (updateData.verseOrder == null || updateData.verseOrder === '') &&
+      Array.isArray(existing.verses) &&
+      existing.verses.length > 0
+    ) {
+      updateData.verseOrder = defaultVerseOrderFromVerses(existing.verses);
     }
 
     // Handle tags
