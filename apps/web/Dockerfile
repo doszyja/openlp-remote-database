@@ -51,9 +51,9 @@ FROM nginx:alpine AS production
 # Copy built files from build stage
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Copy nginx configuration (HTTPS as .conf so nginx includes it; /api proxy must work on 443 for OAuth)
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
-COPY apps/web/nginx-https.conf /etc/nginx/conf.d/nginx-https.conf.template
+COPY apps/web/nginx-https.conf /etc/nginx/conf.d/nginx-https.conf
 
 # Expose ports
 EXPOSE 80 443
