@@ -34,6 +34,7 @@ import {
   NavigateNext as NavigateNextIcon,
   ArrowBack as ArrowBackIcon,
   ContentCopy as ContentCopyIcon,
+  FormatListNumbered as FormatListNumberedIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
 } from '@mui/icons-material';
@@ -43,7 +44,12 @@ import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
+import {
+  parseVerses,
+  getVerseDisplayLabel,
+  getVerseTypePrefix,
+  type ParsedVerse,
+} from '../utils/verseParser';
 import { songsCache } from '../services/songs-cache';
 import SongList from '../components/SongList';
 import {
@@ -61,6 +67,52 @@ const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] =
   { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
   { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
 ];
+
+const OPENLP_COPY_LABELS: Record<NonNullable<ParsedVerse['type']>, string> = {
+  verse: 'Zwrotka',
+  chorus: 'Refren',
+  bridge: 'Bridge',
+  'pre-chorus': 'Pre-Chorus',
+  tag: 'Tag',
+};
+
+function getOpenLpVerseNumber(verse: ParsedVerse, index: number): string {
+  const numberSource = verse.originalLabel || verse.label || '';
+  const numberMatch = numberSource.match(/\d+/);
+  if (numberMatch) return numberMatch[0];
+  if (verse.type && verse.type !== 'verse') return '1';
+  return String(verse.order || index + 1);
+}
+
+function getOpenLpVerseId(verse: ParsedVerse, index: number): string {
+  const prefix = getVerseTypePrefix(verse.type);
+  const localizedPrefixMap: Record<string, string> = {
+    v: 'z',
+    c: 'r',
+    b: 'b',
+  };
+  const localizedPrefix = localizedPrefixMap[prefix] || prefix;
+  return `${localizedPrefix}${getOpenLpVerseNumber(verse, index)}`;
+}
+
+function buildOpenLpCopyText(verses: ParsedVerse[]): string {
+  const copyVerses = verses.filter(v => v.content && v.content.trim());
+
+  const blocks = copyVerses.map((verse, index) => {
+    const type = verse.type || 'verse';
+    const label = OPENLP_COPY_LABELS[type] || 'Zwrotka';
+    const number = getOpenLpVerseNumber(verse, index);
+    const content = verse.content.replace(/<br\s*\/?>/gi, '\n').trim();
+    return `---[${label}:${number}]---\n${content}`;
+  });
+
+  const verseOrder = copyVerses.map(getOpenLpVerseId).join(' ');
+  if (verseOrder) {
+    blocks.push(`---[Kolejność zwrotek]---\n${verseOrder}`);
+  }
+
+  return blocks.join('\n');
+}
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -536,69 +588,107 @@ export default function SongDetailPage() {
             >
               {song.title}
             </Typography>
-            <IconButton
-              onClick={async () => {
-                if (!song) return;
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Tooltip title="Kopiuj tekst">
+                <IconButton
+                  onClick={async () => {
+                    if (!song) return;
 
-                try {
-                  // Format song text: title + verses
-                  let songText = song.title;
+                    try {
+                      // Format song text: title + verses
+                      let songText = song.title;
 
-                  // Use parsedVerses if available (already parsed with labels)
-                  if (parsedVerses && parsedVerses.length > 0) {
-                    songText += '\n\n';
-                    songText += parsedVerses
-                      .map((verse, index) => {
-                        const label = getVerseDisplayLabel(verse, index);
-                        const content = verse.content.replace(/<br\s*\/?>/gi, '\n').trim();
-                        return label ? `${label}\n${content}` : content;
-                      })
-                      .join('\n\n');
-                  } else if (
-                    song.versesArray &&
-                    Array.isArray(song.versesArray) &&
-                    song.versesArray.length > 0
-                  ) {
-                    // Fallback: use versesArray directly
-                    const sortedVerses = [...song.versesArray].sort((a, b) => a.order - b.order);
-                    songText += '\n\n';
-                    songText += sortedVerses
-                      .map(v => {
-                        const label = v.originalLabel || v.label || '';
-                        const content = v.content.replace(/<br\s*\/?>/gi, '\n').trim();
-                        return label ? `${label}\n${content}` : content;
-                      })
-                      .join('\n\n');
-                  } else if (typeof song.verses === 'string' && song.verses.trim()) {
-                    // Last resort: use verses string
-                    songText += '\n\n' + song.verses.replace(/<br\s*\/?>/gi, '\n');
-                  }
+                      // Use parsedVerses if available (already parsed with labels)
+                      if (parsedVerses && parsedVerses.length > 0) {
+                        songText += '\n\n';
+                        songText += parsedVerses
+                          .map((verse, index) => {
+                            const label = getVerseDisplayLabel(verse, index);
+                            const content = verse.content.replace(/<br\s*\/?>/gi, '\n').trim();
+                            return label ? `${label}\n${content}` : content;
+                          })
+                          .join('\n\n');
+                      } else if (
+                        song.versesArray &&
+                        Array.isArray(song.versesArray) &&
+                        song.versesArray.length > 0
+                      ) {
+                        // Fallback: use versesArray directly
+                        const sortedVerses = [...song.versesArray].sort(
+                          (a, b) => a.order - b.order
+                        );
+                        songText += '\n\n';
+                        songText += sortedVerses
+                          .map(v => {
+                            const label = v.originalLabel || v.label || '';
+                            const content = v.content.replace(/<br\s*\/?>/gi, '\n').trim();
+                            return label ? `${label}\n${content}` : content;
+                          })
+                          .join('\n\n');
+                      } else if (typeof song.verses === 'string' && song.verses.trim()) {
+                        // Last resort: use verses string
+                        songText += '\n\n' + song.verses.replace(/<br\s*\/?>/gi, '\n');
+                      }
 
-                  // Copy to clipboard using clipboard-copy library (handles all fallbacks)
-                  await clipboardCopy(songText);
-                  showSuccess('Tekst pieśni został skopiowany do schowka');
-                } catch (error) {
-                  console.error('[SongDetailPage] Error copying song to clipboard:', error);
-                  showError(
-                    'Nie udało się skopiować tekstu pieśni do schowka. Spróbuj zaznaczyć tekst ręcznie.'
-                  );
-                }
-              }}
-              size="small"
-              sx={{
-                opacity: 0.5,
-                transition: 'opacity 0.2s ease',
-                '&:hover': {
-                  opacity: 0.9,
-                },
-                '& .MuiSvgIcon-root': {
-                  fontSize: '1.125rem',
-                },
-              }}
-              aria-label="Kopiuj tekst pieśni do schowka"
-            >
-              <ContentCopyIcon />
-            </IconButton>
+                      // Copy to clipboard using clipboard-copy library (handles all fallbacks)
+                      await clipboardCopy(songText);
+                      showSuccess('Tekst pieśni został skopiowany do schowka');
+                    } catch (error) {
+                      console.error('[SongDetailPage] Error copying song to clipboard:', error);
+                      showError(
+                        'Nie udało się skopiować tekstu pieśni do schowka. Spróbuj zaznaczyć tekst ręcznie.'
+                      );
+                    }
+                  }}
+                  size="small"
+                  sx={{
+                    opacity: 0.5,
+                    transition: 'opacity 0.2s ease',
+                    '&:hover': {
+                      opacity: 0.9,
+                    },
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '1.125rem',
+                    },
+                  }}
+                  aria-label="Kopiuj tekst pieśni do schowka"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Kopiuj w formacie OpenLP">
+                <IconButton
+                  onClick={async () => {
+                    try {
+                      const songText = buildOpenLpCopyText(parsedVerses);
+                      if (!songText.trim()) {
+                        showError('Brak zwrotek do skopiowania.');
+                        return;
+                      }
+                      await clipboardCopy(songText);
+                      showSuccess('Tekst w formacie OpenLP został skopiowany do schowka');
+                    } catch (error) {
+                      console.error('[SongDetailPage] Error copying OpenLP text:', error);
+                      showError('Nie udało się skopiować tekstu w formacie OpenLP.');
+                    }
+                  }}
+                  size="small"
+                  sx={{
+                    opacity: 0.5,
+                    transition: 'opacity 0.2s ease',
+                    '&:hover': {
+                      opacity: 0.9,
+                    },
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '1.125rem',
+                    },
+                  }}
+                  aria-label="Kopiuj tekst pieśni w formacie OpenLP"
+                >
+                  <FormatListNumberedIcon />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Box>
 
           <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap" mt={1}>
