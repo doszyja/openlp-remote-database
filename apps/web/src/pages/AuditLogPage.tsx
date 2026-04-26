@@ -82,6 +82,91 @@ function getActionColor(
   }
 }
 
+function formatAuditVerse(verse: any, index: number): string {
+  const label = verse?.label || verse?.originalLabel || `Zwrotka ${verse?.order ?? index + 1}`;
+  const order = verse?.order != null ? `#${verse.order}` : `#${index + 1}`;
+  const content = typeof verse?.content === 'string' ? verse.content.trim() : '';
+  return `${order} ${label}${content ? `\n${content}` : ''}`;
+}
+
+function formatAuditValue(value: any, fieldKey?: string): string {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  if (Array.isArray(value)) {
+    if (fieldKey === 'verses') {
+      return value.map(formatAuditVerse).join('\n\n');
+    }
+
+    if (value.every(item => typeof item !== 'object' || item === null)) {
+      return value.join(', ');
+    }
+
+    return value
+      .map((item, index) =>
+        typeof item === 'object' && item !== null
+          ? `${index + 1}. ${JSON.stringify(item, null, 2)}`
+          : `${index + 1}. ${String(item)}`
+      )
+      .join('\n\n');
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return String(value);
+}
+
+function buildChangedParts(oldValue: string, newValue: string): Array<{ text: string; changed: boolean }> {
+  const oldTokens = oldValue.split(/(\s+)/);
+  const newTokens = newValue.split(/(\s+)/);
+  const dp: number[][] = Array.from({ length: oldTokens.length + 1 }, () =>
+    Array(newTokens.length + 1).fill(0)
+  );
+
+  for (let oldIdx = oldTokens.length - 1; oldIdx >= 0; oldIdx--) {
+    for (let newIdx = newTokens.length - 1; newIdx >= 0; newIdx--) {
+      dp[oldIdx][newIdx] =
+        oldTokens[oldIdx] === newTokens[newIdx]
+          ? dp[oldIdx + 1][newIdx + 1] + 1
+          : Math.max(dp[oldIdx + 1][newIdx], dp[oldIdx][newIdx + 1]);
+    }
+  }
+
+  const parts: Array<{ text: string; changed: boolean }> = [];
+  const pushPart = (text: string, changed: boolean) => {
+    if (!text) return;
+    const previous = parts[parts.length - 1];
+    if (previous && previous.changed === changed) {
+      previous.text += text;
+    } else {
+      parts.push({ text, changed });
+    }
+  };
+
+  let oldIdx = 0;
+  let newIdx = 0;
+  while (newIdx < newTokens.length) {
+    if (oldIdx < oldTokens.length && oldTokens[oldIdx] === newTokens[newIdx]) {
+      pushPart(newTokens[newIdx], false);
+      oldIdx++;
+      newIdx++;
+    } else if (
+      oldIdx < oldTokens.length &&
+      dp[oldIdx + 1][newIdx] >= dp[oldIdx][newIdx + 1]
+    ) {
+      oldIdx++;
+    } else {
+      pushPart(newTokens[newIdx], true);
+      newIdx++;
+    }
+  }
+
+  return parts;
+}
+
 export default function AuditLogPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -860,7 +945,7 @@ export default function AuditLogPage() {
                                     >
                                       {value.old === null || value.old === undefined
                                         ? '(puste)'
-                                        : String(value.old)}
+                                        : formatAuditValue(value.old, key)}
                                     </Typography>
                                   </Box>
                                   <Box
@@ -899,11 +984,11 @@ export default function AuditLogPage() {
                                         const oldVal =
                                           value.old === null || value.old === undefined
                                             ? ''
-                                            : String(value.old);
+                                            : formatAuditValue(value.old, key);
                                         const newVal =
                                           value.new === null || value.new === undefined
                                             ? ''
-                                            : String(value.new);
+                                            : formatAuditValue(value.new, key);
 
                                         // If values are the same, just show it
                                         if (oldVal === newVal) {
@@ -913,7 +998,13 @@ export default function AuditLogPage() {
                                         // If old is empty, show all new value in bold
                                         if (!oldVal) {
                                           return (
-                                            <span style={{ fontWeight: 'bold' }}>
+                                            <span
+                                              style={{
+                                                fontWeight: 'bold',
+                                                backgroundColor: 'rgba(255, 193, 7, 0.35)',
+                                                color: '#5d4037',
+                                              }}
+                                            >
                                               {newVal || '(puste)'}
                                             </span>
                                           );
@@ -924,58 +1015,7 @@ export default function AuditLogPage() {
                                           return '(puste)';
                                         }
 
-                                        // Use word-based diff for better readability
-                                        const oldWords = oldVal.split(/(\s+)/);
-                                        const newWords = newVal.split(/(\s+)/);
-                                        const parts: Array<{ text: string; changed: boolean }> = [];
-
-                                        // Simple word-by-word comparison
-                                        let oldIdx = 0;
-                                        let newIdx = 0;
-
-                                        while (
-                                          oldIdx < oldWords.length ||
-                                          newIdx < newWords.length
-                                        ) {
-                                          if (
-                                            oldIdx < oldWords.length &&
-                                            newIdx < newWords.length &&
-                                            oldWords[oldIdx] === newWords[newIdx]
-                                          ) {
-                                            // Same word
-                                            if (
-                                              parts.length === 0 ||
-                                              parts[parts.length - 1].changed
-                                            ) {
-                                              parts.push({
-                                                text: newWords[newIdx],
-                                                changed: false,
-                                              });
-                                            } else {
-                                              parts[parts.length - 1].text += newWords[newIdx];
-                                            }
-                                            oldIdx++;
-                                            newIdx++;
-                                          } else {
-                                            // Different - add new word as changed
-                                            if (newIdx < newWords.length) {
-                                              if (
-                                                parts.length === 0 ||
-                                                !parts[parts.length - 1].changed
-                                              ) {
-                                                parts.push({
-                                                  text: newWords[newIdx],
-                                                  changed: true,
-                                                });
-                                              } else {
-                                                parts[parts.length - 1].text += newWords[newIdx];
-                                              }
-                                              newIdx++;
-                                            } else {
-                                              oldIdx++;
-                                            }
-                                          }
-                                        }
+                                        const parts = buildChangedParts(oldVal, newVal);
 
                                         return (
                                           <>
@@ -985,8 +1025,9 @@ export default function AuditLogPage() {
                                                 style={{
                                                   fontWeight: part.changed ? 'bold' : 'normal',
                                                   backgroundColor: part.changed
-                                                    ? 'rgba(46, 125, 50, 0.2)'
+                                                    ? 'rgba(255, 193, 7, 0.35)'
                                                     : 'transparent',
+                                                  color: part.changed ? '#5d4037' : undefined,
                                                 }}
                                               >
                                                 {part.text}
