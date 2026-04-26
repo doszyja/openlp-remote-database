@@ -43,6 +43,10 @@ export function defaultVerseOrderFromVerses(
     .map(v => {
       const orig = v.originalLabel?.trim();
       if (orig && /^[vcbpt]\d+$/i.test(orig)) return orig.toLowerCase();
+      if (orig) {
+        const normalized = normalizeVerseOrderToken(orig);
+        if (normalized) return normalized;
+      }
       const readable = v.label?.trim();
       if (readable) {
         const normalized = normalizeVerseOrderToken(readable);
@@ -63,6 +67,16 @@ export function normalizeVerseOrderString(value: string | null | undefined): str
   const trimmed = value.trim();
   if (!trimmed) return '';
 
-  const normalized = trimmed.split(/\s+/).map(normalizeVerseOrderToken).filter(Boolean).join(' ');
+  const normalized = trimmed
+    .toLowerCase()
+    .replace(/\bpre-?chorus\s*(\d*)\b/g, (_match, number) => `p${number || '1'}`)
+    .replace(/\bverse\s*(\d+)\b/g, (_match, number) => `v${number}`)
+    .replace(/\bchorus\s*(\d*)\b/g, (_match, number) => `c${number || '1'}`)
+    .replace(/\bbridge\s*(\d*)\b/g, (_match, number) => `b${number || '1'}`)
+    .replace(/\btag\s*(\d*)\b/g, (_match, number) => `t${number || '1'}`)
+    .split(/\s+/)
+    .map(normalizeVerseOrderToken)
+    .filter(Boolean)
+    .join(' ');
   return normalized;
 }

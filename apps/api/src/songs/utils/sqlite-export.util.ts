@@ -1,4 +1,7 @@
-import type { SongResponseDto } from '@openlp/shared';
+import {
+  defaultVerseOrderFromVerses,
+  normalizeVerseOrderString,
+} from '@openlp/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -34,6 +37,22 @@ interface SongForSqliteExport {
   deletedAt: Date | null;
 }
 
+function getVerseOrderLabelKey(label?: string | null): string {
+  const normalized = normalizeVerseOrderString(label);
+  return normalized.includes(' ') ? '' : normalized;
+}
+
+function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
+  const normalized = normalizeVerseOrderString(song.verseOrder);
+  if (normalized) return normalized;
+
+  if (song.versesArray && song.versesArray.length > 0) {
+    return defaultVerseOrderFromVerses(song.versesArray) || null;
+  }
+
+  return null;
+}
+
 /**
  * Format song lyrics for OpenLP format
  * OpenLP stores all verses in a single lyrics field with XML formatting
@@ -41,6 +60,7 @@ interface SongForSqliteExport {
  */
 export function formatSongLyrics(song: SongForSqliteExport): string {
   const parts: string[] = [];
+  const effectiveVerseOrder = getEffectiveVerseOrder(song);
 
   // If we have versesArray, use it with verseOrder to maintain proper sequence
   // This ensures we have control over duplicate prevention
@@ -58,27 +78,25 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
     // Use verseOrder string if available to determine sequence and labels
     // IMPORTANT: verseOrder defines the display sequence, but we only store unique verses
     // (e.g., "v1 c1 v2 c1" means: show v1, then c1, then v2, then c1 again - but store c1 only once)
-    if (song.verseOrder) {
+    if (effectiveVerseOrder) {
       // Parse verseOrder string (e.g., "v1 c1 v2 c1")
-      const verseOrderParts = song.verseOrder.split(/\s+/);
+      const verseOrderParts = effectiveVerseOrder.split(/\s+/);
       const verseMap = new Map<string, (typeof sortedVerses)[0]>();
 
       // Build map of unique verses by their originalLabel (lowercase for matching)
       // IMPORTANT: Only store first occurrence of each verse to prevent duplicates
       sortedVerses.forEach((verse) => {
-        if (verse.originalLabel) {
-          const labelKey = verse.originalLabel.toLowerCase();
+        const labelKeys = [
+          getVerseOrderLabelKey(verse.originalLabel),
+          getVerseOrderLabelKey(verse.label),
+        ].filter(Boolean);
+
+        labelKeys.forEach((labelKey) => {
           // Only store first occurrence of each verse (prevent duplicates)
           if (!verseMap.has(labelKey)) {
             verseMap.set(labelKey, verse);
           }
-        } else if (verse.label) {
-          // Fallback: use label if originalLabel is not available
-          const labelKey = verse.label.toLowerCase();
-          if (!verseMap.has(labelKey)) {
-            verseMap.set(labelKey, verse);
-          }
-        }
+        });
       });
 
       // Build XML in the order specified by verseOrder, but only add each unique verse once
@@ -97,11 +115,13 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
 
       // Add any verses not in verseOrder
       sortedVerses.forEach((verse) => {
-        if (verse.originalLabel) {
-          const labelKey = verse.originalLabel.toLowerCase();
+        const labelKey =
+          getVerseOrderLabelKey(verse.originalLabel) ||
+          getVerseOrderLabelKey(verse.label);
+        if (labelKey) {
           if (!addedVerses.has(labelKey)) {
             const { type, label: verseNum } = parseVerseLabel(
-              verse.originalLabel,
+              verse.originalLabel || verse.label || labelKey,
             );
             parts.push(formatVerseXml(type, verseNum, verse.content));
             addedVerses.add(labelKey);
@@ -158,8 +178,8 @@ export function formatSongLyrics(song: SongForSqliteExport): string {
     });
 
     // If verseOrder is available, use it to determine order
-    if (song.verseOrder) {
-      const verseOrderParts = song.verseOrder.split(/\s+/);
+    if (effectiveVerseOrder) {
+      const verseOrderParts = effectiveVerseOrder.split(/\s+/);
       const addedVerses = new Set<string>();
 
       verseOrderParts.forEach((label) => {
@@ -235,14 +255,28 @@ function parseVerseLabel(originalLabel: string): {
 } {
   const lower = originalLabel.toLowerCase().trim();
 
-  // Match patterns like "v1", "c1", "b1", "p1", "verse1", "chorus1", etc.
-  const match = lower.match(
-    /^(v|verse|c|chorus|b|bridge|p|pre-chorus|prechorus)(\d+)$/,
+  const shortMatch = lower.match(/^(v|c|b|p|t)(\d+)$/);
+  if (shortMatch) {
+    return { type: shortMatch[1], label: shortMatch[2] };
+  }
+
+  // Match readable labels like "verse1", "verse 1", "chorus", "bridge 1", etc.
+  const readableMatch = lower.match(
+    /^(verse|chorus|bridge|pre-chorus|prechorus|tag)\s*(\d*)$/,
   );
-  if (match) {
-    const typeChar = match[1].charAt(0); // First character
-    const label = match[2];
-    return { type: typeChar, label };
+  if (readableMatch) {
+    const typeMap: Record<string, string> = {
+      verse: 'v',
+      chorus: 'c',
+      bridge: 'b',
+      'pre-chorus': 'p',
+      prechorus: 'p',
+      tag: 't',
+    };
+    return {
+      type: typeMap[readableMatch[1]],
+      label: readableMatch[2] || '1',
+    };
   }
 
   // If no match, try to extract type and number separately
@@ -258,6 +292,9 @@ function parseVerseLabel(originalLabel: string): {
   } else if (lower.startsWith('p')) {
     const num = lower.replace(/^p/, '') || '1';
     return { type: 'p', label: num };
+  } else if (lower.startsWith('t')) {
+    const num = lower.replace(/^t/, '') || '1';
+    return { type: 't', label: num };
   }
 
   // Default to verse
@@ -445,8 +482,12 @@ export async function createOpenLPSqliteDatabase(
 
   const transaction = db.transaction((songsToInsert: SongForSqliteExport[]) => {
     for (const song of songsToInsert) {
+      const effectiveVerseOrder = getEffectiveVerseOrder(song);
       // Format lyrics as XML
-      const lyrics = formatSongLyrics(song);
+      const lyrics = formatSongLyrics({
+        ...song,
+        verseOrder: effectiveVerseOrder,
+      });
 
       // Map MongoDB fields to OpenLP fields
       const alternateTitle = song.number || null;
@@ -471,7 +512,7 @@ export async function createOpenLPSqliteDatabase(
         song.title, // title
         alternateTitle, // alternate_title
         lyrics, // lyrics
-        song.verseOrder || null, // verse_order
+        effectiveVerseOrder, // verse_order
         copyright, // copyright
         comments, // comments
         ccliNumber, // ccli_number
