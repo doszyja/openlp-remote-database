@@ -17,6 +17,8 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+.env.deploy
+
 # dotenv environment variable files
 .env
 .env.development
@@ -31,6 +33,7 @@ node_modules/
 dist/
 *.d.ts
 *.d.ts.map
+!apps/web/src/vite-env.d.ts
 *.js
 *.js.map
 # Environment variables

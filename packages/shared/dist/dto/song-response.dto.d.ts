@@ -49,4 +49,6 @@ export interface SongListCacheItem {
     openlpMapping?: SongListCacheOpenLPMapping | null;
     updatedAt?: string | null;
 }
+/** GET /songs/all-openlp — lyricsXml is full OpenLP SQLite `songs.lyrics` document. */
+export type SongListOpenlpCacheItem = SongListCacheItem;
 //# sourceMappingURL=song-response.dto.d.ts.map
