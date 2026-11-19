@@ -8,7 +8,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { buildSearchLyricsFolded, buildSearchTitleFolded } from '@openlp/shared';
+import {
+  buildSearchLyricsFolded,
+  buildSearchTitleFolded,
+} from '@openlp/shared';
 import { Song } from '../schemas/song.schema';
 
 async function main() {
@@ -32,7 +35,10 @@ async function main() {
         .trim();
     }
 
-    const searchTitleFolded = buildSearchTitleFolded(song.title ?? '', song.number ?? null);
+    const searchTitleFolded = buildSearchTitleFolded(
+      song.title ?? '',
+      song.number ?? null,
+    );
     const searchLyricsFolded = buildSearchLyricsFolded(searchLyrics);
 
     await songModel.updateOne(
@@ -46,7 +52,7 @@ async function main() {
   await app.close();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

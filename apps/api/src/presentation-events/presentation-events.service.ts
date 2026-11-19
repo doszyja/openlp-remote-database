@@ -192,7 +192,9 @@ export class PresentationEventsService {
     ]);
 
     return {
-      data: data.map((row) => this.mapRow(row as PresentationEvent & { _id: unknown })),
+      data: data.map((row) =>
+        this.mapRow(row as PresentationEvent & { _id: unknown }),
+      ),
       meta: {
         total,
         page,
@@ -288,7 +290,9 @@ export class PresentationEventsService {
     const anonymousViews =
       authCounts.find((row) => row._id === 'anonymous')?.count ?? 0;
 
-    let grouped: Array<{ key: string; label: string; count: number }> | undefined;
+    let grouped:
+      | Array<{ key: string; label: string; count: number }>
+      | undefined;
     if (query.groupBy === 'source') {
       grouped = bySource.map((row) => ({
         key: row._id,

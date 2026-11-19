@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,7 +20,14 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  type SelectChangeEvent,
+  Tooltip,
 } from '@mui/material';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   History as HistoryIcon,
@@ -65,12 +72,24 @@ export default function SongVersionHistory({
   const restoreVersion = useRestoreVersion();
   const compareVersions = useCompareVersions();
   const { showSuccess, showError } = useNotification();
-  const [selectedVersions, setSelectedVersions] = useState<[number | null, number | null]>([
-    null,
-    null,
-  ]);
+  const [versionOlder, setVersionOlder] = useState<number | ''>('');
+  const [versionNewer, setVersionNewer] = useState<number | ''>('');
   const [comparing, setComparing] = useState(false);
   const [comparisonResult, setComparisonResult] = useState<VersionComparison | null>(null);
+  const didSetDefaultVersions = useRef(false);
+
+  useEffect(() => {
+    if (didSetDefaultVersions.current || !versions?.length) {
+      return;
+    }
+    if (versions.length >= 2) {
+      setVersionOlder(versions[1].version);
+      setVersionNewer(versions[0].version);
+    } else {
+      setVersionNewer(versions[0].version);
+    }
+    didSetDefaultVersions.current = true;
+  }, [versions]);
 
   const handleRestore = async (version: number) => {
     if (
@@ -92,17 +111,25 @@ export default function SongVersionHistory({
     }
   };
 
-  const handleCompare = async () => {
-    if (!selectedVersions[0] || !selectedVersions[1]) return;
+  const runCompare = async (older: number, newer: number) => {
+    if (older === newer) {
+      showError('Wybierz dwie różne wersje.');
+      return;
+    }
+    const v1 = Math.min(older, newer);
+    const v2 = Math.max(older, newer);
 
     try {
       setComparing(true);
+      setComparisonResult(null);
       const result = await compareVersions.mutateAsync({
         songId,
-        v1: selectedVersions[0],
-        v2: selectedVersions[1],
+        v1,
+        v2,
       });
       setComparisonResult(result);
+      setVersionOlder(v1);
+      setVersionNewer(v2);
     } catch (error) {
       showError('Nie udało się porównać wersji.');
       console.error(error);
@@ -111,14 +138,19 @@ export default function SongVersionHistory({
     }
   };
 
-  const handleSelectVersion = (version: number) => {
-    if (selectedVersions[0] === null) {
-      setSelectedVersions([version, null]);
-    } else if (selectedVersions[1] === null && selectedVersions[0] !== version) {
-      setSelectedVersions([selectedVersions[0], version]);
-    } else {
-      setSelectedVersions([version, null]);
+  const handleCompare = () => {
+    if (versionOlder === '' || versionNewer === '') {
+      showError('Wybierz obie wersje do porównania.');
+      return;
     }
+    void runCompare(versionOlder, versionNewer);
+  };
+
+  const handleSwapVersions = () => {
+    const a = versionOlder;
+    const b = versionNewer;
+    setVersionOlder(b);
+    setVersionNewer(a);
   };
 
   const formatDate = (dateString: string) => {
@@ -136,6 +168,26 @@ export default function SongVersionHistory({
     }
   };
 
+  const renderVersionMenuItem = (version: SongVersion, index: number) => {
+    const date = formatDate(version.createdAt);
+    const user = version.changedByUsername ? ` · ${version.changedByUsername}` : '';
+    const suffix =
+      index === 0 ? ' (aktualna)' : version.changeReason ? ` · ${version.changeReason}` : '';
+    return (
+      <MenuItem key={version.version} value={version.version} dense>
+        <ListItemText
+          primary={`Wersja ${version.version}${index === 0 ? ' — aktualna' : ''}`}
+          secondary={`${date}${user}${suffix}`}
+          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+          secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+        />
+      </MenuItem>
+    );
+  };
+
+  const canCompare =
+    versionOlder !== '' && versionNewer !== '' && versionOlder !== versionNewer && !comparing;
+
   const historyBody = (
     <>
         {isLoading ? (
@@ -146,31 +198,85 @@ export default function SongVersionHistory({
           <Alert severity="info">Brak historii wersji dla tej pieśni.</Alert>
         ) : (
           <Stack spacing={2}>
-            {selectedVersions[0] && selectedVersions[1] && (
-              <Paper sx={{ p: 2, bgcolor: 'action.selected' }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Typography variant="body2">
-                    Porównaj wersję {selectedVersions[0]} z wersją {selectedVersions[1]}
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Porównaj wersje
+              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                alignItems={{ xs: 'stretch', sm: 'flex-end' }}
+              >
+                <FormControl size="small" fullWidth sx={{ minWidth: 0 }}>
+                  <InputLabel id="version-older-label">Wersja starsza</InputLabel>
+                  <Select
+                    labelId="version-older-label"
+                    label="Wersja starsza"
+                    value={versionOlder}
+                    onChange={(e: SelectChangeEvent<number | ''>) => {
+                      setVersionOlder(e.target.value === '' ? '' : Number(e.target.value));
+                      setComparisonResult(null);
+                    }}
+                  >
+                    {versions.map((v, index) => renderVersionMenuItem(v, index))}
+                  </Select>
+                </FormControl>
+                <Tooltip title="Zamień strony">
+                  <span>
+                    <IconButton
+                      onClick={handleSwapVersions}
+                      disabled={versionOlder === '' || versionNewer === ''}
+                      aria-label="Zamień wersje"
+                      sx={{ alignSelf: { xs: 'center', sm: 'center' }, mb: { sm: 0.25 } }}
+                    >
+                      <SwapHorizIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <FormControl size="small" fullWidth sx={{ minWidth: 0 }}>
+                  <InputLabel id="version-newer-label">Wersja nowsza</InputLabel>
+                  <Select
+                    labelId="version-newer-label"
+                    label="Wersja nowsza"
+                    value={versionNewer}
+                    onChange={(e: SelectChangeEvent<number | ''>) => {
+                      setVersionNewer(e.target.value === '' ? '' : Number(e.target.value));
+                      setComparisonResult(null);
+                    }}
+                  >
+                    {versions.map((v, index) => renderVersionMenuItem(v, index))}
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  startIcon={comparing ? <CircularProgress size={18} color="inherit" /> : <CompareIcon />}
+                  onClick={handleCompare}
+                  disabled={!canCompare}
+                  sx={{
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                    minHeight: 40,
+                  }}
+                >
+                  Porównaj
+                </Button>
+              </Stack>
+              {versionOlder !== '' &&
+                versionNewer !== '' &&
+                versionOlder === versionNewer && (
+                  <Typography variant="caption" color="error.main" sx={{ mt: 1, display: 'block' }}>
+                    Wybierz dwie różne wersje.
                   </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<CompareIcon />}
-                    onClick={handleCompare}
-                    disabled={comparing}
-                  >
-                    Porównaj
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => setSelectedVersions([null, null])}
-                  >
-                    Anuluj
-                  </Button>
-                </Stack>
-              </Paper>
-            )}
+                )}
+            </Paper>
 
             {comparisonResult && (
               <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
@@ -288,17 +394,35 @@ export default function SongVersionHistory({
                     }
                     sx={{
                       border: 1,
-                      borderColor: 'divider',
+                      borderColor:
+                        versionOlder === version.version
+                          ? 'error.main'
+                          : versionNewer === version.version
+                            ? 'success.main'
+                            : 'divider',
                       borderRadius: 1,
                       mb: 1,
                       bgcolor:
-                        selectedVersions[0] === version.version ||
-                        selectedVersions[1] === version.version
-                          ? 'action.selected'
-                          : 'background.paper',
+                        versionOlder === version.version
+                          ? theme =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(211, 47, 47, 0.12)'
+                                : 'rgba(211, 47, 47, 0.06)'
+                          : versionNewer === version.version
+                            ? theme =>
+                                theme.palette.mode === 'dark'
+                                  ? 'rgba(46, 125, 50, 0.12)'
+                                  : 'rgba(46, 125, 50, 0.06)'
+                            : 'background.paper',
                     }}
                   >
-                    <ListItemButton onClick={() => handleSelectVersion(version.version)} dense>
+                    <ListItemButton
+                      onClick={() => {
+                        setVersionNewer(version.version);
+                        setComparisonResult(null);
+                      }}
+                      dense
+                    >
                       <ListItemText
                         primary={
                           <Box
@@ -311,8 +435,12 @@ export default function SongVersionHistory({
                             <Typography variant="subtitle1" component="span">
                               Wersja {version.version}
                             </Typography>
-                            {index === 0 && (
-                              <Chip label="Aktualna" size="small" color="primary" />
+                            {index === 0 && <Chip label="Aktualna" size="small" color="primary" />}
+                            {versionOlder === version.version && (
+                              <Chip label="Starsza" size="small" color="error" variant="outlined" />
+                            )}
+                            {versionNewer === version.version && (
+                              <Chip label="Nowsza" size="small" color="success" variant="outlined" />
                             )}
                             {version.changeSource === 'openlp' && (
                               <Chip label="OpenLP" size="small" variant="outlined" />
@@ -356,33 +484,46 @@ export default function SongVersionHistory({
                                 Powód: {version.changeReason}
                               </Typography>
                             )}
-                            {version.changes && Object.keys(version.changes).length > 0 && (
+                            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
                               <Button
                                 size="small"
                                 variant="text"
                                 onClick={e => {
                                   e.stopPropagation();
-                                  if (index > 0) {
-                                    const previousVersion = versions[index - 1];
-                                    setSelectedVersions([
-                                      previousVersion.version,
-                                      version.version,
-                                    ]);
-                                    setTimeout(() => {
-                                      void handleCompare();
-                                    }, 100);
-                                  }
+                                  setVersionOlder(version.version);
+                                  setComparisonResult(null);
                                 }}
-                                sx={{
-                                  fontSize: '0.75rem',
-                                  textTransform: 'none',
-                                  mt: 0.5,
-                                  px: 0,
-                                }}
+                                sx={{ fontSize: '0.75rem', textTransform: 'none', px: 0, minWidth: 0 }}
                               >
-                                Porównaj z poprzednią
+                                Ustaw jako starszą
                               </Button>
-                            )}
+                              <Button
+                                size="small"
+                                variant="text"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setVersionNewer(version.version);
+                                  setComparisonResult(null);
+                                }}
+                                sx={{ fontSize: '0.75rem', textTransform: 'none', px: 0, minWidth: 0 }}
+                              >
+                                Ustaw jako nowszą
+                              </Button>
+                              {index > 0 && (
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  startIcon={<CompareIcon sx={{ fontSize: 16 }} />}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    void runCompare(versions[index - 1].version, version.version);
+                                  }}
+                                  sx={{ fontSize: '0.75rem', textTransform: 'none', px: 0, minWidth: 0 }}
+                                >
+                                  Porównaj z poprzednią
+                                </Button>
+                              )}
+                            </Stack>
                           </Box>
                         }
                       />

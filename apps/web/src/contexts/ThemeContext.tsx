@@ -1,10 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { ThemeProvider as MuiThemeProvider, CssBaseline, createTheme, Theme } from '@mui/material';
 
-type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark';
+export type ThemePreference = 'auto' | ThemeMode;
 
 interface ThemeContextType {
+  /** Effective palette mode (resolved from preference + system). */
   mode: ThemeMode;
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
   toggleMode: () => void;
   theme: Theme;
 }
@@ -13,35 +17,53 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'theme-mode';
 
-function getInitialMode(): ThemeMode {
-  // Check localStorage first
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark') {
-    return stored;
-  }
-  // Fall back to system preference
+function getSystemMode(): ThemeMode {
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     return 'dark';
   }
   return 'light';
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>(getInitialMode);
+function getStoredPreference(): ThemePreference {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === 'auto' || stored === 'light' || stored === 'dark') {
+    return stored;
+  }
+  return 'auto';
+}
 
-  // Listen to system theme changes
+function resolveMode(preference: ThemePreference): ThemeMode {
+  if (preference === 'light' || preference === 'dark') {
+    return preference;
+  }
+  return getSystemMode();
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [preference, setPreferenceState] = useState<ThemePreference>(getStoredPreference);
+  const [mode, setMode] = useState<ThemeMode>(() => resolveMode(getStoredPreference()));
+
+  useEffect(() => {
+    setMode(resolveMode(preference));
+  }, [preference]);
+
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
-      // Only auto-switch if user hasn't manually set a preference
-      if (!localStorage.getItem(STORAGE_KEY)) {
+      if (preference === 'auto') {
         setMode(e.matches ? 'dark' : 'light');
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  }, [preference]);
+
+  const setPreference = (next: ThemePreference) => {
+    localStorage.setItem(STORAGE_KEY, next);
+    setPreferenceState(next);
+    setMode(resolveMode(next));
+  };
 
   // Create theme based on mode
   const theme = useMemo(
@@ -281,20 +303,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleMode = () => {
-    setMode(prevMode => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
-      localStorage.setItem(STORAGE_KEY, newMode);
-      return newMode;
-    });
+    const newMode: ThemeMode = mode === 'light' ? 'dark' : 'light';
+    setPreference(newMode);
   };
 
-  // Save to localStorage when mode changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
-
   return (
-    <ThemeContext.Provider value={{ mode, toggleMode, theme }}>
+    <ThemeContext.Provider value={{ mode, preference, setPreference, toggleMode, theme }}>
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
         {children}

@@ -412,7 +412,10 @@ export class AuthService {
         avatar: data.avatar ?? null,
       };
     } catch (error) {
-      console.warn('[fetchDiscordUser] Failed to fetch Discord profile:', error);
+      console.warn(
+        '[fetchDiscordUser] Failed to fetch Discord profile:',
+        error,
+      );
       return null;
     }
   }

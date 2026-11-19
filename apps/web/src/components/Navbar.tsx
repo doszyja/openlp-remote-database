@@ -351,7 +351,7 @@ export function UserMenu({
           </>
         )}
         {!onExportZip && <Divider />}
-        {hasEditPermission && (
+        {(hasEditPermission || isAdmin) && (
           <MenuItem
             onClick={() => {
               onClose();

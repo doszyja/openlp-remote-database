@@ -255,7 +255,7 @@ export default function SongDetailPage() {
   // Show all songs (no limit) - same as SongListPage
   // Also apply songbook filter
   const allSearchSongs = useMemo(() => {
-    let songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
+    const songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
 
     return filterSongsBySongbooks(songs, songbookFilters);
   }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);

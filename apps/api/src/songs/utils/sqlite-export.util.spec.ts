@@ -64,8 +64,12 @@ describe('SQLite export verse_order', () => {
     );
 
     expect(row.verse_order).toBe('v1 v2');
-    expect(row.lyrics).toContain('<verse type="v" label="1"><![CDATA[First verse]]></verse>');
-    expect(row.lyrics).toContain('<verse type="v" label="2"><![CDATA[Second verse]]></verse>');
+    expect(row.lyrics).toContain(
+      '<verse type="v" label="1"><![CDATA[First verse]]></verse>',
+    );
+    expect(row.lyrics).toContain(
+      '<verse type="v" label="2"><![CDATA[Second verse]]></verse>',
+    );
   });
 
   it('normalizes readable verseOrder before writing SQLite', async () => {
@@ -97,7 +101,9 @@ describe('SQLite export verse_order', () => {
     );
 
     expect(row.verse_order).toBe('v1 c1 v2');
-    expect(row.lyrics).toContain('<verse type="c" label="1"><![CDATA[Chorus]]></verse>');
+    expect(row.lyrics).toContain(
+      '<verse type="c" label="1"><![CDATA[Chorus]]></verse>',
+    );
   });
 
   it('fills verse_order from versesArray when verseOrder is empty', async () => {
@@ -127,8 +133,12 @@ describe('SQLite export verse_order', () => {
     );
 
     expect(row.verse_order).toBe('v1 c1 b1');
-    expect(row.lyrics).toContain('<verse type="c" label="1"><![CDATA[Chorus]]></verse>');
-    expect(row.lyrics).toContain('<verse type="b" label="1"><![CDATA[Bridge]]></verse>');
+    expect(row.lyrics).toContain(
+      '<verse type="c" label="1"><![CDATA[Chorus]]></verse>',
+    );
+    expect(row.lyrics).toContain(
+      '<verse type="b" label="1"><![CDATA[Bridge]]></verse>',
+    );
   });
 });
 

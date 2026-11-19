@@ -659,7 +659,7 @@ export default function ServicePlanPage() {
 
   // Search results for column 1
   const allSearchSongs = useMemo(() => {
-    let songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
+    const songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
 
     return filterSongsBySongbooks(songs, songbookFilters);
   }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);

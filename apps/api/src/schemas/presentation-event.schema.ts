@@ -7,7 +7,12 @@ export type SongViewSource = 'openlp' | 'browser';
 
 @Schema({ timestamps: true })
 export class PresentationEvent {
-  @Prop({ required: true, enum: ['openlp', 'browser'], default: 'openlp', index: true })
+  @Prop({
+    required: true,
+    enum: ['openlp', 'browser'],
+    default: 'openlp',
+    index: true,
+  })
   source: SongViewSource;
 
   @Prop({ index: true })

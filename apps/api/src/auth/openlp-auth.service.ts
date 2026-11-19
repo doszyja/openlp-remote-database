@@ -40,7 +40,11 @@ export class OpenLpAuthService {
     if (!state || state.length < 8) {
       throw new BadRequestException('Invalid state');
     }
-    if (!Number.isFinite(redirectPort) || redirectPort < 1024 || redirectPort > 65535) {
+    if (
+      !Number.isFinite(redirectPort) ||
+      redirectPort < 1024 ||
+      redirectPort > 65535
+    ) {
       throw new BadRequestException('Invalid redirect port');
     }
 

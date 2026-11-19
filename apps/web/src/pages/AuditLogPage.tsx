@@ -96,14 +96,22 @@ function getActionColor(
   }
 }
 
-function formatAuditVerse(verse: any, index: number): string {
-  const label = verse?.label || verse?.originalLabel || `Zwrotka ${verse?.order ?? index + 1}`;
-  const order = verse?.order != null ? `#${verse.order}` : `#${index + 1}`;
-  const content = typeof verse?.content === 'string' ? verse.content.trim() : '';
+type AuditVerseLike = {
+  label?: string;
+  originalLabel?: string;
+  order?: number;
+  content?: string;
+};
+
+function formatAuditVerse(verse: unknown, index: number): string {
+  const v = verse as AuditVerseLike;
+  const label = v?.label || v?.originalLabel || `Zwrotka ${v?.order ?? index + 1}`;
+  const order = v?.order != null ? `#${v.order}` : `#${index + 1}`;
+  const content = typeof v?.content === 'string' ? v.content.trim() : '';
   return `${order} ${label}${content ? `\n${content}` : ''}`;
 }
 
-function formatAuditValue(value: any, fieldKey?: string): string {
+function formatAuditValue(value: unknown, fieldKey?: string): string {
   if (value === null || value === undefined || value === '') {
     return '';
   }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Typography,
@@ -25,7 +25,9 @@ import { discordAvatarUrl } from '../utils/discordAvatar';
 import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
 import { useServicePlans } from '../hooks/useServicePlans';
 import { UserAvatar, UserMenu } from '../components/Navbar';
-import ThemeToggle from '../components/ThemeToggle';
+import ThemeModeSelect from '../components/ThemeModeSelect';
+import { useExportZip } from '../hooks/useExportZip';
+import { useNotification } from '../contexts/NotificationContext';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
 
@@ -75,6 +77,10 @@ export default function HomePage() {
   const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
+  const exportZip = useExportZip();
+  const { showSuccess, showError } = useNotification();
+  const [isExporting, setIsExporting] = useState(false);
+  const [lastExportTime, setLastExportTime] = useState(0);
   const { data: allPlans } = useServicePlans();
   const isLivePage = location.pathname === '/live';
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
@@ -133,6 +139,34 @@ export default function HomePage() {
     localStorage.setItem('dev-user-type', newType);
   };
 
+  const handleExportZip = useCallback(async () => {
+    const now = Date.now();
+    const DEBOUNCE_MS = 3000;
+    if (isExporting || exportZip.isFetching || now - lastExportTime < DEBOUNCE_MS) {
+      return;
+    }
+    setIsExporting(true);
+    setLastExportTime(now);
+    try {
+      const blob = await exportZip.refetch();
+      if (blob.data) {
+        const url = window.URL.createObjectURL(blob.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `openlp-songs-${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        showSuccess('Eksport zakończony pomyślnie!');
+      }
+    } catch {
+      showError('Nie udało się wyeksportować pieśni. Spróbuj ponownie.');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [exportZip, isExporting, lastExportTime, showError, showSuccess]);
+
   return (
     <Box
       sx={{
@@ -158,7 +192,7 @@ export default function HomePage() {
           flexShrink: 0,
         }}
       >
-        <ThemeToggle />
+        <ThemeModeSelect />
         {isAuthenticated && user ? (
           <>
             <UserAvatar user={user} onClick={handleMenuOpen} />
@@ -174,6 +208,10 @@ export default function HomePage() {
               isServicePlansPage={isServicePlansPage}
               isLivePage={isLivePage}
               isAdmin={isAdmin}
+              hasEditPermission={hasEditPermission}
+              isExporting={isExporting}
+              exportZipIsFetching={exportZip.isFetching}
+              onExportZip={hasEditPermission ? handleExportZip : undefined}
               onNavigate={navigate}
               onOpenSettings={() => settingsDialogRef.current?.open()}
               onLogout={handleLogout}

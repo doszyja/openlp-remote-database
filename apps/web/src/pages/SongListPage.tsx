@@ -114,7 +114,7 @@ export default function SongListPage() {
   // Get the songs to display - use search results if searching, otherwise use all cached songs
   // Also filter by songbook if a filter is selected
   const displaySongs = useMemo(() => {
-    let songs = useCacheForSearch ? searchResults || [] : cachedSongs || [];
+    const songs = useCacheForSearch ? searchResults || [] : cachedSongs || [];
 
     return filterSongsBySongbooks(songs, songbookFilters);
   }, [useCacheForSearch, searchResults, cachedSongs, songbookFilters]);

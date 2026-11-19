@@ -18,7 +18,11 @@ export function detectSongEditSource(
     return 'openlp';
   }
   const ua = (userAgent ?? '').toLowerCase();
-  if (ua.includes('openlp') || ua.includes('songstats') || ua.includes('python-requests')) {
+  if (
+    ua.includes('openlp') ||
+    ua.includes('songstats') ||
+    ua.includes('python-requests')
+  ) {
     return 'openlp';
   }
   return 'web';

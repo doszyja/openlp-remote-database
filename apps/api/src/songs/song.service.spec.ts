@@ -6,6 +6,14 @@ import { Song, SongDocument } from '../schemas/song.schema';
 import { Tag, TagDocument } from '../schemas/tag.schema';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import { SongsVersionService } from './songs-version.service';
+import { SongVersionService } from './song-version.service';
+import { VerseDto } from './dto/verse.dto';
+
+function verseLines(...contents: string[]): VerseDto[] {
+  return contents.map((content, index) => ({ order: index + 1, content }));
+}
 
 describe('SongService', () => {
   let service: SongService;
@@ -39,6 +47,12 @@ describe('SongService', () => {
           provide: getModelToken(Tag.name),
           useValue: mockTagModel,
         },
+        { provide: AuditLogService, useValue: { log: jest.fn() } },
+        {
+          provide: SongsVersionService,
+          useValue: { incrementOnCreate: jest.fn(), incrementOnUpdate: jest.fn(), incrementOnDelete: jest.fn() },
+        },
+        { provide: SongVersionService, useValue: { createVersion: jest.fn() } },
       ],
     }).compile();
 
@@ -57,8 +71,7 @@ describe('SongService', () => {
         title: 'Amazing Grace',
         number: '123',
         language: 'en',
-        chorus: 'Amazing grace, how sweet the sound',
-        verses: 'Verse 1 content\n\nVerse 2 content',
+        verses: verseLines('Verse 1 content', 'Verse 2 content'),
         tags: ['worship', 'classic'],
       };
 
@@ -123,7 +136,7 @@ describe('SongService', () => {
     it('should handle empty verses string', async () => {
       const createSongDto: CreateSongDto = {
         title: 'Empty Song',
-        verses: '',
+        verses: [],
         tags: [],
       };
 
@@ -163,7 +176,7 @@ describe('SongService', () => {
     it('should preserve verse order when storing as string', async () => {
       const createSongDto: CreateSongDto = {
         title: 'Ordered Verses',
-        verses: 'First verse\n\nSecond verse\n\nThird verse',
+        verses: verseLines('First verse', 'Second verse', 'Third verse'),
         tags: [],
       };
 
@@ -205,7 +218,7 @@ describe('SongService', () => {
       const songId = '507f1f77bcf86cd799439011';
       const updateSongDto: UpdateSongDto = {
         title: 'Updated Title',
-        verses: 'New verse content',
+        verses: verseLines('New verse content'),
       };
 
       const existingSong = {

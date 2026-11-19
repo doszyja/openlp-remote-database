@@ -49,7 +49,11 @@ export class SongService {
 
   private buildOpenlpMappingFromDto(
     dto?: { openlpId?: number; lastSyncedAt?: string; clientId?: string },
-    existing?: { openlpId?: number; lastSyncedAt?: Date; syncMetadata?: Record<string, unknown> } | null,
+    existing?: {
+      openlpId?: number;
+      lastSyncedAt?: Date;
+      syncMetadata?: Record<string, unknown>;
+    } | null,
   ) {
     if (!dto || dto.openlpId == null) {
       return undefined;
@@ -78,7 +82,8 @@ export class SongService {
       userAgent?: string;
     },
   ) {
-    const { verses, tags, verseOrder, openlpMapping, ...songData } = createSongDto;
+    const { verses, tags, verseOrder, openlpMapping, ...songData } =
+      createSongDto;
 
     // Create or get tags
     const tagIds: string[] = [];
@@ -120,7 +125,9 @@ export class SongService {
       openlpMapping
         ? {
             ...openlpMapping,
-            clientId: openlpMapping.clientId ?? (songData as { clientId?: string }).clientId,
+            clientId:
+              openlpMapping.clientId ??
+              (songData as { clientId?: string }).clientId,
           }
         : undefined,
     );
@@ -156,8 +163,8 @@ export class SongService {
 
     const editSource = detectSongEditSource(context?.userAgent, {
       clientId:
-        (mapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ??
-        (songData as { clientId?: string }).clientId,
+        (mapping?.syncMetadata as { clientId?: string } | undefined)
+          ?.clientId ?? (songData as { clientId?: string }).clientId,
       openlpId: mapping?.openlpId,
     });
 
@@ -178,7 +185,9 @@ export class SongService {
           openlpId: mapping?.openlpId,
         },
       )
-      .catch((err) => console.error('Failed to create initial song version:', err));
+      .catch((err) =>
+        console.error('Failed to create initial song version:', err),
+      );
 
     if (context?.userId && context?.username) {
       const action =
@@ -196,7 +205,8 @@ export class SongService {
             catalogVersion,
             openlpId: mapping?.openlpId ?? null,
             clientId:
-              (mapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ?? null,
+              (mapping?.syncMetadata as { clientId?: string } | undefined)
+                ?.clientId ?? null,
           },
           ipAddress: context.ipAddress,
           userAgent: context.userAgent,
@@ -406,7 +416,8 @@ export class SongService {
     userAgent?: string,
     avatar?: string | null,
   ) {
-    const { verses, tags, verseOrder, openlpMapping, ...songData } = updateSongDto;
+    const { verses, tags, verseOrder, openlpMapping, ...songData } =
+      updateSongDto;
 
     // Check if song exists
     const existing = await this.songModel.findOne({ _id: id, deletedAt: null });
@@ -499,9 +510,13 @@ export class SongService {
     const finalTitle = (updateData.title ?? existing.title) as string;
     const finalNumber =
       updateData.number !== undefined ? updateData.number : existing.number;
-    const finalSearchLyrics =
-      (updateData.searchLyrics ?? existing.searchLyrics ?? '') as string;
-    updateData.searchTitleFolded = buildSearchTitleFolded(finalTitle, finalNumber);
+    const finalSearchLyrics = (updateData.searchLyrics ??
+      existing.searchLyrics ??
+      '') as string;
+    updateData.searchTitleFolded = buildSearchTitleFolded(
+      finalTitle,
+      finalNumber,
+    );
     updateData.searchLyricsFolded = buildSearchLyricsFolded(finalSearchLyrics);
 
     // Track changes for audit log
@@ -570,7 +585,9 @@ export class SongService {
 
     const mergedMapping = updateData.openlpMapping ?? existing.openlpMapping;
     const editSource = detectSongEditSource(userAgent, {
-      clientId: (mergedMapping?.syncMetadata as { clientId?: string } | undefined)?.clientId,
+      clientId: (
+        mergedMapping?.syncMetadata as { clientId?: string } | undefined
+      )?.clientId,
       openlpId: mergedMapping?.openlpId,
     });
 
@@ -587,7 +604,8 @@ export class SongService {
         Object.keys(changes).length > 0 ? changes : undefined,
         {
           changeSource: editSource,
-          clientId: (mergedMapping?.syncMetadata as { clientId?: string })?.clientId,
+          clientId: (mergedMapping?.syncMetadata as { clientId?: string })
+            ?.clientId,
           openlpId: mergedMapping?.openlpId,
         },
       )
@@ -606,7 +624,11 @@ export class SongService {
         return undefined;
       });
 
-    if (storedRevision && catalogVersion != null && storedRevision.catalogVersion == null) {
+    if (
+      storedRevision &&
+      catalogVersion != null &&
+      storedRevision.catalogVersion == null
+    ) {
       storedRevision.catalogVersion = catalogVersion;
       await storedRevision.save().catch(() => undefined);
     }
@@ -614,7 +636,9 @@ export class SongService {
     // Log audit trail if user is authenticated
     if (userId && username) {
       const auditAction =
-        editSource === 'openlp' ? AuditLogAction.SONG_EDIT_OPENLP : AuditLogAction.SONG_EDIT;
+        editSource === 'openlp'
+          ? AuditLogAction.SONG_EDIT_OPENLP
+          : AuditLogAction.SONG_EDIT;
       await this.auditLogService
         .log(auditAction, userId, username, {
           discordId,
@@ -627,7 +651,8 @@ export class SongService {
             storedRevision: storedRevision?.version ?? null,
             openlpId: mergedMapping?.openlpId ?? null,
             clientId:
-              (mergedMapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ?? null,
+              (mergedMapping?.syncMetadata as { clientId?: string } | undefined)
+                ?.clientId ?? null,
             changes: Object.keys(changes).length > 0 ? changes : undefined,
           },
           ipAddress,
@@ -780,9 +805,7 @@ export class SongService {
                 ?.clientId ?? null,
           }
         : null,
-      updatedAt: song.updatedAt
-        ? new Date(song.updatedAt).toISOString()
-        : null,
+      updatedAt: song.updatedAt ? new Date(song.updatedAt).toISOString() : null,
     }));
 
     return transformedSongs;
@@ -836,7 +859,9 @@ export class SongService {
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
-        }) ?? song.verseOrder ?? null;
+        }) ??
+        song.verseOrder ??
+        null;
 
       return {
         id: song._id.toString(),
@@ -891,9 +916,8 @@ export class SongService {
       };
     }
 
-    const rawChanges = await this.songsVersionService.getChangesSince(
-      sinceVersion,
-    );
+    const rawChanges =
+      await this.songsVersionService.getChangesSince(sinceVersion);
 
     if (
       rawChanges.length === 0 &&
@@ -929,9 +953,7 @@ export class SongService {
     }
 
     const songs =
-      upsertIds.length > 0
-        ? await this.findOpenlpCacheByIds(upsertIds)
-        : [];
+      upsertIds.length > 0 ? await this.findOpenlpCacheByIds(upsertIds) : [];
 
     return {
       version: currentVersion,
@@ -993,7 +1015,9 @@ export class SongService {
           createdAt: new Date(),
           updatedAt: new Date(),
           deletedAt: null,
-        }) ?? song.verseOrder ?? null;
+        }) ??
+        song.verseOrder ??
+        null;
 
       return {
         id: song._id.toString(),

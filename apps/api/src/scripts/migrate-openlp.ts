@@ -686,7 +686,7 @@ async function migrateOpenLPToMongoDB() {
                 const verseLabel = verseType; // Use verse_type as label (v1, v2, c, b, etc.)
 
                 // Get content from XML map if available, otherwise use verse_text
-                let content =
+                const content =
                   xmlContentMap.get(verseLabel) || verse.verse_text.trim();
 
                 if (!content) continue;

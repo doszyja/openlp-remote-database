@@ -1,4 +1,10 @@
-import { IsBooleanString, IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
+import {
+  IsBooleanString,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryPresentationEventsDto {

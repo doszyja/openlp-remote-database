@@ -23,7 +23,8 @@ export function parseUserAgent(userAgent?: string): ParsedClientEnvironment {
   else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browserName = 'Opera';
   else if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) browserName = 'Chrome';
   else if (/Firefox\//i.test(ua)) browserName = 'Firefox';
-  else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browserName = 'Safari';
+  else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua))
+    browserName = 'Safari';
 
   let osName = 'unknown';
   if (/Windows NT/i.test(ua)) osName = 'Windows';

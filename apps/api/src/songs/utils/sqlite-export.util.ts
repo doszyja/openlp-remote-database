@@ -55,7 +55,9 @@ export function formatOpenlpSqliteComments(
   return base ? `${line}\n${base}` : line;
 }
 
-export function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
+export function getEffectiveVerseOrder(
+  song: SongForSqliteExport,
+): string | null {
   const normalized = normalizeVerseOrderString(song.verseOrder);
   if (normalized) return normalized;
 
@@ -75,7 +77,15 @@ export function getEffectiveVerseOrder(song: SongForSqliteExport): string | null
  * Lyrics XML exactly as written to OpenLP SQLite `songs.lyrics` (full document with header).
  */
 export function formatOpenlpDatabaseLyrics(song: {
-  verses?: string | Array<{ order: number; content: string; label?: string; originalLabel?: string }> | null;
+  verses?:
+    | string
+    | Array<{
+        order: number;
+        content: string;
+        label?: string;
+        originalLabel?: string;
+      }>
+    | null;
   versesArray?: SongForSqliteExport['versesArray'];
   verseOrder?: string | null;
   lyricsXml?: string | null;

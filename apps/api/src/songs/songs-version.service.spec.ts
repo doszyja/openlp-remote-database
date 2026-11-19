@@ -26,7 +26,9 @@ describe('SongsVersionService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockVersionDoc.version = 4;
-    mockVersionDoc.save.mockImplementation(async function save(this: typeof mockVersionDoc) {
+    mockVersionDoc.save.mockImplementation(async function save(
+      this: typeof mockVersionDoc,
+    ) {
       return this;
     });
 
@@ -34,7 +36,10 @@ describe('SongsVersionService', () => {
       providers: [
         SongsVersionService,
         { provide: getModelToken(SongsVersion.name), useValue: versionModel },
-        { provide: getModelToken(SongsCatalogChange.name), useValue: changeModel },
+        {
+          provide: getModelToken(SongsCatalogChange.name),
+          useValue: changeModel,
+        },
       ],
     }).compile();
 
@@ -52,7 +57,10 @@ describe('SongsVersionService', () => {
       mockFindOneExec(mockVersionDoc);
       changeModel.create.mockResolvedValue({});
 
-      const version = await service.incrementVersion('507f1f77bcf86cd799439011', 'update');
+      const version = await service.incrementVersion(
+        '507f1f77bcf86cd799439011',
+        'update',
+      );
 
       expect(mockVersionDoc.version).toBe(5);
       expect(mockVersionDoc.save).toHaveBeenCalled();
@@ -91,9 +99,11 @@ describe('SongsVersionService', () => {
     it('queries changes with catalogVersion greater than sinceVersion', async () => {
       const sort = jest.fn().mockReturnThis();
       const lean = jest.fn().mockReturnThis();
-      const exec = jest.fn().mockResolvedValue([
-        { catalogVersion: 3, songId: 'a', action: 'update' },
-      ]);
+      const exec = jest
+        .fn()
+        .mockResolvedValue([
+          { catalogVersion: 3, songId: 'a', action: 'update' },
+        ]);
       changeModel.find.mockReturnValue({ sort, lean, exec });
 
       const rows = await service.getChangesSince(2);

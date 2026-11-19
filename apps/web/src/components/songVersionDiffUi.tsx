@@ -1,6 +1,126 @@
 import { Box, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 
+type DiffOp = { type: 'equal' | 'delete' | 'insert'; value: string };
+
+function tokenizeForDiff(text: string): string[] {
+  if (!text) {
+    return [];
+  }
+  return text.match(/\S+|\s+/g) ?? [text];
+}
+
+/** Word-level LCS diff (tokens = words + whitespace). */
+export function computeWordDiff(oldText: string, newText: string): DiffOp[] {
+  const a = tokenizeForDiff(oldText);
+  const b = tokenizeForDiff(newText);
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  const ops: DiffOp[] = [];
+  let i = m;
+  let j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+      ops.push({ type: 'equal', value: a[i - 1] });
+      i -= 1;
+      j -= 1;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      ops.push({ type: 'insert', value: b[j - 1] });
+      j -= 1;
+    } else {
+      ops.push({ type: 'delete', value: a[i - 1] });
+      i -= 1;
+    }
+  }
+
+  ops.reverse();
+  return mergeAdjacentOps(ops);
+}
+
+function mergeAdjacentOps(ops: DiffOp[]): DiffOp[] {
+  const merged: DiffOp[] = [];
+  for (const op of ops) {
+    const last = merged[merged.length - 1];
+    if (last && last.type === op.type) {
+      last.value += op.value;
+    } else {
+      merged.push({ ...op });
+    }
+  }
+  return merged;
+}
+
+function SideBySideDiffText({
+  oldText,
+  newText,
+  side,
+}: {
+  oldText: string;
+  newText: string;
+  side: 'left' | 'right';
+}) {
+  const ops = computeWordDiff(oldText, newText);
+
+  return (
+    <>
+      {ops.map((op, index) => {
+        if (side === 'left' && op.type === 'insert') {
+          return null;
+        }
+        if (side === 'right' && op.type === 'delete') {
+          return null;
+        }
+        const highlight = side === 'left' ? op.type === 'delete' : op.type === 'insert';
+        return (
+          <Box
+            component="span"
+            key={`${side}-${index}-${op.type}`}
+            sx={{
+              fontWeight: highlight ? 700 : 400,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {op.value}
+          </Box>
+        );
+      })}
+    </>
+  );
+}
+
+function InlineDiffColumns({
+  leftLabel,
+  rightLabel,
+  oldText,
+  newText,
+}: {
+  leftLabel: string;
+  rightLabel: string;
+  oldText: string;
+  newText: string;
+}) {
+  return (
+    <DiffTwoColumns
+      leftLabel={leftLabel}
+      rightLabel={rightLabel}
+      left={<SideBySideDiffText oldText={oldText} newText={newText} side="left" />}
+      right={<SideBySideDiffText oldText={oldText} newText={newText} side="right" />}
+    />
+  );
+}
+
 const panelBase = {
   p: 1.25,
   borderRadius: 1,
@@ -86,7 +206,14 @@ export function diffSimpleSideBySide(
       </Typography>
     );
   }
-  return <DiffTwoColumns leftLabel={leftLabel} rightLabel={rightLabel} left={oldStr} right={newStr} />;
+  return (
+    <InlineDiffColumns
+      leftLabel={leftLabel}
+      rightLabel={rightLabel}
+      oldText={oldStr}
+      newText={newStr}
+    />
+  );
 }
 
 type Verse = {
@@ -123,7 +250,7 @@ export function diffVersesSideBySide(
       </Typography>
     );
   }
-  return <DiffTwoColumns leftLabel={leftLabel} rightLabel={rightLabel} left={left} right={right} />;
+  return diffTextLinesSideBySide(leftLabel, rightLabel, left, right);
 }
 
 export function diffTextLinesSideBySide(
@@ -192,40 +319,46 @@ export function diffTextLinesSideBySide(
                 px: 1,
                 py: 0.5,
                 fontSize: '0.8125rem',
-                whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 minHeight: '1.5em',
+                color: 'text.primary',
                 bgcolor: row.changed
                   ? theme =>
                       theme.palette.mode === 'dark'
-                        ? 'rgba(211, 47, 47, 0.18)'
-                        : 'rgba(211, 47, 47, 0.08)'
+                        ? 'rgba(255, 255, 255, 0.04)'
+                        : 'rgba(0, 0, 0, 0.03)'
                   : 'transparent',
-                color: row.changed ? 'error.main' : 'text.primary',
               }}
             >
-              {row.old || '\u00a0'}
+              {row.changed ? (
+                <SideBySideDiffText oldText={row.old} newText={row.new} side="left" />
+              ) : (
+                row.old || '\u00a0'
+              )}
             </Box>
             <Box
               sx={{
                 px: 1,
                 py: 0.5,
                 fontSize: '0.8125rem',
-                whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 minHeight: '1.5em',
                 borderLeft: { xs: 0, md: 1 },
                 borderColor: 'divider',
+                color: 'text.primary',
                 bgcolor: row.changed
                   ? theme =>
                       theme.palette.mode === 'dark'
-                        ? 'rgba(46, 125, 50, 0.18)'
-                        : 'rgba(46, 125, 50, 0.08)'
+                        ? 'rgba(255, 255, 255, 0.04)'
+                        : 'rgba(0, 0, 0, 0.03)'
                   : 'transparent',
-                color: row.changed ? 'success.dark' : 'text.primary',
               }}
             >
-              {row.new || '\u00a0'}
+              {row.changed ? (
+                <SideBySideDiffText oldText={row.old} newText={row.new} side="right" />
+              ) : (
+                row.new || '\u00a0'
+              )}
             </Box>
           </Box>
         ))}
@@ -257,5 +390,7 @@ export function diffTagsSideBySide(
       </Typography>
     );
   }
-  return <DiffTwoColumns leftLabel={leftLabel} rightLabel={rightLabel} left={left} right={right} />;
+  return (
+    <InlineDiffColumns leftLabel={leftLabel} rightLabel={rightLabel} oldText={left} newText={right} />
+  );
 }
