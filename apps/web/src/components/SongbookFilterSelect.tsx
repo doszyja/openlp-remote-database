@@ -121,7 +121,7 @@ export default function SongbookFilterSelect({
         size="small"
         disableRipple
         tabIndex={-1}
-        sx={{ p: 0.5, mr: 1, ...optionCheckboxSx }}
+        sx={{ mr: 1, ...optionCheckboxSx }}
       />
       <ListItemText primary={option.label} primaryTypographyProps={{ fontSize: '0.95rem' }} />
     </MenuItem>
