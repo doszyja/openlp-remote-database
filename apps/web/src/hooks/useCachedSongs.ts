@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { SongListCacheItem } from '@openlp/shared';
 import { songsCache } from '../services/songs-cache';
@@ -9,9 +9,7 @@ import { useDebouncedValue } from './useDebouncedValue';
  * Fetches song list (metadata only) once and stores in memory, then uses cache for subsequent calls
  */
 export function useCachedSongs() {
-  const initialDataRef = useRef<SongListCacheItem[] | undefined>(
-    songsCache.getCachedSongs() ?? undefined
-  );
+  const cachedOnMount = songsCache.getCachedSongs();
 
   const {
     data: songs,
@@ -21,7 +19,7 @@ export function useCachedSongs() {
   } = useQuery<SongListCacheItem[]>({
     queryKey: ['cached-songs'],
     queryFn: () => songsCache.ensureValidCache(),
-    initialData: initialDataRef.current,
+    ...(cachedOnMount ? { initialData: cachedOnMount } : {}),
     staleTime: Infinity,
     gcTime: Infinity,
     retry: 2,
@@ -31,9 +29,11 @@ export function useCachedSongs() {
     refetchOnReconnect: false,
   });
 
+  const songList = songs ?? [];
+
   return {
-    songs: songs || [],
-    isLoading: isLoading && !songs?.length,
+    songs: songList,
+    isLoading: isLoading && songList.length === 0,
     error,
     refetch,
   };

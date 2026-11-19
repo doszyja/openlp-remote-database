@@ -48,6 +48,8 @@ Restart OpenLP; enable **Song Stats** under **Tools → Configure**.
 4. The page redirects to `http://127.0.0.1:8765/callback?code=…`.
 5. The plugin exchanges the code at `POST /api/auth/openlp/token` and stores the JWT.
 
+**Disconnect (browser):** the plugin opens `{web}/auth/openlp/logout?port=8765&from=openlp`. The page clears the web session and redirects to `http://127.0.0.1:{port}/callback?logout=1&from=openlp`.
+
 Re-login when push returns **401**.
 
 ## Sync workflow

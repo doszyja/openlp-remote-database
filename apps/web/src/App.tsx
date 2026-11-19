@@ -20,6 +20,7 @@ const PresentationStatsPage = lazy(
   () => import('./pages/PresentationStatsPage'),
 );
 const OpenLpAuthPage = lazy(() => import('./pages/OpenLpAuthPage'));
+const OpenLpLogoutPage = lazy(() => import('./pages/OpenLpLogoutPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
@@ -97,6 +98,14 @@ function App() {
           element={
             <Suspense fallback={<PageLoader />}>
               <OpenLpAuthPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/auth/openlp/logout"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <OpenLpLogoutPage />
             </Suspense>
           }
         />
