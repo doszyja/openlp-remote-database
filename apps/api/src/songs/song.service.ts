@@ -27,6 +27,7 @@ import {
 } from '@openlp/shared';
 import * as fs from 'fs';
 import { detectSongEditSource } from './utils/edit-source.util';
+import { buildOpenlpCreateLookup } from './utils/openlp-upsert.util';
 
 interface SqliteCacheEntry {
   filePath: string;
@@ -71,6 +72,60 @@ export class SongService {
     };
   }
 
+  /**
+   * OpenLP desktop may POST without PATCH. Match existing row without relying on openlpMapping.
+   */
+  private async findExistingForOpenlpCreate(createSongDto: CreateSongDto) {
+    const lookup = buildOpenlpCreateLookup(createSongDto);
+
+    if (lookup.byRemoteId) {
+      const byId = await this.songModel
+        .findOne({ _id: lookup.byRemoteId, deletedAt: null })
+        .exec();
+      if (byId) {
+        return byId;
+      }
+    }
+
+    if (lookup.byOpenlpId != null) {
+      const byMapping = await this.songModel
+        .findOne({
+          'openlpMapping.openlpId': lookup.byOpenlpId,
+          deletedAt: null,
+        })
+        .exec();
+      if (byMapping) {
+        return byMapping;
+      }
+    }
+
+    if (!lookup.searchTitleFolded) {
+      return null;
+    }
+
+    if (lookup.number) {
+      const byTitleAndNumber = await this.songModel
+        .findOne({
+          deletedAt: null,
+          searchTitleFolded: lookup.searchTitleFolded,
+          number: lookup.number,
+        })
+        .exec();
+      if (byTitleAndNumber) {
+        return byTitleAndNumber;
+      }
+    }
+
+    const candidates = await this.songModel
+      .find({
+        deletedAt: null,
+        searchTitleFolded: lookup.searchTitleFolded,
+      })
+      .limit(2)
+      .exec();
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   async create(
     createSongDto: CreateSongDto,
     context?: {
@@ -82,6 +137,21 @@ export class SongService {
       userAgent?: string;
     },
   ) {
+    const existingForUpsert =
+      await this.findExistingForOpenlpCreate(createSongDto);
+    if (existingForUpsert) {
+      return this.update(
+        existingForUpsert._id.toString(),
+        createSongDto,
+        context?.userId,
+        context?.username,
+        context?.discordId,
+        context?.ipAddress,
+        context?.userAgent,
+        context?.avatar ?? null,
+      );
+    }
+
     const { verses, tags, verseOrder, openlpMapping, ...songData } =
       createSongDto;
 
@@ -212,6 +282,11 @@ export class SongService {
           userAgent: context.userAgent,
         })
         .catch((err) => console.error('Failed to log song create audit:', err));
+    } else if (context && (!context.userId || !context.username)) {
+      console.warn(
+        'Song create succeeded but audit log skipped: missing userId or username on authenticated create',
+        { userId: context.userId, username: context.username },
+      );
     }
 
     return this.findOne(newId);

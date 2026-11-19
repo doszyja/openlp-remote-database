@@ -99,3 +99,4 @@ SongSchema.index({ language: 1, deletedAt: 1 }); // Compound index for language 
 SongSchema.index({ createdAt: -1 }); // For sorting by creation date
 SongSchema.index({ title: 1, deletedAt: 1 }); // Compound index for title queries
 SongSchema.index({ songbook: 1, deletedAt: 1 }); // Compound index for songbook filtering
+SongSchema.index({ searchTitleFolded: 1, number: 1, deletedAt: 1 }); // OpenLP POST upsert by title
