@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Song, SongDocument } from '../schemas/song.schema';
 import { Tag, TagDocument } from '../schemas/tag.schema';
 import { CreateSongDto } from './dto/create-song.dto';
@@ -135,12 +135,12 @@ export class SongService {
       openlpMapping: mapping ?? null,
     });
 
-    // Increment version when song is created
+    const newId = song._id.toString();
     await this.songsVersionService
-      .incrementVersion()
+      .incrementVersion(newId, 'create')
       .catch((err) => console.error('Failed to increment songs version:', err));
 
-    return this.findOne(song._id.toString());
+    return this.findOne(newId);
   }
 
   async findAll(query: QuerySongDto) {
@@ -521,9 +521,8 @@ export class SongService {
     // Update song
     await this.songModel.updateOne({ _id: id }, updateData);
 
-    // Increment version when song is updated
     await this.songsVersionService
-      .incrementVersion()
+      .incrementVersion(id, 'update')
       .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
@@ -563,9 +562,8 @@ export class SongService {
     // Soft delete
     await this.songModel.updateOne({ _id: id }, { deletedAt: new Date() });
 
-    // Increment version when song is deleted
     await this.songsVersionService
-      .incrementVersion()
+      .incrementVersion(id, 'delete')
       .catch((err) => console.error('Failed to increment songs version:', err));
 
     // Log audit trail if user is authenticated
@@ -651,6 +649,163 @@ export class SongService {
   async findAllForOpenlpCache() {
     const songs = await this.songModel
       .find({ deletedAt: null })
+      .select(
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook copyright comments ccliNumber openlpMapping updatedAt',
+      )
+      .populate('tags', 'name color parentId')
+      .sort({ title: 1 })
+      .lean()
+      .exec();
+
+    return songs.map((song: any) => {
+      const versesArray =
+        Array.isArray(song.verses) && song.verses.length > 0
+          ? song.verses.map((v: any) => ({
+              order: v.order,
+              content: v.content,
+              label: v.label,
+              originalLabel: v.originalLabel,
+            }))
+          : undefined;
+
+      const lyricsXml =
+        formatOpenlpDatabaseLyrics({
+          verses: song.verses,
+          versesArray,
+          verseOrder: song.verseOrder,
+          lyricsXml: song.lyricsXml,
+        }) || null;
+
+      const verseOrder =
+        getEffectiveVerseOrder({
+          id: song._id.toString(),
+          title: song.title || '',
+          number: song.number || null,
+          language: song.language || 'en',
+          verses: '',
+          versesArray,
+          verseOrder: song.verseOrder || null,
+          lyricsXml: song.lyricsXml || null,
+          tags: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+        }) ?? song.verseOrder ?? null;
+
+      return {
+        id: song._id.toString(),
+        title: song.title,
+        number: song.number,
+        language: song.language,
+        tags: song.tags.map((tag: any) => ({
+          id: tag._id.toString(),
+          name: tag.name,
+        })),
+        verses: song.verses ?? null,
+        versesArray,
+        verseOrder,
+        lyricsXml,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        songbook: song.songbook || null,
+        copyright: song.copyright || null,
+        comments: song.comments || null,
+        ccliNumber: song.ccliNumber || null,
+        openlpMapping: song.openlpMapping
+          ? {
+              openlpId: song.openlpMapping.openlpId ?? null,
+              lastSyncedAt: song.openlpMapping.lastSyncedAt
+                ? new Date(song.openlpMapping.lastSyncedAt).toISOString()
+                : null,
+              clientId:
+                (song.openlpMapping.syncMetadata as { clientId?: string })
+                  ?.clientId ?? null,
+            }
+          : null,
+        updatedAt: song.updatedAt
+          ? new Date(song.updatedAt).toISOString()
+          : null,
+      };
+    });
+  }
+
+  /**
+   * OpenLP incremental pull: aggregate changelog since stored catalog version.
+   * Falls back to full catalog when changelog has no rows yet (legacy deployments).
+   */
+  async findChangesForOpenlpSince(sinceVersion: number) {
+    const currentVersion = await this.songsVersionService.getVersion();
+    if (sinceVersion >= currentVersion) {
+      return {
+        version: currentVersion,
+        sinceVersion,
+        deletedSongIds: [] as string[],
+        songs: [],
+        full: false,
+      };
+    }
+
+    const rawChanges = await this.songsVersionService.getChangesSince(
+      sinceVersion,
+    );
+
+    if (
+      rawChanges.length === 0 &&
+      sinceVersion > 0 &&
+      sinceVersion < currentVersion
+    ) {
+      const songs = await this.findAllForOpenlpCache();
+      return {
+        version: currentVersion,
+        sinceVersion,
+        deletedSongIds: [] as string[],
+        songs,
+        full: true,
+      };
+    }
+
+    const latestBySong = new Map<
+      string,
+      { action: 'create' | 'update' | 'delete' }
+    >();
+    for (const row of rawChanges) {
+      latestBySong.set(row.songId, { action: row.action });
+    }
+
+    const deletedSongIds: string[] = [];
+    const upsertIds: string[] = [];
+    for (const [songId, { action }] of latestBySong) {
+      if (action === 'delete') {
+        deletedSongIds.push(songId);
+      } else {
+        upsertIds.push(songId);
+      }
+    }
+
+    const songs =
+      upsertIds.length > 0
+        ? await this.findOpenlpCacheByIds(upsertIds)
+        : [];
+
+    return {
+      version: currentVersion,
+      sinceVersion,
+      deletedSongIds,
+      songs,
+      full: false,
+    };
+  }
+
+  async findOpenlpCacheByIds(ids: string[]) {
+    const objectIds = ids
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+    if (objectIds.length === 0) {
+      return [];
+    }
+
+    const songs = await this.songModel
+      .find({ _id: { $in: objectIds }, deletedAt: null })
       .select(
         'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook copyright comments ccliNumber openlpMapping updatedAt',
       )

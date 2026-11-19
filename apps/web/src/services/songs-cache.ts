@@ -12,6 +12,9 @@ const CACHE_KEY = 'songs_cache';
 const VERSION_KEY = 'songs_cache_version';
 const VERSION_CHECK_TIMESTAMP_KEY = 'songs_cache_version_check_timestamp';
 const VERSION_CHECK_INTERVAL = 2 * 60 * 1000; // 2 minutes in milliseconds
+const IDB_NAME = 'openlp-songs';
+const IDB_STORE = 'catalog';
+const IDB_KEY = 'current';
 
 interface SongsCache {
   version: number;
@@ -23,6 +26,20 @@ interface SongsCache {
  * Songs cache service for storing all songs in browser memory
  * Uses version checking to determine if cache needs to be refreshed
  */
+function openSongsDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 class SongsCacheService {
   private cache: SongsCache | null = null;
   private isRefreshing = false;
@@ -34,30 +51,7 @@ class SongsCacheService {
    * Get cached songs from memory
    */
   getCachedSongs(): SongListCacheItem[] | null {
-    if (!this.cache) {
-      // Try to load from localStorage as fallback
-      const stored = localStorage.getItem(CACHE_KEY);
-      const storedVersion = localStorage.getItem(VERSION_KEY);
-      if (stored && storedVersion) {
-        try {
-          this.cache = {
-            version: parseInt(storedVersion, 10),
-            songs: JSON.parse(stored),
-            timestamp: Date.now(),
-          };
-          console.log(
-            '[Songs Cache] Loaded from localStorage:',
-            this.cache.songs.length,
-            'songs, version',
-            this.cache.version
-          );
-        } catch (e) {
-          console.error('[Songs Cache] Failed to parse cached songs:', e);
-          this.clearCache();
-        }
-      }
-    }
-    return this.cache?.songs || null;
+    return this.cache?.songs ?? null;
   }
 
   /**
@@ -173,7 +167,8 @@ class SongsCacheService {
       try {
         console.log('[Songs Cache] Fetching version from /songs/version endpoint...');
         const { version } = await api.songs.getCollectionVersion();
-        const isValid = version === cachedVersion;
+        const serverVersion = Number(version);
+        const isValid = serverVersion === cachedVersion;
         console.log(
           `[Songs Cache] Version check: cached=${cachedVersion}, server=${version}, valid=${isValid}`
         );
@@ -184,27 +179,14 @@ class SongsCacheService {
         return isValid;
       } catch (error) {
         console.error('[Songs Cache] Failed to check cache version:', error);
-        // If we can't check version, assume cache is invalid
-        return false;
+        // Keep the catalog we already have instead of downloading /songs/all
+        return true;
       } finally {
         this.pendingVersionCheck = null;
       }
     })();
 
     return this.pendingVersionCheck;
-  }
-
-  private async validateCacheAndRefreshIfNeeded(skipVersionCheck = false): Promise<void> {
-    if (skipVersionCheck) {
-      // Version was already checked, just return
-      return;
-    }
-
-    const isValid = await this.isCacheValid();
-    if (!isValid) {
-      console.log('[Songs Cache] Version mismatch detected, refreshing cache...');
-      await this.refreshCache();
-    }
   }
 
   /**
@@ -225,24 +207,18 @@ class SongsCacheService {
         const { version, songs } = await api.songs.getAllForCache();
         const duration = performance.now() - startTime;
 
-        this.cache = {
+        const nextCache: SongsCache = {
           version,
           songs,
           timestamp: Date.now(),
         };
+        this.cache = nextCache;
 
         console.log(
           `[Songs Cache] Cache refreshed: ${songs.length} songs, version ${version}, took ${duration.toFixed(2)}ms`
         );
 
-        // Also store in localStorage as backup
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(songs));
-          localStorage.setItem(VERSION_KEY, version.toString());
-          console.log('[Songs Cache] Cache saved to localStorage');
-        } catch (e) {
-          console.warn('[Songs Cache] Failed to store songs in localStorage:', e);
-        }
+        await this.persistCache(nextCache);
       } catch (error) {
         console.error('[Songs Cache] Failed to refresh songs cache:', error);
         throw error;
@@ -256,56 +232,139 @@ class SongsCacheService {
   }
 
   /**
-   * Ensure cache is valid, refresh if needed
-   * Returns immediately if cache exists in memory, no requests made
-   * @param skipVersionCheck - If true, skip version validation (use when version was already checked)
+   * Load songs once.
+   * No saved catalog: GET /songs/all (response already includes version).
+   * Saved catalog: GET /songs/version, and GET /songs/all only when it changed.
    */
   async ensureValidCache(skipVersionCheck = false): Promise<SongListCacheItem[]> {
-    // If we have cache in memory, return it immediately without any requests
-    if (this.cache && this.cache.songs.length > 0) {
-      console.log(
-        '[Songs Cache] Using cached songs from memory:',
-        this.cache.songs.length,
-        'songs, version',
-        this.cache.version
-      );
-      await this.validateCacheAndRefreshIfNeeded(skipVersionCheck);
-      return this.cache.songs;
+    if (!this.cache?.songs.length) {
+      await this.hydrateFromStorage();
     }
 
-    // Try to load from localStorage first
-    const stored = localStorage.getItem(CACHE_KEY);
-    const storedVersion = localStorage.getItem(VERSION_KEY);
-    if (stored && storedVersion) {
-      try {
-        const parsedSongs = JSON.parse(stored);
-        const version = parseInt(storedVersion, 10);
-        if (parsedSongs && parsedSongs.length > 0) {
-          // Restore cache from localStorage
-          this.cache = {
-            version,
-            songs: parsedSongs,
-            timestamp: Date.now(),
-          };
-          console.log(
-            '[Songs Cache] Restored from localStorage:',
-            parsedSongs.length,
-            'songs, version',
-            version
-          );
-          await this.validateCacheAndRefreshIfNeeded(skipVersionCheck);
-          return this.cache.songs;
-        }
-      } catch (e) {
-        console.error('[Songs Cache] Failed to parse cached songs from localStorage:', e);
-        this.clearCache();
+    if (!this.cache?.songs.length) {
+      console.log('[Songs Cache] No cache found, fetching /songs/all...');
+      await this.refreshCache();
+      return this.cache?.songs ?? [];
+    }
+
+    console.log(
+      '[Songs Cache] Using saved catalog:',
+      this.cache.songs.length,
+      'songs, version',
+      this.cache.version
+    );
+
+    if (!skipVersionCheck) {
+      const isValid = await this.isCacheValid();
+      if (!isValid) {
+        console.log('[Songs Cache] Version mismatch, fetching /songs/all...');
+        await this.refreshCache();
       }
     }
 
-    // No cache at all, need to fetch (this will get version from /songs/all endpoint)
-    console.log('[Songs Cache] No cache found, fetching version and songs from server...');
-    await this.refreshCache();
-    return this.cache!.songs;
+    return this.cache?.songs ?? [];
+  }
+
+  private async hydrateFromStorage(): Promise<void> {
+    const fromIdb = await this.readIndexedDb();
+    if (fromIdb?.songs.length) {
+      this.cache = fromIdb;
+      console.log(
+        '[Songs Cache] Restored from IndexedDB:',
+        fromIdb.songs.length,
+        'songs, version',
+        fromIdb.version
+      );
+      return;
+    }
+
+    const stored = localStorage.getItem(CACHE_KEY);
+    const storedVersion = localStorage.getItem(VERSION_KEY);
+    if (!stored || storedVersion === null) {
+      return;
+    }
+
+    try {
+      const parsedSongs = JSON.parse(stored) as SongListCacheItem[];
+      const version = parseInt(storedVersion, 10);
+      if (!parsedSongs?.length || Number.isNaN(version)) {
+        return;
+      }
+      this.cache = {
+        version,
+        songs: parsedSongs,
+        timestamp: Date.now(),
+      };
+      console.log(
+        '[Songs Cache] Restored from localStorage:',
+        parsedSongs.length,
+        'songs, version',
+        version
+      );
+      await this.persistCache(this.cache);
+    } catch (e) {
+      console.error('[Songs Cache] Failed to parse cached songs from localStorage:', e);
+      localStorage.removeItem(CACHE_KEY);
+    }
+  }
+
+  private async persistCache(cache: SongsCache): Promise<void> {
+    try {
+      await this.writeIndexedDb(cache);
+      localStorage.setItem(VERSION_KEY, cache.version.toString());
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cache.songs));
+      } catch (e) {
+        // Full catalog does not fit in localStorage. Drop the stale blob so the
+        // next load uses IndexedDB instead of treating an old list as current.
+        localStorage.removeItem(CACHE_KEY);
+        console.warn('[Songs Cache] Songs exceed localStorage quota, kept in IndexedDB:', e);
+      }
+    } catch (e) {
+      console.warn('[Songs Cache] Failed to persist songs cache:', e);
+    }
+  }
+
+  private async readIndexedDb(): Promise<SongsCache | null> {
+    try {
+      const db = await openSongsDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const request = tx.objectStore(IDB_STORE).get(IDB_KEY);
+        request.onsuccess = () => {
+          const value = request.result as SongsCache | undefined;
+          resolve(value?.songs?.length ? value : null);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.warn('[Songs Cache] Failed to read IndexedDB:', e);
+      return null;
+    }
+  }
+
+  private async writeIndexedDb(cache: SongsCache): Promise<void> {
+    const db = await openSongsDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(cache, IDB_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  private async deleteIndexedDb(): Promise<void> {
+    try {
+      const db = await openSongsDb();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(IDB_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.warn('[Songs Cache] Failed to clear IndexedDB:', e);
+    }
   }
 
   /**
@@ -418,6 +477,7 @@ class SongsCacheService {
     this.cache = null;
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(VERSION_KEY);
+    void this.deleteIndexedDb();
   }
 
   /**

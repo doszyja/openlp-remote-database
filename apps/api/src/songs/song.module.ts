@@ -11,6 +11,10 @@ import {
   SongsVersion,
   SongsVersionSchema,
 } from '../schemas/songs-version.schema';
+import {
+  SongsCatalogChange,
+  SongsCatalogChangeSchema,
+} from '../schemas/songs-catalog-change.schema';
 import { SongVersion, SongVersionSchema } from '../schemas/song-version.schema';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 
@@ -21,6 +25,7 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
       { name: Tag.name, schema: TagSchema },
       { name: Songbook.name, schema: SongbookSchema },
       { name: SongsVersion.name, schema: SongsVersionSchema },
+      { name: SongsCatalogChange.name, schema: SongsCatalogChangeSchema },
       { name: SongVersion.name, schema: SongVersionSchema },
     ]),
     AuditLogModule,

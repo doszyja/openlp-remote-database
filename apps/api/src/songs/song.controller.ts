@@ -106,6 +106,29 @@ export class SongController {
     };
   }
 
+  @Get('changes')
+  @UseGuards(EditPermissionGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'Incremental OpenLP sync: songs changed on the server since a stored catalog version',
+  })
+  @ApiQuery({
+    name: 'sinceVersion',
+    required: true,
+    description: 'Last successfully synced catalog version from OpenLP',
+  })
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async getChangesForOpenlp(@Query('sinceVersion') sinceVersion: string) {
+    const since = parseInt(sinceVersion, 10);
+    if (isNaN(since) || since < 0) {
+      throw new BadRequestException(
+        `Invalid sinceVersion: ${sinceVersion}. Must be a non-negative integer.`,
+      );
+    }
+    return this.songService.findChangesForOpenlpSince(since);
+  }
+
   @Get(':id')
   @Public() // Public: Anonymous users can view individual songs
   findOne(@Param('id') id: string) {

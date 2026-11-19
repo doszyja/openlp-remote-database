@@ -42,6 +42,19 @@ function getVerseOrderLabelKey(label?: string | null): string {
   return normalized.includes(' ') ? '' : normalized;
 }
 
+/** OpenLP KWCH plugin reads Mongo id from comments (`songstats:remote_id=…`). */
+export function formatOpenlpSqliteComments(
+  mongoId: string,
+  existing?: string | null,
+): string | null {
+  const base = (existing || '').trim();
+  const line = `songstats:remote_id=${mongoId}`;
+  if (/^songstats:remote_id=/m.test(base)) {
+    return base || null;
+  }
+  return base ? `${line}\n${base}` : line;
+}
+
 export function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
   const normalized = normalizeVerseOrderString(song.verseOrder);
   if (normalized) return normalized;
@@ -457,8 +470,9 @@ export async function createOpenLPSqliteDatabase(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       song_id INTEGER,
       file_path VARCHAR NOT NULL,
-      type VARCHAR(64) NOT NULL,
-      weight INTEGER,
+      file_hash VARCHAR(128) NOT NULL DEFAULT '',
+      type VARCHAR(64) NOT NULL DEFAULT 'audio',
+      weight INTEGER DEFAULT 0,
       FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
     )
   `);
@@ -538,7 +552,7 @@ export async function createOpenLPSqliteDatabase(
       // Map MongoDB fields to OpenLP fields
       const alternateTitle = song.number || null;
       const copyright = song.copyright || null;
-      const comments = song.comments || null;
+      const comments = formatOpenlpSqliteComments(song.id, song.comments);
       const ccliNumber = song.ccliNumber || song.number || null;
       const searchTitle = song.searchTitle || song.title.toLowerCase().trim();
       const searchLyrics =
@@ -652,6 +666,11 @@ export async function createOpenLPSqliteDatabase(
       `⚠️  Skipping author relationships: author exists=${!!defaultAuthor}, songs count=${insertedSongIds.length}`,
     );
   }
+
+  db.prepare('INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)').run(
+    'version',
+    '8',
+  );
 
   db.close();
 

@@ -32,6 +32,9 @@ const ADMIN_ROLE_ID = '1161734352447746110';
 const homeTileBorderColor = (theme: Theme) =>
   theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.28)';
 
+const homeDashboardIconColor = (theme: Theme) =>
+  theme.palette.mode === 'dark' ? '#FFFFFF' : '#000000';
+
 const homeTileSx = {
   p: { xs: 3, sm: 3.5 },
   minHeight: { xs: 96, sm: 108 },
@@ -50,15 +53,17 @@ const homeTileSx = {
 };
 
 const homeTileIconSx = {
-  width: { xs: 52, sm: 56 },
-  height: { xs: 52, sm: 56 },
-  borderRadius: 1.5,
-  bgcolor: 'primary.main',
-  color: 'primary.contrastText',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   flexShrink: 0,
+  width: { xs: 40, sm: 44 },
+  minWidth: { xs: 40, sm: 44 },
+};
+
+const homeTileIconGlyphSx = {
+  fontSize: { xs: 36, sm: 40 },
+  color: (theme: Theme) => homeDashboardIconColor(theme),
 };
 
 export default function HomePage() {
@@ -222,21 +227,34 @@ export default function HomePage() {
           </Typography>
 
           {isAuthenticated && user?.username && (
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5 }}>
+            <Stack
+              spacing={1.5}
+              alignItems="center"
+              sx={{ mb: 3.5, width: '100%', textAlign: 'center' }}
+            >
               <Avatar
                 src={discordAvatarUrl(user.discordId, user.avatar)}
                 sx={{
-                  width: 32,
-                  height: 32,
+                  width: { xs: 80, sm: 96 },
+                  height: { xs: 80, sm: 96 },
                   bgcolor: 'primary.main',
-                  fontSize: '0.95rem',
+                  fontSize: { xs: '2rem', sm: '2.35rem' },
                 }}
               >
                 {user.username?.[0]?.toUpperCase() ?? 'U'}
               </Avatar>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="h5"
+                component="p"
+                sx={{
+                  fontSize: { xs: '1.35rem', sm: '1.6rem' },
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                  lineHeight: 1.35,
+                }}
+              >
                 Witaj,{' '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
                   {user.username}
                 </Box>
               </Typography>
@@ -246,7 +264,7 @@ export default function HomePage() {
           <Stack spacing={{ xs: 2.25, sm: 2.5 }}>
             <Paper elevation={0} onClick={() => navigate('/songs')} sx={homeTileSx}>
               <Box sx={homeTileIconSx}>
-                <LibraryMusicIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
+                <LibraryMusicIcon sx={homeTileIconGlyphSx} />
               </Box>
               <Box flex={1} minWidth={0}>
                 <Typography
@@ -275,7 +293,7 @@ export default function HomePage() {
               <ChevronRightIcon
                 sx={{
                   fontSize: { xs: 32, sm: 36 },
-                  color: (theme: Theme) => homeTileBorderColor(theme),
+                  color: (theme: Theme) => homeDashboardIconColor(theme),
                 }}
               />
             </Paper>
@@ -283,7 +301,7 @@ export default function HomePage() {
             {hasEditPermission && (
               <Paper elevation={0} onClick={() => navigate('/songs/new')} sx={homeTileSx}>
                 <Box sx={homeTileIconSx}>
-                  <AddIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
+                  <AddIcon sx={homeTileIconGlyphSx} />
                 </Box>
                 <Box flex={1} minWidth={0}>
                   <Typography
@@ -312,7 +330,7 @@ export default function HomePage() {
                 <ChevronRightIcon
                   sx={{
                     fontSize: { xs: 32, sm: 36 },
-                    color: (theme: Theme) => homeTileBorderColor(theme),
+                    color: (theme: Theme) => homeDashboardIconColor(theme),
                   }}
                 />
               </Paper>
@@ -320,7 +338,7 @@ export default function HomePage() {
 
             <Paper elevation={0} onClick={() => navigate('/help')} sx={homeTileSx}>
               <Box sx={homeTileIconSx}>
-                <HelpIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
+                <HelpIcon sx={homeTileIconGlyphSx} />
               </Box>
               <Box flex={1} minWidth={0}>
                 <Typography
@@ -349,7 +367,7 @@ export default function HomePage() {
               <ChevronRightIcon
                 sx={{
                   fontSize: { xs: 32, sm: 36 },
-                  color: (theme: Theme) => homeTileBorderColor(theme),
+                  color: (theme: Theme) => homeDashboardIconColor(theme),
                 }}
               />
             </Paper>
@@ -367,8 +385,8 @@ export default function HomePage() {
               }}
             >
               <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
-                <Box sx={{ ...homeTileIconSx, bgcolor: '#b45309' }}>
-                  <DeveloperModeIcon sx={{ fontSize: 30 }} />
+                <Box sx={homeTileIconSx}>
+                  <DeveloperModeIcon sx={homeTileIconGlyphSx} />
                 </Box>
                 <Box>
                   <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.2rem' }}>
