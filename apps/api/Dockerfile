@@ -76,6 +76,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD pnpm exec node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
+COPY apps/api/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Start the application using pnpm exec for proper module resolution
-CMD ["pnpm", "exec", "node", "apps/api/dist/main.js"]
+CMD ["/docker-entrypoint.sh"]
 

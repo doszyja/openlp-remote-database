@@ -54,6 +54,8 @@ COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 # Copy nginx configuration (HTTPS as .conf so nginx includes it; /api proxy must work on 443 for OAuth)
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/web/nginx-https.conf /etc/nginx/conf.d/nginx-https.conf
+COPY apps/web/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Expose ports
 EXPOSE 80 443
@@ -62,6 +64,6 @@ EXPOSE 80 443
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start nginx (with daily reload loop for renewed SSL certs)
+CMD ["/docker-entrypoint.sh"]
 

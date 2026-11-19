@@ -83,6 +83,10 @@ export class AuthController {
   async discordCallback(@Req() req: Request, @Res() res: Response) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+    if (res.headersSent) {
+      return;
+    }
+
     try {
       // Check if user exists in request (set by Passport strategy)
       if (!req.user) {
@@ -127,9 +131,11 @@ export class AuthController {
       }
 
       console.error('Discord OAuth callback error:', error);
-      res.redirect(
-        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
-      );
+      if (!res.headersSent) {
+        res.redirect(
+          `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+        );
+      }
     }
   }
 
