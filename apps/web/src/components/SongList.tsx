@@ -38,7 +38,9 @@ export interface SongListProps {
   sortOrder?: 'asc' | 'desc';
   onSortOrderChange?: (order: 'asc' | 'desc') => void;
   showSortButton?: boolean; // Show sort button in the list (for mobile)
-  filterContent?: React.ReactNode; // Content to render below search box (e.g., filter chips)
+  filterContent?: React.ReactNode; // Songbook filter etc.
+  /** `inline-end`: search row + filter button on the right (mobile). */
+  filterPlacement?: 'below' | 'inline-end';
   hasActiveFilter?: boolean; // Show clear button when filter is active
   onAddSong?: () => void; // Callback for "Add Song" action
   showAddSong?: boolean; // Show "Add Song" element at the bottom
@@ -199,6 +201,7 @@ export default function SongList({
   onSortOrderChange: _onSortOrderChange, // Used when sort button is in parent component
   showSortButton = false, // Show sort button in the list (for mobile)
   filterContent,
+  filterPlacement = 'below',
   hasActiveFilter = false,
   onAddSong,
   showAddSong = false,
@@ -373,59 +376,92 @@ export default function SongList({
       }}
     >
       {showSearch && (
-        <Box sx={{ mb: { xs: 1, sm: 2 }, flexShrink: 0 }} data-song-search>
-          <TextField
-            inputRef={searchInputRef}
-            fullWidth
-            placeholder="Szukaj pieśni..."
-            value={searchValue}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            onFocus={() => setSelectedIndex(-1)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MusicNoteIcon fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment:
-                searchValue || hasActiveFilter ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="Wyczyść wyszukiwanie"
-                      onClick={() => {
-                        if (onSearchChange) {
-                          onSearchChange('');
-                        }
-                        searchInputRef.current?.focus();
-                      }}
-                      edge="end"
-                      size="small"
-                      sx={{
-                        p: 0.5,
-                        color: 'text.secondary',
-                        '&:hover': {
-                          color: 'text.primary',
-                        },
-                      }}
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
+        <Box sx={{ mb: { xs: 1, sm: 2 }, flexShrink: 0, px: filterPlacement === 'inline-end' ? 1 : 0 }} data-song-search>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ width: '100%' }}
+          >
+            <TextField
+              inputRef={searchInputRef}
+              fullWidth
+              placeholder="Szukaj pieśni..."
+              value={searchValue}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={() => setSelectedIndex(-1)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <MusicNoteIcon fontSize="small" />
                   </InputAdornment>
-                ) : null,
-            }}
-            sx={{
-              '& .MuiInputBase-input': {
-                fontSize: '16px', // Minimum 16px to prevent iOS zoom
-                py: { xs: 0.75, sm: 1 },
-              },
-            }}
-          />
-          {/* Filter content (e.g., songbook filter chips) */}
-          {filterContent && (
+                ),
+                endAdornment:
+                  searchValue || (hasActiveFilter && filterPlacement !== 'inline-end') ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="Wyczyść wyszukiwanie"
+                        onClick={() => {
+                          if (onSearchChange) {
+                            onSearchChange('');
+                          }
+                          searchInputRef.current?.focus();
+                        }}
+                        edge="end"
+                        size="small"
+                        sx={{
+                          p: 0.5,
+                          color: 'text.secondary',
+                          '&:hover': {
+                            color: 'text.primary',
+                          },
+                        }}
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : filterPlacement === 'inline-end' && showSortButton ? (
+                    <InputAdornment position="end">
+                      <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>
+                        <IconButton
+                          onClick={() => {
+                            const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+                            if (_onSortOrderChange) {
+                              _onSortOrderChange(newOrder);
+                            } else {
+                              _setInternalSortOrder(newOrder);
+                            }
+                            setSelectedIndex(-1);
+                          }}
+                          size="small"
+                          sx={{
+                            opacity: 0.7,
+                            '&:hover': { opacity: 1 },
+                          }}
+                          aria-label={sortOrder === 'asc' ? 'Sortuj rosnąco' : 'Sortuj malejąco'}
+                        >
+                          {sortOrder === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ) : null,
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                '& .MuiInputBase-input': {
+                  fontSize: '16px', // Minimum 16px to prevent iOS zoom
+                  py: { xs: 0.75, sm: 1 },
+                },
+              }}
+            />
+            {filterContent && filterPlacement === 'inline-end' ? filterContent : null}
+          </Stack>
+          {filterContent && filterPlacement === 'below' ? (
             <Box sx={{ mt: 1.5, width: '100%', overflow: 'visible' }}>{filterContent}</Box>
-          )}
+          ) : null}
           {/* Results count */}
           <Typography
             variant="caption"
@@ -443,7 +479,7 @@ export default function SongList({
               ? ''
               : `${sortedSongs.length} ${sortedSongs.length === 1 ? 'pieśń' : 'pieśni'}`}
           </Typography>
-          {showSortButton && (
+          {showSortButton && filterPlacement !== 'inline-end' && (
             <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
               <Tooltip title={sortOrder === 'asc' ? 'Sortuj A→Z' : 'Sortuj Z→A'}>
                 <IconButton

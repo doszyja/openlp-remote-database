@@ -338,7 +338,7 @@ export default function SongListPage() {
         <>
           {isAuthenticated && (
             <Box
-              display="flex"
+              display={{ xs: 'none', sm: 'flex' }}
               justifyContent="space-between"
               alignItems="center"
               mb={{ xs: 1, sm: 2 }}
@@ -460,18 +460,13 @@ export default function SongListPage() {
       {showListContent && (
         <>
           <Box
-            display="flex"
+            display={{ xs: 'none', sm: 'flex' }}
             justifyContent="space-between"
             alignItems="center"
-            mb={{ xs: isAuthenticated || hasEditPermission ? 1 : 0, sm: 2 }}
+            mb={2}
             flexWrap="wrap"
-            gap={{ xs: 0.5, sm: 1 }}
+            gap={1}
             flexShrink={0}
-            sx={{
-              '@media (max-width: 600px)': {
-                mb: isAuthenticated || hasEditPermission ? 1 : 0,
-              },
-            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {isAuthenticated && (
@@ -638,9 +633,12 @@ export default function SongListPage() {
               }
               sortOrder={sortOrder}
               onSortOrderChange={setSortOrder}
+              showSortButton={isMobile}
+              filterPlacement={isMobile ? 'inline-end' : 'below'}
               hasActiveFilter={songbookFilters.length > 0}
               filterContent={
                 <SongbookFilterSelect
+                  variant={isMobile ? 'button' : 'select'}
                   value={songbookFilters}
                   onChange={filters => {
                     setSongbookFilters(filters);
