@@ -186,7 +186,15 @@ export function UserMenu({
           },
         }}
       >
-        <MenuItem disabled>
+        <MenuItem
+          disableRipple
+          sx={{
+            cursor: 'default',
+            '&:hover': {
+              backgroundColor: 'transparent',
+            },
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, userSelect: 'none' }}>
             <Avatar
               src={discordAvatarUrl(user.discordId, user.avatar)}
@@ -204,7 +212,7 @@ export function UserMenu({
             </Avatar>
             <Typography
               variant="caption"
-              sx={{ fontSize: '0.75rem', color: 'text.secondary', userSelect: 'none' }}
+              sx={{ fontSize: '0.75rem', color: 'text.primary', userSelect: 'none' }}
             >
               Zalogowano jako{' '}
               <strong style={{ fontWeight: 600, userSelect: 'none' }}>{user.username}</strong>
