@@ -1,19 +1,19 @@
-import { useState, type MouseEvent } from 'react';
 import {
+  Badge,
   Box,
-  Button,
   Checkbox,
   Chip,
+  Divider,
   FormControl,
   ListItemText,
-  Menu,
   MenuItem,
   OutlinedInput,
   Select,
   SelectChangeEvent,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import { ArrowDropDown as ArrowDropDownIcon } from '@mui/icons-material';
+import { MenuBook as MenuBookIcon } from '@mui/icons-material';
 import type { SongbookSlug } from '@openlp/shared';
 import { SONGBOOK_OPTIONS } from '../constants/songbookOptions';
 
@@ -24,41 +24,11 @@ type SongbookFilterSelectProps = {
   variant?: 'select' | 'button';
 };
 
-function SongbookOptionMenuItems({
-  value,
-  onToggle,
-}: {
-  value: SongbookSlug[];
-  onToggle: (slug: SongbookSlug) => void;
-}) {
-  return (
-    <>
-      {SONGBOOK_OPTIONS.map(option => (
-        <MenuItem
-          key={option.slug}
-          dense
-          onClick={() => onToggle(option.slug)}
-          sx={{ py: 0.75 }}
-        >
-          <Checkbox checked={value.includes(option.slug)} size="small" sx={{ p: 0.5, mr: 1 }} />
-          <ListItemText
-            primary={option.label}
-            primaryTypographyProps={{ fontSize: '0.95rem' }}
-          />
-        </MenuItem>
-      ))}
-    </>
-  );
-}
-
 export default function SongbookFilterSelect({
   value,
   onChange,
   variant = 'select',
 }: SongbookFilterSelectProps) {
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const menuOpen = Boolean(menuAnchor);
-
   const handleChange = (event: SelectChangeEvent<SongbookSlug[]>) => {
     const next = event.target.value;
     onChange(typeof next === 'string' ? [] : next);
@@ -68,66 +38,107 @@ export default function SongbookFilterSelect({
     onChange(value.filter(s => s !== slug));
   };
 
-  const toggleSlug = (slug: SongbookSlug) => {
-    if (value.includes(slug)) {
-      onChange(value.filter(s => s !== slug));
-    } else {
-      onChange([...value, slug]);
-    }
-  };
+  const filterTooltip =
+    value.length === 0
+      ? 'Śpiewniki — wybierz z listy'
+      : value.length === 1
+        ? '1 śpiewnik wybrany'
+        : `${value.length} śpiewniki wybrane`;
 
-  const buttonLabel =
-    value.length === 0 ? 'Śpiewniki' : value.length === 1 ? 'Śpiewnik' : `Śpiewniki (${value.length})`;
+  const selectMenuItems = (
+    <>
+      {SONGBOOK_OPTIONS.map(option => (
+        <MenuItem key={option.slug} value={option.slug} dense>
+          <Checkbox checked={value.includes(option.slug)} size="small" sx={{ p: 0.5, mr: 1 }} />
+          <ListItemText
+            primary={option.label}
+            primaryTypographyProps={{ fontSize: '0.95rem' }}
+          />
+        </MenuItem>
+      ))}
+      {value.length > 0 ? (
+        <>
+          <Divider sx={{ my: 0.5 }} />
+          <MenuItem
+            dense
+            onMouseDown={e => e.preventDefault()}
+            onClick={e => {
+              e.stopPropagation();
+              onChange([]);
+            }}
+            sx={{ justifyContent: 'center', color: 'text.secondary', fontSize: '0.85rem' }}
+          >
+            Wyczyść filtr
+          </MenuItem>
+        </>
+      ) : null}
+    </>
+  );
+
+  const menuProps = {
+    PaperProps: { sx: { maxHeight: 320, minWidth: 220 } },
+    anchorOrigin: { vertical: 'bottom' as const, horizontal: 'right' as const },
+    transformOrigin: { vertical: 'top' as const, horizontal: 'right' as const },
+  };
 
   if (variant === 'button') {
     return (
-      <>
-        <Button
-          id="songbook-filter-button"
-          aria-controls={menuOpen ? 'songbook-filter-menu' : undefined}
-          aria-haspopup="true"
-          aria-expanded={menuOpen ? 'true' : undefined}
-          variant={value.length > 0 ? 'contained' : 'outlined'}
-          size="small"
-          onClick={(e: MouseEvent<HTMLButtonElement>) => setMenuAnchor(e.currentTarget)}
-          endIcon={<ArrowDropDownIcon />}
-          sx={{
-            flexShrink: 0,
-            minWidth: 0,
-            px: 1.25,
-            py: 0.75,
-            fontSize: '0.8125rem',
-            whiteSpace: 'nowrap',
-            maxWidth: { xs: 112, sm: 140 },
-            '& .MuiButton-endIcon': { ml: 0.25 },
-          }}
-        >
-          {buttonLabel}
-        </Button>
-        <Menu
-          id="songbook-filter-menu"
-          anchorEl={menuAnchor}
-          open={menuOpen}
-          onClose={() => setMenuAnchor(null)}
-          MenuListProps={{ 'aria-labelledby': 'songbook-filter-button', dense: true }}
-          PaperProps={{ sx: { maxHeight: 320, minWidth: 220 } }}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <SongbookOptionMenuItems value={value} onToggle={toggleSlug} />
-          {value.length > 0 ? (
-            <MenuItem
-              dense
-              onClick={() => {
-                onChange([]);
-              }}
-              sx={{ justifyContent: 'center', color: 'text.secondary', fontSize: '0.85rem' }}
-            >
-              Wyczyść filtr
-            </MenuItem>
-          ) : null}
-        </Menu>
-      </>
+      <Tooltip title={filterTooltip}>
+        <FormControl size="small" sx={{ flexShrink: 0, width: 'auto' }}>
+          <Select
+            multiple
+            displayEmpty
+            value={value}
+            onChange={handleChange}
+            input={<OutlinedInput notched={false} />}
+            renderValue={() => (
+              <Badge
+                badgeContent={value.length || undefined}
+                color="primary"
+                overlap="circular"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.65rem',
+                    height: 16,
+                    minWidth: 16,
+                    px: 0.5,
+                  },
+                }}
+              >
+                <MenuBookIcon sx={{ fontSize: 22, display: 'block' }} />
+              </Badge>
+            )}
+            MenuProps={menuProps}
+            aria-label={filterTooltip}
+            sx={{
+              '& .MuiSelect-select': {
+                py: '7px',
+                pl: 1,
+                pr: '28px !important',
+                display: 'flex',
+                alignItems: 'center',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: theme =>
+                  value.length > 0
+                    ? theme.palette.primary.main
+                    : theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.23)'
+                      : 'rgba(0, 0, 0, 0.23)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: theme =>
+                  value.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderWidth: 1,
+              },
+            }}
+          >
+            {selectMenuItems}
+          </Select>
+        </FormControl>
+      </Tooltip>
     );
   }
 
@@ -154,11 +165,7 @@ export default function SongbookFilterSelect({
               </Typography>
             );
           }}
-          MenuProps={{
-            PaperProps: {
-              sx: { maxHeight: 320 },
-            },
-          }}
+          MenuProps={menuProps}
           sx={{
             '& .MuiSelect-select': {
               fontSize: '16px',
@@ -166,15 +173,7 @@ export default function SongbookFilterSelect({
             },
           }}
         >
-          {SONGBOOK_OPTIONS.map(option => (
-            <MenuItem key={option.slug} value={option.slug} dense>
-              <Checkbox checked={value.includes(option.slug)} size="small" sx={{ p: 0.5, mr: 1 }} />
-              <ListItemText
-                primary={option.label}
-                primaryTypographyProps={{ fontSize: '0.95rem' }}
-              />
-            </MenuItem>
-          ))}
+          {selectMenuItems}
         </Select>
       </FormControl>
       {value.length > 0 && (

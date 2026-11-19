@@ -511,24 +511,22 @@ export default function SongList({
       )}
 
       {isLoading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, flex: 1, minHeight: 0 }}>
           <CircularProgress />
         </Box>
       )}
 
-      {!isLoading && sortedSongs.length === 0 && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          {emptyMessage}
-        </Alert>
-      )}
-
-      {!isLoading && sortedSongs.length > 0 && (
+      {!isLoading && (
         <Box
           ref={listContainerRef}
           data-list-container
           sx={{
             flex: 1,
             minHeight: 0,
+            height: '100%',
+            alignSelf: 'stretch',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
             border: 1,
             borderColor: 'divider',
@@ -558,17 +556,32 @@ export default function SongList({
             },
           }}
         >
-          <FixedSizeList
-            ref={listRef}
-            height={Math.min(listHeight, sortedSongs.length * itemSize)}
-            itemCount={sortedSongs.length}
-            itemSize={itemSize}
-            width="100%"
-            itemData={listData}
-            outerElementType={ListOuterElement}
-          >
-            {VirtualizedRow}
-          </FixedSizeList>
+          {sortedSongs.length === 0 ? (
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 2,
+              }}
+            >
+              <Alert severity="info" sx={{ width: '100%' }}>
+                {emptyMessage}
+              </Alert>
+            </Box>
+          ) : (
+            <FixedSizeList
+              ref={listRef}
+              height={Math.max(listHeight, itemSize)}
+              itemCount={sortedSongs.length}
+              itemSize={itemSize}
+              width="100%"
+              itemData={listData}
+              outerElementType={ListOuterElement}
+            />
+          )}
         </Box>
       )}
 
