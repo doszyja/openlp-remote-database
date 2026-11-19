@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
@@ -28,6 +29,7 @@ import * as fs from 'fs';
 import { SongService } from './song.service';
 import { SongVersionService } from './song-version.service';
 import { CreateSongDto } from './dto/create-song.dto';
+import { OpenLpSaveSongDto } from './dto/openlp-save-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -140,6 +142,30 @@ export class SongController {
       );
     }
     return this.songService.findChangesForOpenlpSince(since);
+  }
+
+  @Put('openlp/save')
+  @UseGuards(EditPermissionGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'OpenLP desktop save (upsert): optional Mongo id, else match by songstats:remote_id or title/number',
+  })
+  saveFromOpenlp(
+    @Body() dto: OpenLpSaveSongDto,
+    @CurrentUser() user: UserResponseDto,
+    @Req() req: Request,
+  ) {
+    const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+    const userAgent = req.get('user-agent') || undefined;
+    return this.songService.saveFromOpenlp(dto, {
+      userId: user?.id,
+      username: user?.username,
+      discordId: user?.discordId,
+      avatar: user?.avatar,
+      ipAddress,
+      userAgent,
+    });
   }
 
   @Get(':id')

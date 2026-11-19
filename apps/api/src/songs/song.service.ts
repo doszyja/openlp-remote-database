@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Song, SongDocument } from '../schemas/song.schema';
 import { Tag, TagDocument } from '../schemas/tag.schema';
 import { CreateSongDto } from './dto/create-song.dto';
+import { OpenLpSaveSongDto } from './dto/openlp-save-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { QuerySongDto } from './dto/query-song.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
@@ -124,6 +125,41 @@ export class SongService {
       .limit(2)
       .exec();
     return candidates.length === 1 ? candidates[0] : null;
+  }
+
+  async saveFromOpenlp(
+    dto: OpenLpSaveSongDto,
+    context?: {
+      userId?: string;
+      username?: string;
+      discordId?: string;
+      avatar?: string | null;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ) {
+    const mongoId = (dto.id || '').trim();
+    if (mongoId && Types.ObjectId.isValid(mongoId)) {
+      const existing = await this.songModel
+        .findOne({ _id: mongoId, deletedAt: null })
+        .exec();
+      if (existing) {
+        const { id: _ignored, ...updateBody } = dto;
+        return this.update(
+          mongoId,
+          updateBody,
+          context?.userId,
+          context?.username,
+          context?.discordId,
+          context?.ipAddress,
+          context?.userAgent,
+          context?.avatar ?? null,
+        );
+      }
+    }
+
+    const { id: _ignored, ...createBody } = dto;
+    return this.create(createBody, context);
   }
 
   async create(

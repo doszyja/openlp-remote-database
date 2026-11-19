@@ -28,7 +28,8 @@ Pull (OpenLP desktop plugin, JWT + Discord edit/admin role):
 
 Push (JWT + Discord edit role):
 
-- `POST /api/songs`, `PATCH /api/songs/:id` with `openlpMapping.openlpId`, `tags`, optional `songbook`
+- **`PUT /api/songs/openlp/save`** — preferred desktop upsert (optional Mongo `id`, else `songstats:remote_id` in `comments` or title/number)
+- `POST /api/songs`, `PATCH /api/songs/:id` — legacy/alternate
 
 Each push/create:
 
