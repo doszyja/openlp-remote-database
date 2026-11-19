@@ -131,6 +131,7 @@ export class SongController {
       user?.discordId,
       ipAddress,
       userAgent,
+      user?.avatar,
     );
   }
 
@@ -152,6 +153,7 @@ export class SongController {
       user?.discordId,
       ipAddress,
       userAgent,
+      user?.avatar,
     );
   }
 
@@ -180,6 +182,7 @@ export class SongController {
     this.auditLogService
       .log(AuditLogAction.ZIP_EXPORT, user.id, user.username, {
         discordId: user.discordId,
+        avatar: user.avatar,
         metadata: {
           exportType: 'zip',
           timestamp,
@@ -377,6 +380,7 @@ export class SongController {
       await this.auditLogService
         .log(AuditLogAction.SONG_EDIT, user.id, user.username, {
           discordId: user.discordId,
+          avatar: user.avatar,
           songId: id,
           songTitle: restoredSong.title,
           metadata: {

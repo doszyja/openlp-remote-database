@@ -20,6 +20,7 @@ export class AuditLogService {
     username: string,
     options?: {
       discordId?: string;
+      avatar?: string | null;
       songId?: string;
       songTitle?: string;
       metadata?: Record<string, any>;
@@ -32,6 +33,7 @@ export class AuditLogService {
       userId,
       username,
       discordId: options?.discordId,
+      avatar: options?.avatar || undefined,
       songId: options?.songId,
       songTitle: options?.songTitle,
       metadata: options?.metadata || {},

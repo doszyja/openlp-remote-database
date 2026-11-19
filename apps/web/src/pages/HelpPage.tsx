@@ -208,7 +208,7 @@ export default function HelpPage() {
                 </ListItemIcon>
                 <ListItemText
                   primary="Logowanie"
-                  secondary="Kliknij ikonę ustawień w prawym górnym rogu, a następnie 'Zaloguj', aby zalogować się przez Discord. Wymagana jest odpowiednia rola na serwerze Discord 'Uwielbienie'."
+                  secondary="Kliknij 'Zaloguj' po prawej stronie nagłówka, obok ikony ustawień, aby zalogować się przez Discord. Wymagana jest odpowiednia rola na serwerze Discord 'Uwielbienie'."
                 />
               </ListItem>
               <ListItem>

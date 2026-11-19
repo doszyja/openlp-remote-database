@@ -24,6 +24,9 @@ export class AuditLog {
   @Prop()
   discordId?: string;
 
+  @Prop()
+  avatar?: string;
+
   @Prop({ type: String, ref: 'Song' })
   songId?: string;
 

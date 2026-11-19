@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
+import { discordAvatarUrl } from '../utils/discordAvatar';
 import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
 import { useServicePlans } from '../hooks/useServicePlans';
 import { UserAvatar, UserMenu } from '../components/Navbar';
@@ -223,19 +224,15 @@ export default function HomePage() {
           {isAuthenticated && user?.username && (
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5 }}>
               <Avatar
-                src={
-                  user.avatar
-                    ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-                    : undefined
-                }
+                src={discordAvatarUrl(user.discordId, user.avatar)}
                 sx={{
                   width: 32,
                   height: 32,
-                  bgcolor: !user.avatar ? 'primary.main' : undefined,
+                  bgcolor: 'primary.main',
                   fontSize: '0.95rem',
                 }}
               >
-                {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+                {user.username?.[0]?.toUpperCase() ?? 'U'}
               </Avatar>
               <Typography variant="body2" color="text.secondary">
                 Witaj,{' '}

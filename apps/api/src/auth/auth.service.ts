@@ -118,14 +118,21 @@ export class AuthService {
       `[validateDiscordUser] User ${profile.id} is in the server. hasEditPermission: ${hasRequiredRole}`,
     );
 
+    // Prefer the live Discord profile so avatar (including animated hashes) stays current.
+    const freshProfile = await this.fetchDiscordUser(accessToken);
+    const avatar = freshProfile
+      ? freshProfile.avatar
+      : (profile.avatar ?? memberInfo.user?.avatar ?? null);
+    const username = freshProfile?.username || profile.username;
+
     // Create or update user in database
     const user = await this.userModel
       .findOneAndUpdate(
         { discordId: profile.id },
         {
-          username: profile.username,
-          discriminator: profile.discriminator,
-          avatar: profile.avatar,
+          username,
+          discriminator: freshProfile?.discriminator ?? profile.discriminator,
+          avatar,
           discordRoles: memberInfo.roles,
         },
         { upsert: true, new: true },
@@ -365,6 +372,51 @@ export class AuthService {
     throw lastError || new Error('Failed to fetch guild member');
   }
 
+  /**
+   * Load the current Discord user via the OAuth access token.
+   * `avatar` is a hash (`a_` prefix means an animated GIF), or null for the default avatar.
+   */
+  private async fetchDiscordUser(accessToken: string): Promise<{
+    username: string;
+    discriminator: string;
+    avatar: string | null;
+  } | null> {
+    if (!accessToken) {
+      return null;
+    }
+
+    try {
+      const response = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn(
+          `[fetchDiscordUser] Discord @me responded ${response.status}`,
+        );
+        return null;
+      }
+
+      const data = (await response.json()) as {
+        username?: string;
+        global_name?: string | null;
+        discriminator?: string;
+        avatar?: string | null;
+      };
+
+      return {
+        username: data.global_name || data.username || '',
+        discriminator: data.discriminator || '0',
+        avatar: data.avatar ?? null,
+      };
+    } catch (error) {
+      console.warn('[fetchDiscordUser] Failed to fetch Discord profile:', error);
+      return null;
+    }
+  }
+
   async login(user: UserResponseDto, ipAddress?: string, userAgent?: string) {
     const payload = {
       sub: user.id,
@@ -377,6 +429,7 @@ export class AuthService {
     await this.auditLogService
       .log(AuditLogAction.LOGIN, user.id, user.username, {
         discordId: user.discordId,
+        avatar: user.avatar,
         ipAddress,
         userAgent,
       })

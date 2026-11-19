@@ -27,6 +27,7 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  Avatar,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -38,6 +39,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuditLogs } from '../hooks/useAuditLogs';
 import { AuditLogAction, AuditLog } from '@openlp/shared';
+import { discordAvatarUrl } from '../utils/discordAvatar';
 // Simple date formatter (no external dependency needed)
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -231,11 +233,12 @@ export default function AuditLogPage() {
   const handleExportCSV = () => {
     if (!data?.data) return;
 
-    const headers = ['Data', 'Akcja', 'Użytkownik', 'Pieśń', 'ID Pieśni'];
+    const headers = ['Data', 'Akcja', 'Użytkownik', 'Avatar', 'Pieśń', 'ID Pieśni'];
     const rows = data.data.map(log => [
       formatDate(log.createdAt),
       getActionLabel(log.action),
       log.username,
+      log.discordId ? discordAvatarUrl(log.discordId, log.avatar) : '-',
       log.songTitle || '-',
       log.songId || '-',
     ]);
@@ -699,7 +702,17 @@ export default function AuditLogPage() {
                           fontSize: { xs: '0.875rem', md: '0.9375rem' },
                         }}
                       >
-                        {log.username}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {log.discordId && (
+                            <Avatar
+                              src={discordAvatarUrl(log.discordId, log.avatar)}
+                              sx={{ width: 24, height: 24, fontSize: '0.75rem' }}
+                            >
+                              {log.username?.[0]?.toUpperCase() ?? 'U'}
+                            </Avatar>
+                          )}
+                          {log.username}
+                        </Box>
                       </TableCell>
                       <TableCell sx={{ color: 'text.primary', py: { xs: 0.75, md: 1.25 } }}>
                         {log.songTitle ? (
@@ -841,9 +854,19 @@ export default function AuditLogPage() {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Użytkownik
                 </Typography>
-                <Typography variant="body1" sx={{ color: 'text.primary' }}>
-                  {selectedLog.username}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {selectedLog.discordId && (
+                    <Avatar
+                      src={discordAvatarUrl(selectedLog.discordId, selectedLog.avatar)}
+                      sx={{ width: 32, height: 32 }}
+                    >
+                      {selectedLog.username?.[0]?.toUpperCase() ?? 'U'}
+                    </Avatar>
+                  )}
+                  <Typography variant="body1" sx={{ color: 'text.primary' }}>
+                    {selectedLog.username}
+                  </Typography>
+                </Box>
                 {selectedLog.discordId && (
                   <Typography variant="caption" color="text.secondary">
                     Discord ID: {selectedLog.discordId}

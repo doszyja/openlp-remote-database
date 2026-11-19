@@ -30,6 +30,7 @@ import {
 import SettingsDialog, { SettingsDialogRef } from './SettingsDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
+import { discordAvatarUrl } from '../utils/discordAvatar';
 import { useCachedSongs } from '../hooks/useCachedSongs';
 import { useServicePlans, useServicePlan } from '../hooks/useServicePlans';
 import { useExportZip } from '../hooks/useExportZip';
@@ -188,22 +189,18 @@ export function UserMenu({
         <MenuItem disabled>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, userSelect: 'none' }}>
             <Avatar
-              src={
-                user.avatar
-                  ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-                  : undefined
-              }
+              src={discordAvatarUrl(user.discordId, user.avatar)}
               sx={{
                 width: 24,
                 height: 24,
-                bgcolor: !user.avatar ? 'action.selected' : undefined,
-                color: !user.avatar ? 'text.primary' : undefined,
+                bgcolor: 'action.selected',
+                color: 'text.primary',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 userSelect: 'none',
               }}
             >
-              {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+              {user.username?.[0]?.toUpperCase() ?? 'U'}
             </Avatar>
             <Typography
               variant="caption"
@@ -430,23 +427,19 @@ export function UserAvatar({
       onClick={onClick}
     >
       <Avatar
-        src={
-          user.avatar
-            ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-            : undefined
-        }
+        src={discordAvatarUrl(user.discordId, user.avatar)}
         sx={{
           width: { xs: 32, md: 36 },
           height: { xs: 32, md: 36 },
           cursor: 'pointer',
-          bgcolor: !user.avatar ? 'action.selected' : undefined,
-          color: !user.avatar ? 'text.primary' : undefined,
+          bgcolor: 'action.selected',
+          color: 'text.primary',
           fontSize: '0.9rem',
           fontWeight: 600,
           userSelect: 'none',
         }}
       >
-        {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+        {user.username?.[0]?.toUpperCase() ?? 'U'}
       </Avatar>
       <Typography
         variant="body2"
@@ -560,22 +553,21 @@ export function RightSideContent({
         </>
       ) : !hasToken && !isLoading ? (
         <>
-          {!isSongListPage && !isSongDetailPage && (
-            <Button
-              variant="contained"
-              onClick={onDiscordLogin}
-              disabled={isApiError}
-              size="small"
-              sx={{
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                px: { xs: 1, sm: 1.5 },
-                py: { xs: 0.5, sm: 0.75 },
-              }}
-            >
-              Zaloguj
-            </Button>
-          )}
           <SettingsDialog ref={settingsDialogRef} small={isSongListPage || isSongDetailPage} />
+          <Button
+            variant="contained"
+            onClick={onDiscordLogin}
+            disabled={isApiError}
+            size="small"
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 1.5 },
+              py: { xs: 0.5, sm: 0.75 },
+              minWidth: 0,
+            }}
+          >
+            Zaloguj
+          </Button>
         </>
       ) : null}
     </Box>

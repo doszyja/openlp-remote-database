@@ -11,6 +11,8 @@ export interface AuditLog {
   userId: string;
   username: string;
   discordId?: string;
+  /** Discord avatar hash captured when the action was logged. */
+  avatar?: string | null;
   songId?: string;
   songTitle?: string;
   metadata?: Record<string, any>;

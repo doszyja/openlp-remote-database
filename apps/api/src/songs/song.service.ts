@@ -340,6 +340,7 @@ export class SongService {
     discordId?: string,
     ipAddress?: string,
     userAgent?: string,
+    avatar?: string | null,
   ) {
     const { verses, tags, verseOrder, openlpMapping, ...songData } = updateSongDto;
 
@@ -530,6 +531,7 @@ export class SongService {
       await this.auditLogService
         .log(AuditLogAction.SONG_EDIT, userId, username, {
           discordId,
+          avatar,
           songId: id,
           songTitle: updateData.title || existing.title,
           metadata: Object.keys(changes).length > 0 ? changes : undefined,
@@ -549,6 +551,7 @@ export class SongService {
     discordId?: string,
     ipAddress?: string,
     userAgent?: string,
+    avatar?: string | null,
   ): Promise<void> {
     // Get song before deletion for audit log
     const song = await this.songModel.findOne({ _id: id, deletedAt: null });
@@ -570,6 +573,7 @@ export class SongService {
       await this.auditLogService
         .log(AuditLogAction.SONG_DELETE, userId, username, {
           discordId,
+          avatar,
           songId: id,
           songTitle: song.title,
           ipAddress,
