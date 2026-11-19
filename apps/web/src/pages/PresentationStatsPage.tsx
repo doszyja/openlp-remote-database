@@ -995,7 +995,21 @@ function PresentationStatsContent() {
                         </TableCell>
                         <TableCell>
                           {row.mongoSongId ? (
-                            <Link component={RouterLink} to={`/songs/${row.mongoSongId}`} underline="hover">
+                            <Link
+                              component={RouterLink}
+                              to={`/songs/${row.mongoSongId}`}
+                              underline="hover"
+                              color="text.primary"
+                              sx={{
+                                fontWeight: 500,
+                                '&:hover': {
+                                  color: theme =>
+                                    theme.palette.mode === 'dark'
+                                      ? theme.palette.common.white
+                                      : theme.palette.primary.main,
+                                },
+                              }}
+                            >
                               {row.title}
                             </Link>
                           ) : (
