@@ -99,17 +99,14 @@ export default function SongListPage() {
     error,
     refetch: refetchCache,
   } = useCachedSongs();
-  const {
-    results: searchResults,
-    isLoading: isSearchLoading,
-    debouncedQuery: debouncedSearch,
-  } = useCachedSongSearch(search);
+  const { results: searchResults, debouncedQuery: debouncedSearch } = useCachedSongSearch(search);
 
   // Use cached search results if we have a search query, otherwise use cached songs list
   const useCacheForSearch = !!debouncedSearch.trim();
 
-  // Determine loading state
-  const isLoading = useCacheForSearch ? isSearchLoading : isCacheLoading;
+  const hasCatalog = (cachedSongs?.length ?? 0) > 0;
+  /** Full-page skeleton only before the catalog exists (not while typing search). */
+  const isInitialCacheLoading = isCacheLoading && !hasCatalog;
 
   // Get the songs to display - use search results if searching, otherwise use all cached songs
   // Also filter by songbook if a filter is selected
@@ -134,11 +131,11 @@ export default function SongListPage() {
       !showBackButton && // Don't auto-navigate when viewport < 900px (search is hidden)
       location.pathname === '/songs' &&
       !hasAutoNavigatedRef.current &&
-      !isLoading &&
+      !isInitialCacheLoading &&
       !useCacheForSearch &&
       !!firstSongId
     );
-  }, [showBackButton, location.pathname, isLoading, useCacheForSearch, firstSongId]);
+  }, [showBackButton, location.pathname, isInitialCacheLoading, useCacheForSearch, firstSongId]);
 
   // Auto-navigate to first song on initial load (only if we're on /songs exactly, not /songs/:id)
   // Use useLayoutEffect to navigate synchronously before browser paints, preventing visual jump
@@ -309,8 +306,8 @@ export default function SongListPage() {
     );
   }
 
-  const showListSkeleton = shouldAutoNavigate || isLoading;
-  const showListContent = !shouldAutoNavigate && !isLoading;
+  const showListSkeleton = shouldAutoNavigate || isInitialCacheLoading;
+  const showListContent = !shouldAutoNavigate && !isInitialCacheLoading;
 
   return (
     <Box
@@ -633,7 +630,7 @@ export default function SongListPage() {
                   }
                 }
               }}
-              isLoading={isLoading}
+              isLoading={isInitialCacheLoading}
               emptyMessage={
                 cachedSongs && cachedSongs.length === 0
                   ? 'Nie znaleziono pieśni. Utwórz pierwszą pieśń!'

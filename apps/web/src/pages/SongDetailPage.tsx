@@ -247,7 +247,6 @@ export default function SongDetailPage() {
   // Use cached search for instant results when searching, otherwise show all songs
   const {
     results: searchResults,
-    isLoading: isSearchLoading,
     debouncedQuery: debouncedSearch,
   } = useCachedSongSearch(search);
 
@@ -260,7 +259,8 @@ export default function SongDetailPage() {
     return filterSongsBySongbooks(songs, songbookFilters);
   }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);
 
-  const isSearchLoadingState = debouncedSearch.trim() ? isSearchLoading : isCacheLoading;
+  const hasSongCatalog = (allCachedSongs?.length ?? 0) > 0;
+  const isSearchLoadingState = isCacheLoading && !hasSongCatalog;
 
   const handleDelete = async () => {
     if (!id || deleteSong.isPending) return;

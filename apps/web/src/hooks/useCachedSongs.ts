@@ -75,7 +75,9 @@ export function useCachedSongSearch(
 
   return {
     results: searchResults,
-    isLoading: isLoading || isDebouncing,
+    /** True only while the song catalog is loading — not during search debounce. */
+    isLoading,
+    isDebouncing,
     debouncedQuery,
   };
 }

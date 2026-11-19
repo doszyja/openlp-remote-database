@@ -2,11 +2,11 @@ import { useMemo, type ElementType } from 'react';
 import {
   Box,
   FormControl,
+  InputLabel,
   ListItemIcon,
   ListItemText,
   MenuItem,
   Select,
-  Stack,
   Typography,
   type SelectChangeEvent,
 } from '@mui/material';
@@ -66,52 +66,40 @@ export default function ThemeModeSelect() {
   };
 
   return (
-    <Stack direction="row" alignItems="center" spacing={1}>
-      <Typography
-        variant="body2"
-        component="span"
+    <FormControl size="small" sx={{ minWidth: { xs: 148, sm: 168 } }}>
+      <InputLabel id="theme-mode-select-label">Motyw</InputLabel>
+      <Select
+        labelId="theme-mode-select-label"
+        label="Motyw"
+        value={preference}
+        onChange={handleChange}
+        renderValue={() => (
+          <ThemeOptionContent Icon={selected.Icon} label={selected.label} iconSize={22} />
+        )}
         sx={{
-          fontWeight: 500,
-          color: 'text.secondary',
-          whiteSpace: 'nowrap',
-          userSelect: 'none',
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'divider',
+          },
+          '& .MuiSelect-select': {
+            py: 0.85,
+            pl: 1.25,
+            display: 'flex',
+            alignItems: 'center',
+          },
         }}
       >
-        Motyw
-      </Typography>
-      <FormControl size="small" sx={{ minWidth: { xs: 132, sm: 148 } }}>
-        <Select
-          value={preference}
-          onChange={handleChange}
-          renderValue={() => (
-            <ThemeOptionContent Icon={selected.Icon} label={selected.label} iconSize={22} />
-          )}
-          inputProps={{ 'aria-label': 'Motyw wyświetlania' }}
-          sx={{
-            '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'divider',
-            },
-            '& .MuiSelect-select': {
-              py: 0.85,
-              pl: 1.25,
-              display: 'flex',
-              alignItems: 'center',
-            },
-          }}
-        >
-          {OPTIONS.map(opt => (
-            <MenuItem key={opt.value} value={opt.value} sx={{ py: 1 }}>
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                <opt.Icon fontSize="small" sx={{ color: 'text.primary' }} />
-              </ListItemIcon>
-              <ListItemText
-                primary={opt.label}
-                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-              />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Stack>
+        {OPTIONS.map(opt => (
+          <MenuItem key={opt.value} value={opt.value} sx={{ py: 1 }}>
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <opt.Icon fontSize="small" sx={{ color: 'text.primary' }} />
+            </ListItemIcon>
+            <ListItemText
+              primary={opt.label}
+              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+            />
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 }

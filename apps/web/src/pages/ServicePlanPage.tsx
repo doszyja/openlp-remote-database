@@ -424,7 +424,6 @@ export default function ServicePlanPage() {
   const { songs: allCachedSongs, isLoading: isCacheLoading } = useCachedSongs();
   const {
     results: searchResults,
-    isLoading: isSearchLoading,
     debouncedQuery: debouncedSearch,
   } = useCachedSongSearch(search);
   // Get active song state via WebSocket for real-time updates
@@ -664,7 +663,8 @@ export default function ServicePlanPage() {
     return filterSongsBySongbooks(songs, songbookFilters);
   }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);
 
-  const isSearchLoadingState = debouncedSearch.trim() ? isSearchLoading : isCacheLoading;
+  const hasSongCatalog = (allCachedSongs?.length ?? 0) > 0;
+  const isSearchLoadingState = isCacheLoading && !hasSongCatalog;
 
   // Type for plan songs with verses
   type PlanSongWithVerses = {
