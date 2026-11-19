@@ -33,6 +33,30 @@ export class QueryPresentationEventsDto {
   viewContext?: string;
 
   @IsOptional()
+  @IsString()
+  viewerUsername?: string;
+
+  @IsOptional()
+  @IsString()
+  timezone?: string;
+
+  @IsOptional()
+  @IsIn([
+    'presentedAt',
+    'title',
+    'source',
+    'viewerUsername',
+    'deviceType',
+    'viewContext',
+    'timezone',
+  ])
+  sortBy?: string;
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
+
+  @IsOptional()
   @IsBooleanString()
   authenticated?: string;
 
@@ -71,6 +95,6 @@ export class QueryPresentationSummaryDto {
   deviceType?: string;
 
   @IsOptional()
-  @IsIn(['song', 'day', 'source', 'device'])
-  groupBy?: 'song' | 'day' | 'source' | 'device';
+  @IsIn(['song', 'day', 'source', 'device', 'user'])
+  groupBy?: 'song' | 'day' | 'source' | 'device' | 'user';
 }

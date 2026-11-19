@@ -2,6 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import type { SongViewGroupBy, SongViewSource } from '@openlp/shared';
 import { api } from '../services/api';
 
+export type SongViewEventsSortBy =
+  | 'presentedAt'
+  | 'title'
+  | 'source'
+  | 'viewerUsername'
+  | 'deviceType'
+  | 'viewContext'
+  | 'timezone';
+
 export interface SongViewListFilters {
   clientId?: string;
   mongoSongId?: string;
@@ -9,9 +18,13 @@ export interface SongViewListFilters {
   source?: SongViewSource;
   deviceType?: string;
   viewContext?: string;
+  viewerUsername?: string;
+  timezone?: string;
   authenticated?: 'true' | 'false';
   from?: string;
   to?: string;
+  sortBy?: SongViewEventsSortBy;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface SongViewSummaryFilters {

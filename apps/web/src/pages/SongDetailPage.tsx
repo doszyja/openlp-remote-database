@@ -43,7 +43,11 @@ import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
-import { isSkipAutoSongViewState, SKIP_AUTO_SONG_VIEW_STATE } from '../utils/songViewNavigation';
+import {
+  isSkipAutoSongViewState,
+  shouldRecordSongDetailView,
+  SKIP_AUTO_SONG_VIEW_STATE,
+} from '../utils/songViewNavigation';
 import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
 import SongMoreActionsMenu from '../components/SongMoreActionsMenu';
 import { useNotification } from '../contexts/NotificationContext';
@@ -174,7 +178,9 @@ export default function SongDetailPage() {
 
   usePageTitle(song?.title);
   const skipAutoSongView = isSkipAutoSongViewState(location.state);
-  useSongViewTelemetry(id, song?.title, 'detail', { enabled: !skipAutoSongView });
+  useSongViewTelemetry(id, song?.title, 'detail', {
+    enabled: shouldRecordSongDetailView(skipAutoSongView, isAuthenticated),
+  });
 
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {

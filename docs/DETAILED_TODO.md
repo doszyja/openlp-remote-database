@@ -107,6 +107,7 @@ This document captures the current implementation status and actionable next ste
 - [ ] **Task 3.14 (New)**: Add offline warning & retry banner when network fails (bubble up `ApiError` status 0).
 - [ ] **Task 3.15 (New)**: Implement audit log page filters (front-end stub exists; needs UI polish + pagination controls).
 - [x] **Task 3.16.1 (New)**: Add Playwright E2E suite (list/search, CRUD, auth, export) and document in `docs/E2E_TEST_STRATEGY.md` (Completed 2025-11-24).
+- [x] **Task 3.17 (New)**: Collapsible presentation-stats sections — „Najczęściej oglądane pieśni” and „Aktywność wg dni” can be collapsed; state persists in localStorage.
 
 ---
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isSkipAutoSongViewState, SKIP_AUTO_SONG_VIEW_STATE } from './songViewNavigation';
+import {
+  isSkipAutoSongViewState,
+  shouldRecordSongDetailView,
+  SKIP_AUTO_SONG_VIEW_STATE,
+} from './songViewNavigation';
 
 describe('songViewNavigation', () => {
   it('exports skip state flag', () => {
@@ -16,5 +20,15 @@ describe('songViewNavigation', () => {
     expect(isSkipAutoSongViewState(undefined)).toBe(false);
     expect(isSkipAutoSongViewState({ skipSongViewTelemetry: false })).toBe(false);
     expect(isSkipAutoSongViewState('')).toBe(false);
+  });
+
+  it('records anonymous views even on auto-first-song navigation', () => {
+    expect(shouldRecordSongDetailView(true, false)).toBe(true);
+    expect(shouldRecordSongDetailView(false, false)).toBe(true);
+  });
+
+  it('skips auto-first-song telemetry only for authenticated users', () => {
+    expect(shouldRecordSongDetailView(true, true)).toBe(false);
+    expect(shouldRecordSongDetailView(false, true)).toBe(true);
   });
 });

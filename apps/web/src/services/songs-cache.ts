@@ -46,6 +46,8 @@ class SongsCacheService {
   private refreshPromise: Promise<void> | null = null;
   private lastVersionCheckTimestamp: number | null = null;
   private pendingVersionCheck: Promise<boolean> | null = null; // Global promise for all components
+  /** First catalog validation after full page reload must hit GET /songs/version. */
+  private forceVersionCheckPending = true;
 
   /**
    * Get cached songs from memory
@@ -255,7 +257,11 @@ class SongsCacheService {
     );
 
     if (!skipVersionCheck) {
-      const isValid = await this.isCacheValid();
+      const forceCheck = this.forceVersionCheckPending;
+      if (forceCheck) {
+        this.forceVersionCheckPending = false;
+      }
+      const isValid = await this.isCacheValid(forceCheck);
       if (!isValid) {
         console.log('[Songs Cache] Version mismatch, fetching /songs/all...');
         await this.refreshCache();

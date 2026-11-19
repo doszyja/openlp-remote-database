@@ -248,9 +248,13 @@ export const api = {
       source?: SongViewSource;
       deviceType?: string;
       viewContext?: string;
+      viewerUsername?: string;
+      timezone?: string;
       authenticated?: 'true' | 'false';
       from?: string;
       to?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
     }): Promise<SongViewEventsResponse> => {
       const params = new URLSearchParams();
       if (query.page) params.append('page', String(query.page));
@@ -261,9 +265,13 @@ export const api = {
       if (query.source) params.append('source', query.source);
       if (query.deviceType) params.append('deviceType', query.deviceType);
       if (query.viewContext) params.append('viewContext', query.viewContext);
+      if (query.viewerUsername) params.append('viewerUsername', query.viewerUsername);
+      if (query.timezone) params.append('timezone', query.timezone);
       if (query.authenticated) params.append('authenticated', query.authenticated);
       if (query.from) params.append('from', query.from);
       if (query.to) params.append('to', query.to);
+      if (query.sortBy) params.append('sortBy', query.sortBy);
+      if (query.sortOrder) params.append('sortOrder', query.sortOrder);
       const qs = params.toString();
       return request(`/presentation-events${qs ? `?${qs}` : ''}`);
     },

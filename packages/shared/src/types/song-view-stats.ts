@@ -2,7 +2,7 @@ export type SongViewSource = 'openlp' | 'browser';
 
 export type SongViewContext = 'detail' | 'presentation' | 'live' | 'list';
 
-export type SongViewGroupBy = 'song' | 'day' | 'source' | 'device';
+export type SongViewGroupBy = 'song' | 'day' | 'source' | 'device' | 'user';
 
 export interface SongViewEvent {
   id: string;
@@ -16,6 +16,8 @@ export interface SongViewEvent {
   viewerUserId?: string;
   viewerUsername?: string;
   viewerDiscordId?: string;
+  /** Resolved from Mongo User when clientId is a Discord snowflake (OpenLP). */
+  viewerAvatar?: string | null;
   sessionId?: string;
   pagePath?: string;
   viewContext?: SongViewContext;

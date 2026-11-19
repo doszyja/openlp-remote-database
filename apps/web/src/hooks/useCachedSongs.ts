@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { SongListCacheItem } from '@openlp/shared';
 import { songsCache } from '../services/songs-cache';
@@ -31,12 +31,22 @@ export function useCachedSongs() {
 
   const songList = songs ?? [];
 
+  const [cacheVersion, setCacheVersion] = useState<number | null>(() =>
+    songsCache.getCachedVersion()
+  );
+
+  useEffect(() => {
+    if (!isLoading) {
+      setCacheVersion(songsCache.getCachedVersion());
+    }
+  }, [isLoading, songs]);
+
   return {
     songs: songList,
     isLoading: isLoading && songList.length === 0,
     error,
     refetch,
-    cacheVersion: songsCache.getCachedVersion(),
+    cacheVersion,
   };
 }
 

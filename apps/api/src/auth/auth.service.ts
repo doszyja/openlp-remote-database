@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import type { UserResponseDto } from './dto/user-response.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
@@ -442,6 +442,144 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user,
     };
+  }
+
+  async findUserByDiscordId(
+    discordId: string,
+  ): Promise<{
+    id: string;
+    username: string;
+    discordId: string;
+    avatar?: string | null;
+  } | null> {
+    if (!discordId?.trim()) {
+      return null;
+    }
+    const user = await this.userModel
+      .findOne({ discordId: discordId.trim() })
+      .lean()
+      .exec();
+    if (!user) {
+      return null;
+    }
+    return {
+      id: user._id.toString(),
+      discordId: user.discordId,
+      username: user.username,
+      avatar: user.avatar ?? null,
+    };
+  }
+
+  async findUsersByDiscordIds(
+    discordIds: string[],
+  ): Promise<
+    Map<
+      string,
+      { id: string; username: string; discordId: string; avatar?: string | null }
+    >
+  > {
+    return this.resolveUsersByClientIds(discordIds);
+  }
+
+  isMongoObjectId(value: string): boolean {
+    return Types.ObjectId.isValid(value) && String(new Types.ObjectId(value)) === value;
+  }
+
+  private isMongoUserId(value: string): boolean {
+    return this.isMongoObjectId(value);
+  }
+
+  private toResolvedUser(user: {
+    _id: Types.ObjectId;
+    discordId: string;
+    username: string;
+    avatar?: string;
+  }) {
+    return {
+      id: user._id.toString(),
+      discordId: user.discordId,
+      username: user.username,
+      avatar: user.avatar ?? null,
+    };
+  }
+
+  /**
+   * OpenLP `clientId` may be a Discord snowflake or a Mongo user id (JWT sub).
+   */
+  async resolveUserByClientId(
+    clientId: string,
+  ): Promise<{
+    id: string;
+    username: string;
+    discordId: string;
+    avatar?: string | null;
+  } | null> {
+    const map = await this.resolveUsersByClientIds([clientId]);
+    const trimmed = clientId?.trim();
+    return trimmed ? map.get(trimmed) ?? null : null;
+  }
+
+  async resolveUsersByClientIds(
+    rawIds: string[],
+  ): Promise<
+    Map<
+      string,
+      { id: string; username: string; discordId: string; avatar?: string | null }
+    >
+  > {
+    const unique = [...new Set(rawIds.map((id) => id?.trim()).filter(Boolean))];
+    const result = new Map<
+      string,
+      { id: string; username: string; discordId: string; avatar?: string | null }
+    >();
+    if (!unique.length) {
+      return result;
+    }
+
+    const discordIds: string[] = [];
+    const mongoIds: Types.ObjectId[] = [];
+    for (const id of unique) {
+      if (this.isMongoUserId(id)) {
+        mongoIds.push(new Types.ObjectId(id));
+      } else {
+        discordIds.push(id);
+      }
+    }
+
+    if (discordIds.length) {
+      const users = await this.userModel
+        .find({ discordId: { $in: discordIds } })
+        .lean()
+        .exec();
+      for (const user of users) {
+        const resolved = this.toResolvedUser(user);
+        result.set(user.discordId, resolved);
+        for (const id of unique) {
+          if (id === user.discordId) {
+            result.set(id, resolved);
+          }
+        }
+      }
+    }
+
+    if (mongoIds.length) {
+      const users = await this.userModel
+        .find({ _id: { $in: mongoIds } })
+        .lean()
+        .exec();
+      for (const user of users) {
+        const resolved = this.toResolvedUser(user);
+        result.set(resolved.id, resolved);
+        result.set(user.discordId, resolved);
+        for (const id of unique) {
+          if (id === resolved.id || id === user.discordId) {
+            result.set(id, resolved);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   async validateUser(userId: string): Promise<UserResponseDto | null> {

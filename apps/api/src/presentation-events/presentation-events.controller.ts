@@ -77,6 +77,18 @@ export class PresentationEventsController {
     return this.eventsService.getSummary(query);
   }
 
+  @Post('backfill-viewer-identity')
+  @UseGuards(EditPermissionGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Attach Mongo user fields to presentation events from clientId (Discord or user id)',
+  })
+  backfillViewerIdentity() {
+    return this.eventsService.backfillViewerIdentityFromClientId();
+  }
+
   private async resolveOptionalViewer(req: Request) {
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) {

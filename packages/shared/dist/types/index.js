@@ -17,4 +17,5 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./song"), exports);
 __exportStar(require("./audit-log"), exports);
 __exportStar(require("./service-plan"), exports);
+__exportStar(require("./song-view-stats"), exports);
 //# sourceMappingURL=index.js.map

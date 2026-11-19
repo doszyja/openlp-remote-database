@@ -9,3 +9,17 @@ export function isSkipAutoSongViewState(state: unknown): boolean {
     (state as { skipSongViewTelemetry?: boolean }).skipSongViewTelemetry === true
   );
 }
+
+/**
+ * Logged-in editors: skip telemetry when /songs auto-opens the first song (layout default).
+ * Anonymous visitors: always record — that auto-open is a real browse view.
+ */
+export function shouldRecordSongDetailView(
+  skipAutoSongView: boolean,
+  isAuthenticated: boolean,
+): boolean {
+  if (!isAuthenticated) {
+    return true;
+  }
+  return !skipAutoSongView;
+}

@@ -1,16 +1,23 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode, type MouseEvent } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
+  Avatar,
   Box,
+  Button,
   Chip,
   CircularProgress,
   FormControl,
+  IconButton,
   InputLabel,
   Link,
   MenuItem,
   Pagination,
   Paper,
+  Popover,
   Select,
   Stack,
   Table,
@@ -19,6 +26,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Typography,
   type Theme,
@@ -30,11 +38,28 @@ import {
   Slideshow as SlideshowIcon,
   Groups as GroupsIcon,
   Devices as DevicesIcon,
+  ExpandMore as ExpandMoreIcon,
+  FilterList as FilterListIcon,
 } from '@mui/icons-material';
-import type { SongViewGroupBy, SongViewSource } from '@openlp/shared';
+import {
+  isMongoObjectId,
+  type SongViewEvent,
+  type SongViewGroupBy,
+  type SongViewSource,
+} from '@openlp/shared';
 import ProtectedRoute from '../components/ProtectedRoute';
-import { useSongViewEvents, useSongViewSummary } from '../hooks/usePresentationStats';
+import {
+  useSongViewEvents,
+  useSongViewSummary,
+  type SongViewEventsSortBy,
+} from '../hooks/usePresentationStats';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { discordAvatarUrl } from '../utils/discordAvatar';
+
+const STATS_SECTION_STORAGE = {
+  activityByDay: 'openlp.stats.section.activityByDay',
+  topSongs: 'openlp.stats.section.topSongs',
+} as const;
 
 const sectionPaperSx = {
   p: { xs: 2, sm: 2.5 },
@@ -45,6 +70,87 @@ const sectionPaperSx = {
     theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
   bgcolor: 'background.paper',
 } as const;
+
+function readLocalBoolean(key: string, fallback: boolean): boolean {
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+  } catch {
+    // private mode / blocked storage
+  }
+  return fallback;
+}
+
+function writeLocalBoolean(key: string, value: boolean): void {
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function CollapsibleStatsSection({
+  sectionId,
+  title,
+  storageKey,
+  defaultExpanded = true,
+  disableDetailsPadding = false,
+  children,
+}: {
+  sectionId: string;
+  title: string;
+  storageKey: string;
+  defaultExpanded?: boolean;
+  disableDetailsPadding?: boolean;
+  children: ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(() => readLocalBoolean(storageKey, defaultExpanded));
+
+  return (
+    <Accordion
+      expanded={expanded}
+      onChange={(_, next) => {
+        setExpanded(next);
+        writeLocalBoolean(storageKey, next);
+      }}
+      disableGutters
+      elevation={0}
+      sx={{
+        ...sectionPaperSx,
+        p: 0,
+        overflow: 'hidden',
+        '&:before': { display: 'none' },
+        '&.Mui-expanded': { mt: 0, mb: 3 },
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        aria-controls={`stats-section-${sectionId}-content`}
+        id={`stats-section-${sectionId}-header`}
+        sx={{
+          px: { xs: 2, sm: 2.5 },
+          minHeight: 56,
+          '& .MuiAccordionSummary-content': { my: 1.25, overflow: 'hidden' },
+        }}
+      >
+        <Typography variant="h6" fontWeight={600} component="h2" noWrap>
+          {title}
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails
+        id={`stats-section-${sectionId}-content`}
+        sx={
+          disableDetailsPadding
+            ? { p: 0 }
+            : { px: { xs: 2, sm: 2.5 }, pt: 0, pb: { xs: 2, sm: 2.5 } }
+        }
+      >
+        {children}
+      </AccordionDetails>
+    </Accordion>
+  );
+}
 
 function formatDateTime(dateString: string): string {
   const date = new Date(dateString);
@@ -67,6 +173,150 @@ function sourceLabel(source?: SongViewSource) {
   if (source === 'browser') return 'Przeglądarka';
   if (source === 'openlp') return 'OpenLP';
   return '—';
+}
+
+function SourceChip({ source }: { source?: SongViewSource }) {
+  const known = source === 'browser' || source === 'openlp';
+  return (
+    <Chip
+      label={sourceLabel(source)}
+      size="small"
+      variant={known ? 'filled' : 'outlined'}
+      sx={theme => {
+        if (source === 'browser') {
+          const color = theme.palette.mode === 'dark' ? '#A5D6A7' : '#1B5E20';
+          return {
+            fontWeight: 600,
+            color,
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(165, 214, 167, 0.16)' : 'rgba(27, 94, 32, 0.1)',
+            border: '1px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(165, 214, 167, 0.45)' : 'rgba(27, 94, 32, 0.28)',
+          };
+        }
+        if (source === 'openlp') {
+          const color = theme.palette.mode === 'dark' ? '#90CAF9' : '#0D47A1';
+          return {
+            fontWeight: 600,
+            color,
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : 'rgba(13, 71, 161, 0.1)',
+            border: '1px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.45)' : 'rgba(13, 71, 161, 0.28)',
+          };
+        }
+        return { fontWeight: 600 };
+      }}
+    />
+  );
+}
+
+function groupByLabel(groupBy: SongViewGroupBy | '') {
+  if (groupBy === 'user') return 'użytkownik';
+  if (groupBy === 'song') return 'pieśń';
+  if (groupBy === 'day') return 'dzień';
+  if (groupBy === 'source') return 'źródło';
+  if (groupBy === 'device') return 'urządzenie';
+  return '';
+}
+
+function ViewerIdentityCell({ row }: { row: SongViewEvent }) {
+  const discordId =
+    row.viewerDiscordId && !isMongoObjectId(row.viewerDiscordId)
+      ? row.viewerDiscordId
+      : row.clientId && !isMongoObjectId(row.clientId)
+        ? row.clientId
+        : undefined;
+  const displayName =
+    row.viewerUsername ||
+    (row.sessionId ? `Sesja ${row.sessionId.slice(0, 8)}` : undefined) ||
+    (row.clientId && isMongoObjectId(row.clientId)
+      ? `Niepowiązane konto`
+      : undefined) ||
+    (discordId ? `Discord ${discordId}` : undefined);
+
+  if (!displayName) {
+    return (
+      <Typography component="span" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+        —
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      {discordId && (
+        <Avatar
+          src={discordAvatarUrl(discordId, row.viewerAvatar)}
+          alt=""
+          sx={{ width: 24, height: 24 }}
+        />
+      )}
+      <Typography component="span" sx={{ fontSize: '0.85rem' }}>
+        {displayName}
+      </Typography>
+    </Stack>
+  );
+}
+
+type EventsSortField = SongViewEventsSortBy;
+
+function EventsSortFilterHead({
+  label,
+  sortField,
+  activeSortBy,
+  sortOrder,
+  onSort,
+  filterActive,
+  children,
+}: {
+  label: string;
+  sortField: EventsSortField;
+  activeSortBy: EventsSortField;
+  sortOrder: 'asc' | 'desc';
+  onSort: (field: EventsSortField) => void;
+  filterActive?: boolean;
+  children?: ReactNode;
+}) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const open = Boolean(anchor);
+
+  return (
+    <TableCell sx={{ fontWeight: 600, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+      <Stack direction="row" alignItems="center" spacing={0} sx={{ minHeight: 32 }}>
+        <TableSortLabel
+          active={activeSortBy === sortField}
+          direction={activeSortBy === sortField ? sortOrder : 'asc'}
+          onClick={() => onSort(sortField)}
+        >
+          {label}
+        </TableSortLabel>
+        {children ? (
+          <IconButton
+            size="small"
+            aria-label={`Filtr: ${label}`}
+            color={filterActive ? 'primary' : 'default'}
+            onClick={(e: MouseEvent<HTMLElement>) => setAnchor(e.currentTarget)}
+          >
+            <FilterListIcon fontSize="small" />
+          </IconButton>
+        ) : null}
+      </Stack>
+      {children ? (
+        <Popover
+          open={open}
+          anchorEl={anchor}
+          onClose={() => setAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        >
+          <Box sx={{ p: 2, minWidth: 220 }}>
+            {children}
+            <Button size="small" onClick={() => setAnchor(null)} sx={{ mt: 1 }}>
+              Zamknij
+            </Button>
+          </Box>
+        </Popover>
+      ) : null}
+    </TableCell>
+  );
 }
 
 function StatMetric({
@@ -106,8 +356,23 @@ function PresentationStatsContent() {
   const [groupBy, setGroupBy] = useState<SongViewGroupBy | ''>('');
   const [authFilter, setAuthFilter] = useState<'' | 'true' | 'false'>('');
   const [titleFilter, setTitleFilter] = useState('');
+  const [viewerUsernameFilter, setViewerUsernameFilter] = useState('');
+  const [viewContextFilter, setViewContextFilter] = useState('');
+  const [timezoneFilter, setTimezoneFilter] = useState('');
+  const [eventsSortBy, setEventsSortBy] = useState<EventsSortField>('presentedAt');
+  const [eventsSortOrder, setEventsSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const limit = 25;
+
+  const handleEventsSort = (field: EventsSortField) => {
+    if (eventsSortBy === field) {
+      setEventsSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setEventsSortBy(field);
+      setEventsSortOrder(field === 'presentedAt' ? 'desc' : 'asc');
+    }
+    setPage(1);
+  };
 
   const summaryFilters = useMemo(
     () => ({
@@ -127,8 +392,24 @@ function PresentationStatsContent() {
       deviceType: deviceFilter || undefined,
       authenticated: authFilter || undefined,
       title: titleFilter || undefined,
+      viewerUsername: viewerUsernameFilter || undefined,
+      viewContext: viewContextFilter || undefined,
+      timezone: timezoneFilter || undefined,
+      sortBy: eventsSortBy,
+      sortOrder: eventsSortOrder,
     }),
-    [clientId, sourceFilter, deviceFilter, authFilter, titleFilter],
+    [
+      clientId,
+      sourceFilter,
+      deviceFilter,
+      authFilter,
+      titleFilter,
+      viewerUsernameFilter,
+      viewContextFilter,
+      timezoneFilter,
+      eventsSortBy,
+      eventsSortOrder,
+    ],
   );
 
   const summaryQuery = useSongViewSummary(summaryFilters);
@@ -185,14 +466,15 @@ function PresentationStatsContent() {
           <Stack spacing={2}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap">
               <TextField
-                label="Client ID (OpenLP)"
+                label="ID użytkownika (clientId OpenLP)"
                 size="small"
                 value={clientId}
                 onChange={e => {
                   setClientId(e.target.value);
                   setPage(1);
                 }}
-                placeholder="opcjonalnie"
+                placeholder="id z GET /api/auth/me"
+                helperText="Plugin wysyła to samo id co pole user.id po zalogowaniu (MongoDB)"
                 sx={{ flex: 1, minWidth: 200 }}
               />
               <TextField
@@ -222,14 +504,19 @@ function PresentationStatsContent() {
                   labelId="stats-source-label"
                   label="Źródło"
                   value={sourceFilter}
+                  sx={{ '& .MuiSelect-select': { display: 'flex', alignItems: 'center' } }}
                   onChange={e => {
                     setSourceFilter(e.target.value as '' | SongViewSource);
                     setPage(1);
                   }}
                 >
                   <MenuItem value="">Wszystkie</MenuItem>
-                  <MenuItem value="browser">Przeglądarka</MenuItem>
-                  <MenuItem value="openlp">OpenLP</MenuItem>
+                  <MenuItem value="browser">
+                    <SourceChip source="browser" />
+                  </MenuItem>
+                  <MenuItem value="openlp">
+                    <SourceChip source="openlp" />
+                  </MenuItem>
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 160 }}>
@@ -279,6 +566,7 @@ function PresentationStatsContent() {
                   <MenuItem value="day">Dzień</MenuItem>
                   <MenuItem value="source">Źródło</MenuItem>
                   <MenuItem value="device">Urządzenie</MenuItem>
+                  <MenuItem value="user">Użytkownik</MenuItem>
                 </Select>
               </FormControl>
             </Stack>
@@ -293,12 +581,13 @@ function PresentationStatsContent() {
           <StatMetric label="Z przeglądarki" value={summary?.bySource?.find(s => s.source === 'browser')?.count ?? 0} icon={<DevicesIcon />} />
         </Stack>
 
-        <Paper elevation={0} sx={sectionPaperSx}>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Aktywność wg dni ({days} dni)
-          </Typography>
+        <CollapsibleStatsSection
+          sectionId="activity-by-day"
+          title={`Aktywność wg dni (${days} dni)`}
+          storageKey={STATS_SECTION_STORAGE.activityByDay}
+        >
           {summary?.byDay?.length ? (
-            <Box sx={{ mt: 2 }}>
+            <Box>
               {summary.byDay.map(row => (
                 <Box key={row.date} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ width: { xs: 72, sm: 88 }, flexShrink: 0, fontSize: '0.8rem' }}>
@@ -314,49 +603,59 @@ function PresentationStatsContent() {
               ))}
             </Box>
           ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
               Brak zdarzeń w wybranym okresie.
             </Typography>
           )}
-        </Paper>
+        </CollapsibleStatsSection>
 
-        <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5 }}>
-          {groupBy ? `Grupowanie: ${groupBy}` : 'Najczęściej oglądane pieśni'}
-        </Typography>
-        <TableContainer component={Paper} elevation={0} sx={{ ...sectionPaperSx, p: 0, overflow: 'auto', mb: 3 }}>
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Etykieta</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, width: 88 }}>
-                  Liczba
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(groupedRows ?? []).length === 0 ? (
+        <CollapsibleStatsSection
+          sectionId="top-songs"
+          title={groupBy ? `Grupowanie: ${groupByLabel(groupBy)}` : 'Najczęściej oglądane pieśni'}
+          storageKey={STATS_SECTION_STORAGE.topSongs}
+          disableDetailsPadding
+        >
+          <TableContainer sx={{ overflow: 'auto' }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={2}>
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                      Brak danych.
-                    </Typography>
+                  <TableCell sx={{ fontWeight: 600 }}>Etykieta</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, width: 88 }}>
+                    Liczba
                   </TableCell>
                 </TableRow>
-              ) : (
-                (groupedRows ?? []).map(row => (
-                  <TableRow key={row.key} hover>
-                    <TableCell>{row.label}</TableCell>
-                    <TableCell align="right">
-                      <Typography component="span" fontWeight={600}>
-                        {row.count}
+              </TableHead>
+              <TableBody>
+                {(groupedRows ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                        Brak danych.
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  (groupedRows ?? []).map(row => (
+                    <TableRow key={row.key} hover>
+                      <TableCell>
+                        {groupBy === 'source' ? (
+                          <SourceChip source={row.key === 'browser' || row.key === 'openlp' ? row.key : undefined} />
+                        ) : (
+                          row.label
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography component="span" fontWeight={600}>
+                          {row.count}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CollapsibleStatsSection>
 
         <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5 }}>
           Ostatnie zdarzenia
@@ -371,13 +670,173 @@ function PresentationStatsContent() {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Czas</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Źródło</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Tytuł</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Użytkownik / sesja</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Urządzenie</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Kontekst</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Strefa</TableCell>
+                    <EventsSortFilterHead
+                      label="Czas"
+                      sortField="presentedAt"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                    />
+                    <EventsSortFilterHead
+                      label="Źródło"
+                      sortField="source"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(sourceFilter)}
+                    >
+                      <FormControl size="small" fullWidth>
+                        <InputLabel id="hdr-source-label">Źródło</InputLabel>
+                        <Select
+                          labelId="hdr-source-label"
+                          label="Źródło"
+                          value={sourceFilter}
+                          sx={{ '& .MuiSelect-select': { display: 'flex', alignItems: 'center' } }}
+                          onChange={e => {
+                            setSourceFilter(e.target.value as '' | SongViewSource);
+                            setPage(1);
+                          }}
+                        >
+                          <MenuItem value="">Wszystkie</MenuItem>
+                          <MenuItem value="browser">
+                            <SourceChip source="browser" />
+                          </MenuItem>
+                          <MenuItem value="openlp">
+                            <SourceChip source="openlp" />
+                          </MenuItem>
+                        </Select>
+                      </FormControl>
+                    </EventsSortFilterHead>
+                    <EventsSortFilterHead
+                      label="Tytuł"
+                      sortField="title"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(titleFilter)}
+                    >
+                      <TextField
+                        size="small"
+                        label="Zawiera tekst"
+                        fullWidth
+                        value={titleFilter}
+                        onChange={e => {
+                          setTitleFilter(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </EventsSortFilterHead>
+                    <EventsSortFilterHead
+                      label="Użytkownik / sesja"
+                      sortField="viewerUsername"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(viewerUsernameFilter) || Boolean(authFilter)}
+                    >
+                      <Stack spacing={1.5}>
+                        <TextField
+                          size="small"
+                          label="Nick (zawiera)"
+                          fullWidth
+                          value={viewerUsernameFilter}
+                          onChange={e => {
+                            setViewerUsernameFilter(e.target.value);
+                            setPage(1);
+                          }}
+                        />
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id="hdr-auth-label">Sesja</InputLabel>
+                          <Select
+                            labelId="hdr-auth-label"
+                            label="Sesja"
+                            value={authFilter}
+                            onChange={e => {
+                              setAuthFilter(e.target.value as '' | 'true' | 'false');
+                              setPage(1);
+                            }}
+                          >
+                            <MenuItem value="">Wszyscy</MenuItem>
+                            <MenuItem value="true">Zalogowani</MenuItem>
+                            <MenuItem value="false">Anonimowi (sesja)</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Stack>
+                    </EventsSortFilterHead>
+                    <EventsSortFilterHead
+                      label="Urządzenie"
+                      sortField="deviceType"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(deviceFilter)}
+                    >
+                      <FormControl size="small" fullWidth>
+                        <InputLabel id="hdr-device-label">Urządzenie</InputLabel>
+                        <Select
+                          labelId="hdr-device-label"
+                          label="Urządzenie"
+                          value={deviceFilter}
+                          onChange={e => {
+                            setDeviceFilter(e.target.value);
+                            setPage(1);
+                          }}
+                        >
+                          <MenuItem value="">Wszystkie</MenuItem>
+                          <MenuItem value="mobile">mobile</MenuItem>
+                          <MenuItem value="tablet">tablet</MenuItem>
+                          <MenuItem value="desktop">desktop</MenuItem>
+                          <MenuItem value="unknown">unknown</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </EventsSortFilterHead>
+                    <EventsSortFilterHead
+                      label="Kontekst"
+                      sortField="viewContext"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(viewContextFilter)}
+                    >
+                      <FormControl size="small" fullWidth>
+                        <InputLabel id="hdr-ctx-label">Kontekst</InputLabel>
+                        <Select
+                          labelId="hdr-ctx-label"
+                          label="Kontekst"
+                          value={viewContextFilter}
+                          onChange={e => {
+                            setViewContextFilter(e.target.value);
+                            setPage(1);
+                          }}
+                        >
+                          <MenuItem value="">Wszystkie</MenuItem>
+                          <MenuItem value="detail">detail</MenuItem>
+                          <MenuItem value="presentation">presentation</MenuItem>
+                          <MenuItem value="live">live</MenuItem>
+                          <MenuItem value="list">list</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </EventsSortFilterHead>
+                    <EventsSortFilterHead
+                      label="Strefa"
+                      sortField="timezone"
+                      activeSortBy={eventsSortBy}
+                      sortOrder={eventsSortOrder}
+                      onSort={handleEventsSort}
+                      filterActive={Boolean(timezoneFilter)}
+                    >
+                      <TextField
+                        size="small"
+                        label="Strefa (zawiera)"
+                        fullWidth
+                        placeholder="Europe/Warsaw"
+                        value={timezoneFilter}
+                        onChange={e => {
+                          setTimezoneFilter(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </EventsSortFilterHead>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -396,7 +855,7 @@ function PresentationStatsContent() {
                           {formatDateTime(row.presentedAt)}
                         </TableCell>
                         <TableCell>
-                          <Chip label={sourceLabel(row.source)} size="small" variant="outlined" />
+                          <SourceChip source={row.source} />
                         </TableCell>
                         <TableCell>
                           {row.mongoSongId ? (
@@ -407,8 +866,8 @@ function PresentationStatsContent() {
                             row.title
                           )}
                         </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                          {row.viewerUsername || row.sessionId?.slice(0, 8) || row.clientId || '—'}
+                        <TableCell>
+                          <ViewerIdentityCell row={row} />
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.85rem' }}>
                           {[row.deviceType, row.browserName, row.osName].filter(Boolean).join(' · ') || '—'}

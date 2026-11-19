@@ -15,7 +15,7 @@ In OpenLP **Configure → Song Stats**:
 |--------|--------|
 | API base URL | `https://piesni.swietochlowicekwch.pl/api` |
 | Stats endpoint | *(leave empty — defaults to `{API base}/presentation-events`)* |
-| Church / site ID | optional `clientId` for stats and `openlpMapping.clientId` on push |
+| Church / site ID | **`id` użytkownika z `GET /api/auth/me`** (MongoDB) — plugin ustawia to jako `clientId` w statystykach i w `openlpMapping` przy pushu |
 
 Pull (web / anonymous):
 
@@ -71,9 +71,9 @@ Re-login when push returns **401**.
 
 ## Live statistics
 
-When a song goes live, the plugin `POST`s to `/api/presentation-events` with `clientId`, `openlpSongId`, `mongoSongId`, `title`, `presentedAt`.
+When a song goes live, the plugin `POST`s to `/api/presentation-events` with `clientId` set to the operator's **`id` from `GET /api/auth/me`**, plus `openlpSongId`, `mongoSongId`, `title`, `presentedAt`. The API looks up `users._id` (and falls back to `users.discordId` if needed) and stores `viewerUserId`, `viewerUsername`, `viewerDiscordId`. Older events: `POST /api/presentation-events/backfill-viewer-identity` (edit permission).
 
-View aggregates in the web app: **menu → Statystyki odsłon** (`/stats`, edit permission required). Events include **OpenLP** (live presentation) and **Przeglądarka** (song detail, presentation mode, live view) with device/browser/timezone metadata — no extra browser permissions required.
+View aggregates in the web app: **menu → Statystyki odsłon** (`/stats`, edit permission required). Events include **OpenLP** (live presentation, attributed to Discord operator) and **Przeglądarka** (song detail, presentation mode, live view) with device/browser/timezone metadata — no extra browser permissions required. **Anonymous** visitors are tracked too (`POST /presentation-events/browser` is public); identity is the browser tab `sessionId` until someone logs in. Use **Grupuj wg → Użytkownik** to see counts per operator (browser anon = **Anonimowy** / session prefix).
 
 ## JSON vs SQLite
 

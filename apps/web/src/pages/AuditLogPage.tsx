@@ -189,6 +189,262 @@ function buildChangedParts(oldValue: string, newValue: string): Array<{ text: st
   return parts;
 }
 
+const AUDIT_META_CONTEXT_KEYS = new Set([
+  'source',
+  'catalogVersion',
+  'storedRevision',
+  'openlpId',
+  'clientId',
+  'changes',
+  'restoredFromRevision',
+]);
+
+/** Raw XML duplicates parsed `verses` in OpenLP sync audits. */
+const AUDIT_HIDDEN_CHANGE_KEYS = new Set(['lyricsXml', 'lyrics']);
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  title: 'Tytuł',
+  number: 'Numer',
+  language: 'Język',
+  verses: 'Zwrotki',
+  verseOrder: 'Kolejność zwrotek',
+  tags: 'Tagi',
+  comments: 'Uwagi',
+  copyright: 'Prawa autorskie',
+  songbook: 'Śpiewnik',
+  ccliNumber: 'CCLI',
+  openlpMapping: 'Mapowanie OpenLP',
+};
+
+function getAuditFieldLabel(key: string): string {
+  return (
+    AUDIT_FIELD_LABELS[key] ??
+    key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')
+  );
+}
+
+function isAuditChangePair(
+  value: unknown
+): value is { old: unknown; new: unknown } {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'old' in value &&
+    'new' in value
+  );
+}
+
+function getAuditChangeEntries(
+  metadata: Record<string, unknown>
+): Array<[string, { old: unknown; new: unknown }]> {
+  const nested = metadata.changes;
+  const source =
+    nested && typeof nested === 'object' && !Array.isArray(nested)
+      ? (nested as Record<string, unknown>)
+      : metadata;
+
+  return Object.entries(source).filter(
+    ([key, value]) =>
+      !AUDIT_META_CONTEXT_KEYS.has(key) &&
+      !AUDIT_HIDDEN_CHANGE_KEYS.has(key) &&
+      isAuditChangePair(value)
+  ) as Array<[string, { old: unknown; new: unknown }]>;
+}
+
+function getAuditContextRows(
+  metadata: Record<string, unknown>
+): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+
+  const source = metadata.source;
+  if (source === 'openlp') {
+    rows.push({ label: 'Źródło', value: 'OpenLP' });
+  } else if (source === 'web') {
+    rows.push({ label: 'Źródło', value: 'Aplikacja web' });
+  } else if (typeof source === 'string') {
+    rows.push({ label: 'Źródło', value: source });
+  }
+
+  if (metadata.catalogVersion != null && metadata.catalogVersion !== '') {
+    rows.push({
+      label: 'Wersja katalogu',
+      value: String(metadata.catalogVersion),
+    });
+  }
+  if (metadata.storedRevision != null && metadata.storedRevision !== '') {
+    rows.push({
+      label: 'Rewizja pieśni',
+      value: String(metadata.storedRevision),
+    });
+  }
+  if (metadata.openlpId != null && metadata.openlpId !== '') {
+    rows.push({ label: 'ID OpenLP', value: String(metadata.openlpId) });
+  }
+  if (metadata.clientId != null && metadata.clientId !== '') {
+    rows.push({ label: 'ID klienta', value: String(metadata.clientId) });
+  }
+  if (metadata.restoredFromRevision != null) {
+    rows.push({
+      label: 'Przywrócono z rewizji',
+      value: String(metadata.restoredFromRevision),
+    });
+  }
+
+  return rows;
+}
+
+function renderAuditNewValueWithDiff(
+  oldValue: unknown,
+  newValue: unknown,
+  fieldKey: string
+) {
+  const oldVal =
+    oldValue === null || oldValue === undefined
+      ? ''
+      : formatAuditValue(oldValue, fieldKey);
+  const newVal =
+    newValue === null || newValue === undefined
+      ? ''
+      : formatAuditValue(newValue, fieldKey);
+
+  if (oldVal === newVal) {
+    return newVal || '(puste)';
+  }
+
+  if (!oldVal) {
+    return (
+      <span
+        style={{
+          fontWeight: 'bold',
+          backgroundColor: 'rgba(255, 193, 7, 0.35)',
+          color: '#5d4037',
+        }}
+      >
+        {newVal || '(puste)'}
+      </span>
+    );
+  }
+
+  if (!newVal) {
+    return '(puste)';
+  }
+
+  const parts = buildChangedParts(oldVal, newVal);
+
+  return (
+    <>
+      {parts.map((part, idx) => (
+        <span
+          key={idx}
+          style={{
+            fontWeight: part.changed ? 'bold' : 'normal',
+            backgroundColor: part.changed ? 'rgba(255, 193, 7, 0.35)' : 'transparent',
+            color: part.changed ? '#5d4037' : undefined,
+          }}
+        >
+          {part.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function renderAuditChangeField(
+  key: string,
+  value: { old: unknown; new: unknown }
+) {
+  return (
+    <Box key={key}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          fontSize: '0.7rem',
+          mb: 1,
+          display: 'block',
+        }}
+      >
+        {getAuditFieldLabel(key)}
+      </Typography>
+      <Stack spacing={1}>
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 1,
+            bgcolor: theme =>
+              theme.palette.mode === 'dark'
+                ? 'rgba(211, 47, 47, 0.1)'
+                : 'rgba(211, 47, 47, 0.05)',
+            border: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(211, 47, 47, 0.3)'
+                : '1px solid rgba(211, 47, 47, 0.2)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
+          >
+            Stara wartość:
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: '0.875rem',
+              color: 'text.primary',
+            }}
+          >
+            {value.old === null || value.old === undefined
+              ? '(puste)'
+              : formatAuditValue(value.old, key)}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 1,
+            bgcolor: theme =>
+              theme.palette.mode === 'dark'
+                ? 'rgba(46, 125, 50, 0.1)'
+                : 'rgba(46, 125, 50, 0.05)',
+            border: theme =>
+              theme.palette.mode === 'dark'
+                ? '1px solid rgba(46, 125, 50, 0.3)'
+                : '1px solid rgba(46, 125, 50, 0.2)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="success.main"
+            sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
+          >
+            Nowa wartość:
+          </Typography>
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: '0.875rem',
+              color: 'text.primary',
+            }}
+          >
+            {renderAuditNewValueWithDiff(value.old, value.new, key)}
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
+  );
+}
+
 export default function AuditLogPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -921,209 +1177,85 @@ export default function AuditLogPage() {
 
               {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
                 <>
-                  <Divider />
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Zmienione Wartości
-                    </Typography>
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 2,
-                        mt: 1,
-                        bgcolor: theme =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : 'rgba(0, 0, 0, 0.02)',
-                      }}
-                    >
-                      <Stack spacing={2}>
-                        {Object.entries(selectedLog.metadata).map(([key, value]) => {
-                          const isChangeObject =
-                            value && typeof value === 'object' && 'old' in value && 'new' in value;
-                          const displayKey =
-                            key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
+                  {(() => {
+                    const meta = selectedLog.metadata as Record<string, unknown>;
+                    const contextRows = getAuditContextRows(meta);
+                    const changeEntries = getAuditChangeEntries(meta);
 
-                          return (
-                            <Box key={key}>
+                    if (contextRows.length === 0 && changeEntries.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <>
+                        {contextRows.length > 0 && (
+                          <>
+                            <Divider />
+                            <Box>
                               <Typography
-                                variant="caption"
+                                variant="subtitle2"
                                 color="text.secondary"
+                                gutterBottom
+                              >
+                                Kontekst synchronizacji
+                              </Typography>
+                              <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 0.5 }}>
+                                {contextRows.map(row =>
+                                  row.label === 'Źródło' ? (
+                                    <Chip
+                                      key={row.label}
+                                      size="small"
+                                      label={row.value}
+                                      color={row.value === 'OpenLP' ? 'info' : 'default'}
+                                    />
+                                  ) : (
+                                    <Chip
+                                      key={row.label}
+                                      size="small"
+                                      variant="outlined"
+                                      label={`${row.label}: ${row.value}`}
+                                    />
+                                  )
+                                )}
+                              </Stack>
+                            </Box>
+                          </>
+                        )}
+
+                        {changeEntries.length > 0 && (
+                          <>
+                            <Divider />
+                            <Box>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                                gutterBottom
+                              >
+                                Zmienione wartości
+                              </Typography>
+                              <Paper
+                                variant="outlined"
                                 sx={{
-                                  fontWeight: 600,
-                                  textTransform: 'uppercase',
-                                  fontSize: '0.7rem',
-                                  mb: 1,
-                                  display: 'block',
+                                  p: 2,
+                                  mt: 1,
+                                  bgcolor: theme =>
+                                    theme.palette.mode === 'dark'
+                                      ? 'rgba(255, 255, 255, 0.05)'
+                                      : 'rgba(0, 0, 0, 0.02)',
                                 }}
                               >
-                                {displayKey}
-                              </Typography>
-                              {isChangeObject ? (
-                                <Stack spacing={1}>
-                                  <Box
-                                    sx={{
-                                      p: 1.5,
-                                      borderRadius: 1,
-                                      bgcolor: theme =>
-                                        theme.palette.mode === 'dark'
-                                          ? 'rgba(211, 47, 47, 0.1)'
-                                          : 'rgba(211, 47, 47, 0.05)',
-                                      border: theme =>
-                                        theme.palette.mode === 'dark'
-                                          ? '1px solid rgba(211, 47, 47, 0.3)'
-                                          : '1px solid rgba(211, 47, 47, 0.2)',
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="error"
-                                      sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
-                                    >
-                                      Stara wartość:
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      sx={{
-                                        fontFamily: 'monospace',
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                        fontSize: '0.875rem',
-                                        color: 'text.primary',
-                                      }}
-                                    >
-                                      {value.old === null || value.old === undefined
-                                        ? '(puste)'
-                                        : formatAuditValue(value.old, key)}
-                                    </Typography>
-                                  </Box>
-                                  <Box
-                                    sx={{
-                                      p: 1.5,
-                                      borderRadius: 1,
-                                      bgcolor: theme =>
-                                        theme.palette.mode === 'dark'
-                                          ? 'rgba(46, 125, 50, 0.1)'
-                                          : 'rgba(46, 125, 50, 0.05)',
-                                      border: theme =>
-                                        theme.palette.mode === 'dark'
-                                          ? '1px solid rgba(46, 125, 50, 0.3)'
-                                          : '1px solid rgba(46, 125, 50, 0.2)',
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="success.main"
-                                      sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}
-                                    >
-                                      Nowa wartość:
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      component="div"
-                                      sx={{
-                                        fontFamily: 'monospace',
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                        fontSize: '0.875rem',
-                                        color: 'text.primary',
-                                      }}
-                                    >
-                                      {(() => {
-                                        const oldVal =
-                                          value.old === null || value.old === undefined
-                                            ? ''
-                                            : formatAuditValue(value.old, key);
-                                        const newVal =
-                                          value.new === null || value.new === undefined
-                                            ? ''
-                                            : formatAuditValue(value.new, key);
-
-                                        // If values are the same, just show it
-                                        if (oldVal === newVal) {
-                                          return newVal || '(puste)';
-                                        }
-
-                                        // If old is empty, show all new value in bold
-                                        if (!oldVal) {
-                                          return (
-                                            <span
-                                              style={{
-                                                fontWeight: 'bold',
-                                                backgroundColor: 'rgba(255, 193, 7, 0.35)',
-                                                color: '#5d4037',
-                                              }}
-                                            >
-                                              {newVal || '(puste)'}
-                                            </span>
-                                          );
-                                        }
-
-                                        // If new is empty
-                                        if (!newVal) {
-                                          return '(puste)';
-                                        }
-
-                                        const parts = buildChangedParts(oldVal, newVal);
-
-                                        return (
-                                          <>
-                                            {parts.map((part, idx) => (
-                                              <span
-                                                key={idx}
-                                                style={{
-                                                  fontWeight: part.changed ? 'bold' : 'normal',
-                                                  backgroundColor: part.changed
-                                                    ? 'rgba(255, 193, 7, 0.35)'
-                                                    : 'transparent',
-                                                  color: part.changed ? '#5d4037' : undefined,
-                                                }}
-                                              >
-                                                {part.text}
-                                              </span>
-                                            ))}
-                                          </>
-                                        );
-                                      })()}
-                                    </Typography>
-                                  </Box>
+                                <Stack spacing={2}>
+                                  {changeEntries.map(([key, value]) =>
+                                    renderAuditChangeField(key, value)
+                                  )}
                                 </Stack>
-                              ) : (
-                                <Box
-                                  sx={{
-                                    p: 1.5,
-                                    borderRadius: 1,
-                                    bgcolor: theme =>
-                                      theme.palette.mode === 'dark'
-                                        ? 'rgba(255, 255, 255, 0.05)'
-                                        : 'rgba(0, 0, 0, 0.02)',
-                                    border: theme =>
-                                      theme.palette.mode === 'dark'
-                                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                                        : '1px solid rgba(0, 0, 0, 0.1)',
-                                  }}
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      fontFamily: 'monospace',
-                                      whiteSpace: 'pre-wrap',
-                                      wordBreak: 'break-word',
-                                      color: 'text.primary',
-                                    }}
-                                  >
-                                    {typeof value === 'object'
-                                      ? JSON.stringify(value, null, 2)
-                                      : String(value)}
-                                  </Typography>
-                                </Box>
-                              )}
+                              </Paper>
                             </Box>
-                          );
-                        })}
-                      </Stack>
-                    </Paper>
-                  </Box>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               )}
 
