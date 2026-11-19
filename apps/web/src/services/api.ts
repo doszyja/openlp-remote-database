@@ -12,6 +12,11 @@ import type {
   AddSongToPlanDto,
   SetActiveSongDto,
   SetActiveVerseDto,
+  SongViewContext,
+  SongViewEventsResponse,
+  SongViewGroupBy,
+  SongViewSource,
+  SongViewSummary,
 } from '@openlp/shared';
 import type { SongVersion, VersionComparison } from '../hooks/useSongVersions';
 
@@ -218,54 +223,63 @@ export const api = {
     },
   },
   presentationEvents: {
-    getAll: (
-      page?: number,
-      limit?: number,
-      clientId?: string,
-    ): Promise<{
-      data: Array<{
-        id: string;
-        clientId?: string;
-        openlpSongId?: number;
-        mongoSongId?: string;
-        title: string;
-        serviceItemTitle?: string;
-        presentedAt: string;
-        metadata?: Record<string, unknown>;
-      }>;
-      meta: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-      };
-    }> => {
+    recordBrowserView: (data: {
+      mongoSongId?: string;
+      title: string;
+      sessionId?: string;
+      pagePath?: string;
+      viewContext?: SongViewContext;
+      screenWidth?: number;
+      screenHeight?: number;
+      language?: string;
+      timezone?: string;
+      referrer?: string;
+    }): Promise<void> =>
+      request('/presentation-events/browser', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getAll: (query: {
+      page?: number;
+      limit?: number;
+      clientId?: string;
+      mongoSongId?: string;
+      title?: string;
+      source?: SongViewSource;
+      deviceType?: string;
+      viewContext?: string;
+      authenticated?: 'true' | 'false';
+      from?: string;
+      to?: string;
+    }): Promise<SongViewEventsResponse> => {
       const params = new URLSearchParams();
-      if (page) params.append('page', String(page));
-      if (limit) params.append('limit', String(limit));
-      if (clientId) params.append('clientId', clientId);
+      if (query.page) params.append('page', String(query.page));
+      if (query.limit) params.append('limit', String(query.limit));
+      if (query.clientId) params.append('clientId', query.clientId);
+      if (query.mongoSongId) params.append('mongoSongId', query.mongoSongId);
+      if (query.title) params.append('title', query.title);
+      if (query.source) params.append('source', query.source);
+      if (query.deviceType) params.append('deviceType', query.deviceType);
+      if (query.viewContext) params.append('viewContext', query.viewContext);
+      if (query.authenticated) params.append('authenticated', query.authenticated);
+      if (query.from) params.append('from', query.from);
+      if (query.to) params.append('to', query.to);
       const qs = params.toString();
       return request(`/presentation-events${qs ? `?${qs}` : ''}`);
     },
-    getSummary: (
-      clientId?: string,
-      days?: number,
-    ): Promise<{
-      from: string;
-      to: string;
-      clientId: string | null;
-      totalEvents: number;
-      bySong: Array<{
-        title: string;
-        mongoSongId?: string;
-        count: number;
-        lastPresentedAt?: string;
-      }>;
-      byDay: Array<{ date: string; count: number }>;
-    }> => {
+    getSummary: (query: {
+      clientId?: string;
+      days?: number;
+      source?: SongViewSource;
+      deviceType?: string;
+      groupBy?: SongViewGroupBy;
+    }): Promise<SongViewSummary> => {
       const params = new URLSearchParams();
-      if (clientId) params.append('clientId', clientId);
-      if (days) params.append('days', String(days));
+      if (query.clientId) params.append('clientId', query.clientId);
+      if (query.days) params.append('days', String(query.days));
+      if (query.source) params.append('source', query.source);
+      if (query.deviceType) params.append('deviceType', query.deviceType);
+      if (query.groupBy) params.append('groupBy', query.groupBy);
       const qs = params.toString();
       return request(`/presentation-events/summary${qs ? `?${qs}` : ''}`);
     },

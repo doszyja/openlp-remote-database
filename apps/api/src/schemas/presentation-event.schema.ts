@@ -3,8 +3,13 @@ import { HydratedDocument } from 'mongoose';
 
 export type PresentationEventDocument = HydratedDocument<PresentationEvent>;
 
+export type SongViewSource = 'openlp' | 'browser';
+
 @Schema({ timestamps: true })
 export class PresentationEvent {
+  @Prop({ required: true, enum: ['openlp', 'browser'], default: 'openlp', index: true })
+  source: SongViewSource;
+
   @Prop({ index: true })
   clientId?: string;
 
@@ -23,6 +28,51 @@ export class PresentationEvent {
   @Prop({ required: true, index: true })
   presentedAt: Date;
 
+  @Prop({ type: String, ref: 'User', index: true })
+  viewerUserId?: string;
+
+  @Prop()
+  viewerUsername?: string;
+
+  @Prop()
+  viewerDiscordId?: string;
+
+  @Prop({ index: true })
+  sessionId?: string;
+
+  @Prop()
+  pagePath?: string;
+
+  @Prop({ index: true })
+  viewContext?: string;
+
+  @Prop({ index: true })
+  deviceType?: string;
+
+  @Prop()
+  browserName?: string;
+
+  @Prop()
+  osName?: string;
+
+  @Prop()
+  screenWidth?: number;
+
+  @Prop()
+  screenHeight?: number;
+
+  @Prop()
+  language?: string;
+
+  @Prop()
+  timezone?: string;
+
+  @Prop()
+  referrer?: string;
+
+  @Prop()
+  userAgent?: string;
+
   @Prop({ type: Object, default: {} })
   metadata?: Record<string, unknown>;
 }
@@ -30,3 +80,5 @@ export class PresentationEvent {
 export const PresentationEventSchema =
   SchemaFactory.createForClass(PresentationEvent);
 PresentationEventSchema.index({ presentedAt: -1, clientId: 1 });
+PresentationEventSchema.index({ presentedAt: -1, source: 1 });
+PresentationEventSchema.index({ presentedAt: -1, deviceType: 1 });

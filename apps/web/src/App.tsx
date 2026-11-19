@@ -165,10 +165,8 @@ function App() {
                       </AdminRoute>
                     }
                   />
-                  <Route
-                    path="/stats/presentation"
-                    element={<PresentationStatsPage />}
-                  />
+                  <Route path="/stats/presentation" element={<PresentationStatsPage />} />
+                  <Route path="/stats" element={<PresentationStatsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>

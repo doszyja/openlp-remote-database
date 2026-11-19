@@ -347,7 +347,7 @@ export function UserMenu({
           <MenuItem
             onClick={() => {
               onClose();
-              onNavigate('/stats/presentation');
+              onNavigate('/stats');
             }}
             sx={{
               minHeight: 48,
@@ -355,7 +355,7 @@ export function UserMenu({
             }}
           >
             <BarChartIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            Statystyki OpenLP
+            Statystyki odsłon
           </MenuItem>
         )}
         {isAdmin && (

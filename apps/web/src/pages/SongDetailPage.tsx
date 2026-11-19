@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Typography,
   Box,
@@ -43,6 +43,8 @@ import clipboardCopy from 'clipboard-copy';
 import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
+import { isSkipAutoSongViewState, SKIP_AUTO_SONG_VIEW_STATE } from '../utils/songViewNavigation';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -112,6 +114,7 @@ function buildOpenLpCopyText(verses: ParsedVerse[]): string {
 
 export default function SongDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -169,6 +172,8 @@ export default function SongDetailPage() {
   }, [id, allCachedSongs]);
 
   usePageTitle(song?.title);
+  const skipAutoSongView = isSkipAutoSongViewState(location.state);
+  useSongViewTelemetry(id, song?.title, 'detail', { enabled: !skipAutoSongView });
 
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {
@@ -243,7 +248,7 @@ export default function SongDetailPage() {
         console.log(`[SongDetailPage] Song ${id} not found in cache, redirecting...`);
         const firstSongId = getFirstSongId();
         if (firstSongId) {
-          navigate(`/songs/${firstSongId}`, { replace: true });
+          navigate(`/songs/${firstSongId}`, { replace: true, state: SKIP_AUTO_SONG_VIEW_STATE });
         } else {
           navigate('/', { replace: true });
         }
@@ -279,7 +284,7 @@ export default function SongDetailPage() {
       // Navigate to first song from list
       const firstSongId = getFirstSongId();
       if (firstSongId) {
-        navigate(`/songs/${firstSongId}`);
+        navigate(`/songs/${firstSongId}`, { state: SKIP_AUTO_SONG_VIEW_STATE });
       } else {
         // If no songs left, go to home
         navigate('/');

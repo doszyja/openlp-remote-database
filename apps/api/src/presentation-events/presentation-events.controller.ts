@@ -6,20 +6,33 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { EditPermissionGuard } from '../auth/guards/edit-permission.guard';
+import { AuthService } from '../auth/auth.service';
 import { CreatePresentationEventDto } from './dto/create-presentation-event.dto';
-import { QueryPresentationEventsDto } from './dto/query-presentation-events.dto';
+import { CreateBrowserSongViewDto } from './dto/create-browser-song-view.dto';
+import {
+  QueryPresentationEventsDto,
+  QueryPresentationSummaryDto,
+} from './dto/query-presentation-events.dto';
 import { PresentationEventsService } from './presentation-events.service';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('presentation-events')
 @Controller('presentation-events')
 export class PresentationEventsController {
-  constructor(private readonly eventsService: PresentationEventsService) {}
+  constructor(
+    private readonly eventsService: PresentationEventsService,
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post()
   @Public()
@@ -30,10 +43,28 @@ export class PresentationEventsController {
     return this.eventsService.create(dto);
   }
 
+  @Post('browser')
+  @Public()
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 180, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Record a song view from the web app (detail/presentation/live)',
+  })
+  async createBrowser(
+    @Body() dto: CreateBrowserSongViewDto,
+    @Req() req: Request,
+  ) {
+    const viewer = await this.resolveOptionalViewer(req);
+    return this.eventsService.createBrowserView(dto, {
+      userAgent: req.get('user-agent') || undefined,
+      viewer,
+    });
+  }
+
   @Get()
   @UseGuards(EditPermissionGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List presentation events' })
+  @ApiOperation({ summary: 'List song view events (OpenLP + browser)' })
   findAll(@Query() query: QueryPresentationEventsDto) {
     return this.eventsService.findAll(query);
   }
@@ -41,12 +72,27 @@ export class PresentationEventsController {
   @Get('summary')
   @UseGuards(EditPermissionGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Aggregated presentation statistics' })
-  getSummary(
-    @Query('clientId') clientId?: string,
-    @Query('days') days?: string,
-  ) {
-    const dayCount = days ? parseInt(days, 10) : 30;
-    return this.eventsService.getSummary(clientId, dayCount);
+  @ApiOperation({ summary: 'Aggregated song view statistics' })
+  getSummary(@Query() query: QueryPresentationSummaryDto) {
+    return this.eventsService.getSummary(query);
+  }
+
+  private async resolveOptionalViewer(req: Request) {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      return null;
+    }
+    try {
+      const payload = this.jwtService.verify<JwtPayload>(header.slice(7));
+      const user = await this.authService.validateUser(payload.sub);
+      if (!user) return null;
+      return {
+        viewerUserId: user.id,
+        viewerUsername: user.username,
+        viewerDiscordId: user.discordId,
+      };
+    } catch {
+      return null;
+    }
   }
 }

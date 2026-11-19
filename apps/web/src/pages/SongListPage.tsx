@@ -29,6 +29,7 @@ import SongList from '../components/SongList';
 import SongbookFilterSelect from '../components/SongbookFilterSelect';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { filterSongsBySongbooks, parseStoredSongbookFilters } from '../utils/songbookFilter';
+import { SKIP_AUTO_SONG_VIEW_STATE } from '../utils/songViewNavigation';
 
 // Session storage keys for remembering state
 const SEARCH_STORAGE_KEY = 'songListSearch';
@@ -147,7 +148,7 @@ export default function SongListPage() {
 
     hasAutoNavigatedRef.current = true;
     // Use replace: true to avoid adding to history and prevent visual jump
-    navigate(`/songs/${firstSongId}`, { replace: true });
+    navigate(`/songs/${firstSongId}`, { replace: true, state: SKIP_AUTO_SONG_VIEW_STATE });
   }, [shouldAutoNavigate, firstSongId, navigate]);
 
   // Debounce loading animation - only show if request takes longer than 300ms

@@ -7,6 +7,7 @@ import {
 } from '@mui/icons-material';
 import { useState, useEffect, useRef } from 'react';
 import { useSong } from '../hooks';
+import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
 import { parseVerses } from '../utils/verseParser';
 import { useTheme } from '@mui/material/styles';
 
@@ -31,6 +32,7 @@ export default function PresentationPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const { data: song, isLoading, error } = useSong(id!);
+  useSongViewTelemetry(id, song?.title, 'presentation');
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [fontSizes, setFontSizes] = useState({ titleSize: 48, contentSize: 75 });
   const [dynamicContentSize, setDynamicContentSize] = useState(32);

@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
 
 const AUTH_TOKEN_KEY = 'auth_token';
+const OPENLP_CALLBACK_PORT_KEY = 'openlp_callback_port';
 
 async function requestOpenLpCode(
   state: string,
@@ -55,6 +56,8 @@ export default function OpenLpAuthPage() {
       setStatus('error');
       return;
     }
+
+    sessionStorage.setItem(OPENLP_CALLBACK_PORT_KEY, String(port));
 
     if (isLoading) {
       return;

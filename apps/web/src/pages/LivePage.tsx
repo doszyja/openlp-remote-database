@@ -26,6 +26,7 @@ import { generateStepLabel } from '../utils/liveUtils';
 import { useActiveSong } from '../hooks/useServicePlans';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
 import { useResponsiveFontSizes } from '../hooks/useResponsiveFontSizes';
+import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
 
 // Fullscreen API vendor prefixes
 interface DocumentWithFullscreen extends Document {
@@ -63,6 +64,7 @@ export default function LivePage() {
 
   const song = activeSongData?.song ?? null;
   const servicePlan = activeSongData?.servicePlan ?? null;
+  useSongViewTelemetry(song?.id, song?.title, 'live');
 
   // Parse verses - ensure we handle null/undefined/empty strings
   const parsedVerses = useMemo(() => {

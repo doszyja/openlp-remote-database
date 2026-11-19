@@ -48,7 +48,7 @@ Restart OpenLP; enable **Song Stats** under **Tools → Configure**.
 4. The page redirects to `http://127.0.0.1:8765/callback?code=…`.
 5. The plugin exchanges the code at `POST /api/auth/openlp/token` and stores the JWT.
 
-**Disconnect (browser):** the plugin opens `{web}/auth/openlp/logout?port=8765&from=openlp`. The page clears the web session and redirects to `http://127.0.0.1:{port}/callback?logout=1&from=openlp`.
+**Disconnect (browser):** the plugin opens `{web}/auth/openlp/logout?port=8765&from=openlp` (or `?from=openlp` only). The page always clears the web session. If `port` is present—or was saved during login in the browser—it also redirects to `http://127.0.0.1:{port}/callback?logout=1&from=openlp`. Without a port, the user sees a success message and can close the tab (plugin token may still need clearing inside OpenLP).
 
 Re-login when push returns **401**.
 
@@ -64,7 +64,7 @@ Re-login when push returns **401**.
 
 When a song goes live, the plugin `POST`s to `/api/presentation-events` with `clientId`, `openlpSongId`, `mongoSongId`, `title`, `presentedAt`.
 
-View aggregates in the web app: **menu → Statystyki OpenLP** (`/stats/presentation`, edit permission required).
+View aggregates in the web app: **menu → Statystyki odsłon** (`/stats`, edit permission required). Events include **OpenLP** (live presentation) and **Przeglądarka** (song detail, presentation mode, live view) with device/browser/timezone metadata — no extra browser permissions required.
 
 ## JSON vs SQLite
 
