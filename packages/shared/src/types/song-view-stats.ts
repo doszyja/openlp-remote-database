@@ -61,4 +61,10 @@ export interface SongViewSummary {
   bySource: Array<{ source: SongViewSource; count: number }>;
   byDevice: Array<{ deviceType: string; count: number }>;
   grouped?: Array<{ key: string; label: string; count: number }>;
+  groupedMeta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }

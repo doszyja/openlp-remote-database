@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { SongViewGroupBy, SongViewSource } from '@openlp/shared';
 import { api } from '../services/api';
 
@@ -33,12 +33,15 @@ export interface SongViewSummaryFilters {
   source?: SongViewSource;
   deviceType?: string;
   groupBy?: SongViewGroupBy;
+  page?: number;
+  limit?: number;
 }
 
 export function useSongViewSummary(filters: SongViewSummaryFilters) {
   return useQuery({
     queryKey: ['songViewSummary', filters],
     queryFn: () => api.presentationEvents.getSummary(filters),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
   });
 }
@@ -51,6 +54,7 @@ export function useSongViewEvents(
   return useQuery({
     queryKey: ['songViewEvents', page, limit, filters],
     queryFn: () => api.presentationEvents.getAll({ page, limit, ...filters }),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
   });
 }

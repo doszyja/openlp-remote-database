@@ -281,6 +281,8 @@ export const api = {
       source?: SongViewSource;
       deviceType?: string;
       groupBy?: SongViewGroupBy;
+      page?: number;
+      limit?: number;
     }): Promise<SongViewSummary> => {
       const params = new URLSearchParams();
       if (query.clientId) params.append('clientId', query.clientId);
@@ -288,6 +290,8 @@ export const api = {
       if (query.source) params.append('source', query.source);
       if (query.deviceType) params.append('deviceType', query.deviceType);
       if (query.groupBy) params.append('groupBy', query.groupBy);
+      if (query.page) params.append('page', String(query.page));
+      if (query.limit) params.append('limit', String(query.limit));
       const qs = params.toString();
       return request(`/presentation-events/summary${qs ? `?${qs}` : ''}`);
     },

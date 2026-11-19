@@ -97,4 +97,12 @@ export class QueryPresentationSummaryDto {
   @IsOptional()
   @IsIn(['song', 'day', 'source', 'device', 'user'])
   groupBy?: 'song' | 'day' | 'source' | 'device' | 'user';
+
+  @IsOptional()
+  @Type(() => Number)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  limit?: number;
 }

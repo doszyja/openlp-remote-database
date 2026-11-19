@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type ReactNode, type MouseEvent } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Accordion,
@@ -28,6 +28,7 @@ import {
   TableRow,
   TableSortLabel,
   TextField,
+  Tooltip,
   Typography,
   type Theme,
 } from '@mui/material';
@@ -218,6 +219,11 @@ function groupByLabel(groupBy: SongViewGroupBy | '') {
   return '';
 }
 
+function discordProfileUrl(id?: string): string | undefined {
+  if (!id || isMongoObjectId(id) || !/^\d{17,20}$/.test(id)) return undefined;
+  return `https://discord.com/users/${id}`;
+}
+
 function ViewerIdentityCell({ row }: { row: SongViewEvent }) {
   const discordId =
     row.viewerDiscordId && !isMongoObjectId(row.viewerDiscordId)
@@ -225,6 +231,7 @@ function ViewerIdentityCell({ row }: { row: SongViewEvent }) {
       : row.clientId && !isMongoObjectId(row.clientId)
         ? row.clientId
         : undefined;
+  const profileUrl = discordProfileUrl(discordId);
   const displayName =
     row.viewerUsername ||
     (row.sessionId ? `Sesja ${row.sessionId.slice(0, 8)}` : undefined) ||
@@ -241,8 +248,17 @@ function ViewerIdentityCell({ row }: { row: SongViewEvent }) {
     );
   }
 
-  return (
-    <Stack direction="row" spacing={1} alignItems="center">
+  const sourceName = sourceLabel(row.source);
+  const visibleName =
+    profileUrl && !row.viewerUsername && sourceName !== '—'
+      ? `${sourceName} · Discord ${discordId}`
+      : sourceName !== '—'
+        ? `${sourceName} · ${displayName}`
+        : displayName;
+  const hoverTitle = profileUrl ? `${sourceName !== '—' ? sourceName : 'OpenLP'} · Discord ${discordId}` : '';
+
+  const body = (
+    <Stack direction="row" spacing={1} alignItems="center" component="span">
       {discordId && (
         <Avatar
           src={discordAvatarUrl(discordId, row.viewerAvatar)}
@@ -251,9 +267,29 @@ function ViewerIdentityCell({ row }: { row: SongViewEvent }) {
         />
       )}
       <Typography component="span" sx={{ fontSize: '0.85rem' }}>
-        {displayName}
+        {visibleName}
       </Typography>
     </Stack>
+  );
+
+  if (!profileUrl) return body;
+
+  return (
+    <Tooltip title={hoverTitle}>
+      <Link
+        href={profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        underline="hover"
+        color="inherit"
+        sx={{
+          cursor: 'pointer',
+          '&:hover': { color: 'primary.main' },
+        }}
+      >
+        {body}
+      </Link>
+    </Tooltip>
   );
 }
 
@@ -319,6 +355,43 @@ function EventsSortFilterHead({
   );
 }
 
+function ListPagination({
+  page,
+  total,
+  limit,
+  onChange,
+  noun,
+}: {
+  page: number;
+  total: number;
+  limit: number;
+  onChange: (page: number) => void;
+  noun: string;
+}) {
+  if (total <= 0) return null;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const from = (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
+  return (
+    <Stack alignItems="center" sx={{ py: 1.5 }}>
+      {totalPages > 1 ? (
+        <Pagination
+          count={totalPages}
+          page={Math.min(page, totalPages)}
+          onChange={(_, value) => onChange(value)}
+          color="primary"
+          size="small"
+          showFirstButton
+          showLastButton
+        />
+      ) : null}
+      <Typography variant="body2" color="text.secondary" sx={{ mt: totalPages > 1 ? 1 : 0 }}>
+        Wyświetlanie {from}-{to} z {total} {noun}
+      </Typography>
+    </Stack>
+  );
+}
+
 function StatMetric({
   label,
   value,
@@ -362,7 +435,25 @@ function PresentationStatsContent() {
   const [eventsSortBy, setEventsSortBy] = useState<EventsSortField>('presentedAt');
   const [eventsSortOrder, setEventsSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
+  const [groupPage, setGroupPage] = useState(1);
+  const [dayPage, setDayPage] = useState(1);
   const limit = 25;
+  const groupLimit = 25;
+  const dayPageSize = 31;
+
+  const rankingScope = `${clientId}|${days}|${sourceFilter}|${deviceFilter}|${groupBy}`;
+  const [rankingScopeSeen, setRankingScopeSeen] = useState(rankingScope);
+  if (rankingScopeSeen !== rankingScope) {
+    setRankingScopeSeen(rankingScope);
+    setGroupPage(1);
+  }
+
+  const dayScope = `${clientId}|${days}|${sourceFilter}|${deviceFilter}`;
+  const [dayScopeSeen, setDayScopeSeen] = useState(dayScope);
+  if (dayScopeSeen !== dayScope) {
+    setDayScopeSeen(dayScope);
+    setDayPage(1);
+  }
 
   const handleEventsSort = (field: EventsSortField) => {
     if (eventsSortBy === field) {
@@ -381,8 +472,10 @@ function PresentationStatsContent() {
       source: sourceFilter || undefined,
       deviceType: deviceFilter || undefined,
       groupBy: groupBy || undefined,
+      page: groupPage,
+      limit: groupLimit,
     }),
-    [clientId, days, sourceFilter, deviceFilter, groupBy],
+    [clientId, days, sourceFilter, deviceFilter, groupBy, groupPage, groupLimit],
   );
 
   const listFilters = useMemo(
@@ -421,6 +514,19 @@ function PresentationStatsContent() {
     return Math.max(...counts, 1);
   }, [summary?.byDay]);
 
+  useEffect(() => {
+    const totalPages = summary?.groupedMeta?.totalPages;
+    if (totalPages && groupPage > totalPages) setGroupPage(totalPages);
+  }, [summary?.groupedMeta?.totalPages, groupPage]);
+
+  useEffect(() => {
+    const totalPages = eventsQuery.data?.meta.totalPages;
+    if (totalPages && page > totalPages) setPage(totalPages);
+  }, [eventsQuery.data?.meta.totalPages, page]);
+
+  const dayRows = summary?.byDay ?? [];
+  const visibleDays = dayRows.slice((dayPage - 1) * dayPageSize, dayPage * dayPageSize);
+
   if (summaryQuery.isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={320}>
@@ -439,13 +545,14 @@ function PresentationStatsContent() {
     );
   }
 
-  const groupedRows = summary?.grouped?.length
-    ? summary.grouped
-    : summary?.bySong?.map(row => ({
-        key: row.mongoSongId || row.title,
-        label: row.title,
-        count: row.count,
-      }));
+  const groupedRows =
+    summary?.grouped ??
+    summary?.bySong?.map(row => ({
+      key: row.mongoSongId || row.title,
+      label: row.title,
+      count: row.count,
+    })) ??
+    [];
 
   return (
     <Box sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 2, sm: 3 }, flex: 1 }}>
@@ -586,9 +693,9 @@ function PresentationStatsContent() {
           title={`Aktywność wg dni (${days} dni)`}
           storageKey={STATS_SECTION_STORAGE.activityByDay}
         >
-          {summary?.byDay?.length ? (
+          {visibleDays.length ? (
             <Box>
-              {summary.byDay.map(row => (
+              {visibleDays.map(row => (
                 <Box key={row.date} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ width: { xs: 72, sm: 88 }, flexShrink: 0, fontSize: '0.8rem' }}>
                     {formatDayLabel(row.date)}
@@ -607,6 +714,13 @@ function PresentationStatsContent() {
               Brak zdarzeń w wybranym okresie.
             </Typography>
           )}
+          <ListPagination
+            page={dayPage}
+            total={dayRows.length}
+            limit={dayPageSize}
+            onChange={setDayPage}
+            noun="dni"
+          />
         </CollapsibleStatsSection>
 
         <CollapsibleStatsSection
@@ -640,6 +754,21 @@ function PresentationStatsContent() {
                       <TableCell>
                         {groupBy === 'source' ? (
                           <SourceChip source={row.key === 'browser' || row.key === 'openlp' ? row.key : undefined} />
+                        ) : discordProfileUrl(row.key) ? (
+                          <Tooltip title={`OpenLP · Discord ${row.key}`}>
+                            <Link
+                              href={discordProfileUrl(row.key)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                              color="inherit"
+                              sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                            >
+                              {row.label.startsWith('Discord ') || row.label === row.key
+                                ? `OpenLP · Discord ${row.key}`
+                                : row.label}
+                            </Link>
+                          </Tooltip>
                         ) : (
                           row.label
                         )}
@@ -655,6 +784,13 @@ function PresentationStatsContent() {
               </TableBody>
             </Table>
           </TableContainer>
+          <ListPagination
+            page={groupPage}
+            total={summary?.groupedMeta?.total ?? groupedRows.length}
+            limit={summary?.groupedMeta?.limit ?? groupLimit}
+            onChange={setGroupPage}
+            noun="pozycji"
+          />
         </CollapsibleStatsSection>
 
         <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5 }}>
@@ -880,11 +1016,13 @@ function PresentationStatsContent() {
                 </TableBody>
               </Table>
             </TableContainer>
-            {(eventsQuery.data?.meta.totalPages ?? 0) > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Pagination count={eventsQuery.data?.meta.totalPages ?? 1} page={page} onChange={(_, value) => setPage(value)} color="primary" size="small" />
-              </Box>
-            )}
+            <ListPagination
+              page={page}
+              total={eventsQuery.data?.meta.total ?? 0}
+              limit={eventsQuery.data?.meta.limit ?? limit}
+              onChange={setPage}
+              noun="zdarzeń"
+            />
           </>
         )}
       </Box>

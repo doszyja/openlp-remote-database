@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, PipelineStage } from 'mongoose';
 import {
   PresentationEvent,
   PresentationEventDocument,
@@ -390,20 +390,12 @@ export class PresentationEventsService {
       presentedAtGte: from,
     });
 
-    const [bySong, byDay, bySource, byDevice, authCounts, totalEvents] =
+    const page = Math.max(query.page ?? 1, 1);
+    const limit = Math.min(Math.max(query.limit ?? 25, 1), 100);
+    const groupBy = query.groupBy ?? 'song';
+
+    const [byDay, bySource, byDevice, authCounts, totalEvents] =
       await Promise.all([
-        this.presentationEventModel.aggregate([
-          { $match: match },
-          {
-            $group: {
-              _id: { title: '$title', mongoSongId: '$mongoSongId' },
-              count: { $sum: 1 },
-              lastPresentedAt: { $max: '$presentedAt' },
-            },
-          },
-          { $sort: { count: -1 } },
-          { $limit: 50 },
-        ]),
         this.presentationEventModel.aggregate([
           { $match: match },
           {
@@ -464,90 +456,15 @@ export class PresentationEventsService {
     const anonymousViews =
       authCounts.find((row) => row._id === 'anonymous')?.count ?? 0;
 
-    let grouped:
-      | Array<{ key: string; label: string; count: number }>
-      | undefined;
-
-    if (query.groupBy === 'user') {
-      const byUser = await this.presentationEventModel.aggregate([
-        { $match: match },
-        {
-          $addFields: {
-            statsDiscordId: {
-              $cond: [
-                {
-                  $and: [
-                    { $ne: ['$viewerDiscordId', null] },
-                    { $ne: ['$viewerDiscordId', ''] },
-                  ],
-                },
-                '$viewerDiscordId',
-                {
-                  $cond: [
-                    {
-                      $and: [
-                        { $eq: ['$source', 'openlp'] },
-                        { $ne: ['$clientId', null] },
-                        { $ne: ['$clientId', ''] },
-                      ],
-                    },
-                    '$clientId',
-                    '$sessionId',
-                  ],
-                },
-              ],
-            },
-            statsUsername: { $ifNull: ['$viewerUsername', null] },
-          },
-        },
-        {
-          $group: {
-            _id: { $ifNull: ['$statsDiscordId', 'anonymous'] },
-            count: { $sum: 1 },
-            label: { $first: '$statsUsername' },
-          },
-        },
-        { $sort: { count: -1 } },
-        { $limit: 50 },
-      ]);
-      const ids = byUser
-        .map((row) => (typeof row._id === 'string' ? row._id : null))
-        .filter((id): id is string => Boolean(id && id !== 'anonymous'));
-      const usersByKey = await this.authService.resolveUsersByClientIds(ids);
-      grouped = byUser.map((row) => {
-        const key = String(row._id);
-        const user = usersByKey.get(key);
-        const label =
-          row.label ||
-          user?.username ||
-          (key === 'anonymous' ? 'Anonimowy' : `Discord ${key}`);
-        return { key, label, count: row.count };
-      });
-    } else if (query.groupBy === 'source') {
-      grouped = bySource.map((row) => ({
-        key: row._id,
-        label: row._id === 'browser' ? 'Przeglądarka' : 'OpenLP',
-        count: row.count,
-      }));
-    } else if (query.groupBy === 'device') {
-      grouped = byDevice.map((row) => ({
-        key: row._id,
-        label: row._id,
-        count: row.count,
-      }));
-    } else if (query.groupBy === 'day') {
-      grouped = byDay.map((row) => ({
-        key: row._id,
-        label: row._id,
-        count: row.count,
-      }));
-    } else if (query.groupBy === 'song') {
-      grouped = bySong.map((row) => ({
-        key: row._id.mongoSongId || row._id.title,
-        label: row._id.title,
-        count: row.count,
-      }));
-    }
+    const groupedPage = await this.buildGroupedPage({
+      groupBy,
+      match,
+      page,
+      limit,
+      byDay,
+      bySource,
+      byDevice,
+    });
 
     return {
       from: from.toISOString(),
@@ -558,12 +475,7 @@ export class PresentationEventsService {
       totalEvents,
       authenticatedViews,
       anonymousViews,
-      bySong: bySong.map((row) => ({
-        title: row._id.title,
-        mongoSongId: row._id.mongoSongId,
-        count: row.count,
-        lastPresentedAt: row.lastPresentedAt,
-      })),
+      bySong: groupedPage.bySong,
       byDay: byDay.map((row) => ({ date: row._id, count: row.count })),
       bySource: bySource.map((row) => ({
         source: row._id as SongViewSource,
@@ -573,7 +485,188 @@ export class PresentationEventsService {
         deviceType: row._id as string,
         count: row.count,
       })),
-      grouped,
+      grouped: groupedPage.grouped,
+      groupedMeta: {
+        total: groupedPage.total,
+        page,
+        limit,
+        totalPages: Math.ceil(groupedPage.total / limit) || 1,
+      },
+    };
+  }
+
+  private async aggregatePage<T>(
+    pipeline: PipelineStage[],
+    page: number,
+    limit: number,
+  ): Promise<{ rows: T[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [facet] = await this.presentationEventModel
+      .aggregate<{ meta: Array<{ total: number }>; data: T[] }>([
+        ...pipeline,
+        {
+          $facet: {
+            meta: [{ $count: 'total' }],
+            data: [{ $skip: skip }, { $limit: limit }],
+          },
+        },
+      ])
+      .exec();
+    return {
+      rows: facet?.data ?? [],
+      total: facet?.meta?.[0]?.total ?? 0,
+    };
+  }
+
+  private slicePage<T>(rows: T[], page: number, limit: number) {
+    const start = (page - 1) * limit;
+    return { rows: rows.slice(start, start + limit), total: rows.length };
+  }
+
+  private async buildGroupedPage(input: {
+    groupBy: 'song' | 'day' | 'source' | 'device' | 'user';
+    match: Record<string, unknown>;
+    page: number;
+    limit: number;
+    byDay: Array<{ _id: string; count: number }>;
+    bySource: Array<{ _id: string; count: number }>;
+    byDevice: Array<{ _id: string; count: number }>;
+  }): Promise<{
+    grouped: Array<{ key: string; label: string; count: number }>;
+    bySong: Array<{
+      title: string;
+      mongoSongId?: string;
+      count: number;
+      lastPresentedAt?: Date;
+    }>;
+    total: number;
+  }> {
+    const { groupBy, match, page, limit, byDay, bySource, byDevice } = input;
+
+    if (groupBy === 'user') {
+      const { rows, total } = await this.aggregatePage<{
+        _id: string;
+        count: number;
+        label?: string | null;
+      }>(
+        [
+          { $match: match },
+          {
+            $addFields: {
+              statsDiscordId: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ['$viewerDiscordId', null] },
+                      { $ne: ['$viewerDiscordId', ''] },
+                    ],
+                  },
+                  '$viewerDiscordId',
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ['$source', 'openlp'] },
+                          { $ne: ['$clientId', null] },
+                          { $ne: ['$clientId', ''] },
+                        ],
+                      },
+                      '$clientId',
+                      '$sessionId',
+                    ],
+                  },
+                ],
+              },
+              statsUsername: { $ifNull: ['$viewerUsername', null] },
+            },
+          },
+          {
+            $group: {
+              _id: { $ifNull: ['$statsDiscordId', 'anonymous'] },
+              count: { $sum: 1 },
+              label: { $first: '$statsUsername' },
+            },
+          },
+          { $sort: { count: -1 } },
+        ],
+        page,
+        limit,
+      );
+      const ids = rows
+        .map((row) => (typeof row._id === 'string' ? row._id : null))
+        .filter((id): id is string => Boolean(id && id !== 'anonymous'));
+      const usersByKey = await this.authService.resolveUsersByClientIds(ids);
+      return {
+        total,
+        bySong: [],
+        grouped: rows.map((row) => {
+          const key = String(row._id);
+          const user = usersByKey.get(key);
+          const label =
+            row.label ||
+            user?.username ||
+            (key === 'anonymous' ? 'Anonimowy' : `Discord ${key}`);
+          return { key, label, count: row.count };
+        }),
+      };
+    }
+
+    if (groupBy === 'source' || groupBy === 'device' || groupBy === 'day') {
+      const sourceRows =
+        groupBy === 'source'
+          ? bySource.map((row) => ({
+              key: row._id,
+              label: row._id === 'browser' ? 'Przeglądarka' : 'OpenLP',
+              count: row.count,
+            }))
+          : groupBy === 'device'
+            ? byDevice.map((row) => ({
+                key: row._id,
+                label: row._id,
+                count: row.count,
+              }))
+            : byDay.map((row) => ({
+                key: row._id,
+                label: row._id,
+                count: row.count,
+              }));
+      const sliced = this.slicePage(sourceRows, page, limit);
+      return { grouped: sliced.rows, bySong: [], total: sliced.total };
+    }
+
+    const { rows, total } = await this.aggregatePage<{
+      _id: { title: string; mongoSongId?: string };
+      count: number;
+      lastPresentedAt?: Date;
+    }>(
+      [
+        { $match: match },
+        {
+          $group: {
+            _id: { title: '$title', mongoSongId: '$mongoSongId' },
+            count: { $sum: 1 },
+            lastPresentedAt: { $max: '$presentedAt' },
+          },
+        },
+        { $sort: { count: -1 } },
+      ],
+      page,
+      limit,
+    );
+    const bySong = rows.map((row) => ({
+      title: row._id.title,
+      mongoSongId: row._id.mongoSongId,
+      count: row.count,
+      lastPresentedAt: row.lastPresentedAt,
+    }));
+    return {
+      total,
+      bySong,
+      grouped: bySong.map((row) => ({
+        key: row.mongoSongId || row.title,
+        label: row.title,
+        count: row.count,
+      })),
     };
   }
 }
