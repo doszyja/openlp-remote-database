@@ -15,11 +15,13 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useCachedSongs } from '../hooks/useCachedSongs';
 
 export default function Footer() {
   const { mode, toggleMode } = useTheme();
   const isNarrow = useMediaQuery('(max-width: 600px)');
   const location = useLocation();
+  const { cacheVersion } = useCachedSongs();
   const [appVersion, setAppVersion] = useState<string>('');
 
   // Hide extra content on mobile on /songs page
@@ -118,13 +120,40 @@ export default function Footer() {
               Znalazłeś błąd? Napisz na Discord
             </Link>
           </Stack>
-          {appVersion && (
+        </>
+      )}
+      {(cacheVersion !== null || appVersion) && (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            px: 1,
+            pb: 0.5,
+            pt: isSongsPageMobile ? 0.25 : 0,
+            minHeight: isSongsPageMobile ? 14 : undefined,
+          }}
+        >
+          {cacheVersion !== null ? (
             <Typography
+              component="span"
               sx={{
-                position: 'absolute',
-                bottom: 4,
-                right: 8,
-                fontSize: '0.6rem',
+                fontSize: '0.55rem',
+                color: 'text.disabled',
+                fontWeight: 300,
+                letterSpacing: '0.02em',
+              }}
+            >
+              cache v{cacheVersion}
+            </Typography>
+          ) : (
+            <span />
+          )}
+          {appVersion ? (
+            <Typography
+              component="span"
+              sx={{
+                fontSize: '0.55rem',
                 color: 'text.disabled',
                 fontWeight: 300,
                 letterSpacing: '0.02em',
@@ -133,8 +162,8 @@ export default function Footer() {
             >
               v{appVersion}
             </Typography>
-          )}
-        </>
+          ) : null}
+        </Box>
       )}
     </Box>
   );

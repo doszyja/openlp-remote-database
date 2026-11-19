@@ -36,6 +36,7 @@ export function useCachedSongs() {
     isLoading: isLoading && songList.length === 0,
     error,
     refetch,
+    cacheVersion: songsCache.getCachedVersion(),
   };
 }
 
