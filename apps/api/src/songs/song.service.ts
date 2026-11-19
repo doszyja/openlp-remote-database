@@ -138,6 +138,8 @@ export class SongService {
       userAgent?: string;
     },
   ) {
+    /** Same audit action + metadata shape as PATCH from the web UI (still metadata.source=openlp). */
+    const saveOpts = { auditAsWebAction: true as const };
     const mongoId = (dto.id || '').trim();
     if (mongoId && Types.ObjectId.isValid(mongoId)) {
       const existing = await this.songModel
@@ -154,12 +156,16 @@ export class SongService {
           context?.ipAddress,
           context?.userAgent,
           context?.avatar ?? null,
+          saveOpts,
         );
       }
     }
 
     const { id: _ignored, ...createBody } = dto;
-    return this.create(createBody, context);
+    return this.create(createBody, {
+      ...context,
+      auditAsWebAction: true,
+    });
   }
 
   async create(
@@ -171,11 +177,15 @@ export class SongService {
       avatar?: string | null;
       ipAddress?: string;
       userAgent?: string;
+      auditAsWebAction?: boolean;
     },
   ) {
     const existingForUpsert =
       await this.findExistingForOpenlpCreate(createSongDto);
     if (existingForUpsert) {
+      const saveOptions = context?.auditAsWebAction
+        ? { auditAsWebAction: true as const }
+        : undefined;
       return this.update(
         existingForUpsert._id.toString(),
         createSongDto,
@@ -185,6 +195,7 @@ export class SongService {
         context?.ipAddress,
         context?.userAgent,
         context?.avatar ?? null,
+        saveOptions,
       );
     }
 
@@ -297,7 +308,7 @@ export class SongService {
 
     if (context?.userId && context?.username) {
       const action =
-        editSource === 'openlp'
+        editSource === 'openlp' && !context.auditAsWebAction
           ? AuditLogAction.SONG_CREATE_OPENLP
           : AuditLogAction.SONG_CREATE;
       await this.auditLogService
@@ -526,6 +537,7 @@ export class SongService {
     ipAddress?: string,
     userAgent?: string,
     avatar?: string | null,
+    saveOptions?: { auditAsWebAction?: boolean },
   ) {
     const { verses, tags, verseOrder, openlpMapping, ...songData } =
       updateSongDto;
@@ -753,7 +765,7 @@ export class SongService {
     // Log audit trail if user is authenticated
     if (userId && username) {
       const auditAction =
-        editSource === 'openlp'
+        editSource === 'openlp' && !saveOptions?.auditAsWebAction
           ? AuditLogAction.SONG_EDIT_OPENLP
           : AuditLogAction.SONG_EDIT;
       await this.auditLogService
