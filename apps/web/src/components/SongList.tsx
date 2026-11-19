@@ -580,7 +580,9 @@ export default function SongList({
               width="100%"
               itemData={listData}
               outerElementType={ListOuterElement}
-            />
+            >
+              {VirtualizedRow}
+            </FixedSizeList>
           )}
         </Box>
       )}
