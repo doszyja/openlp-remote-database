@@ -306,6 +306,37 @@ describe('SongService', () => {
         }),
       );
     });
+
+    it('should accept tags: null on update (OpenLP save)', async () => {
+      const songId = '507f1f77bcf86cd799439011';
+      const existingSong = {
+        _id: songId,
+        title: 'Ach potrzebuję Cię',
+        verses: verseLines('line'),
+        searchTitle: 'ach',
+        searchLyrics: 'line',
+        tags: [{ name: 'worship' }],
+        toObject: jest.fn().mockReturnValue({
+          _id: songId,
+          title: 'Ach potrzebuję Cię',
+          verses: verseLines('line'),
+          tags: [],
+        }),
+      };
+
+      mockSongModel.findOne.mockResolvedValue(existingSong);
+      mockSongModel.updateOne.mockResolvedValue({ modifiedCount: 1 });
+      mockSongModel.findOne.mockResolvedValueOnce(existingSong);
+
+      await service.update(songId, { tags: null } as UpdateSongDto);
+
+      expect(mockSongModel.updateOne).toHaveBeenCalledWith(
+        { _id: songId },
+        expect.objectContaining({
+          tags: [],
+        }),
+      );
+    });
   });
 
   describe('findAll', () => {

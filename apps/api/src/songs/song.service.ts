@@ -598,17 +598,21 @@ export class SongService {
       updateData.verseOrder = defaultVerseOrderFromVerses(existing.verses);
     }
 
-    // Handle tags
-    if (tags) {
-      const tagIds: string[] = [];
-      for (const tagName of tags) {
-        let tag = await this.tagModel.findOne({ name: tagName });
-        if (!tag) {
-          tag = await this.tagModel.create({ name: tagName });
+    // Handle tags (OpenLP may send tags: null)
+    if (tags !== undefined) {
+      if (tags === null || (Array.isArray(tags) && tags.length === 0)) {
+        updateData.tags = [];
+      } else if (Array.isArray(tags)) {
+        const tagIds: string[] = [];
+        for (const tagName of tags) {
+          let tag = await this.tagModel.findOne({ name: tagName });
+          if (!tag) {
+            tag = await this.tagModel.create({ name: tagName });
+          }
+          tagIds.push(tag._id.toString());
         }
-        tagIds.push(tag._id.toString());
+        updateData.tags = tagIds;
       }
-      updateData.tags = tagIds;
     }
 
     if (openlpMapping !== undefined) {
@@ -683,8 +687,10 @@ export class SongService {
               .join(', ')
           : '';
 
-      // Get new tag names (they're already names in the DTO)
-      const newTagNames = tags.length > 0 ? tags.sort().join(', ') : '';
+      const newTagNames =
+        tags != null && Array.isArray(tags) && tags.length > 0
+          ? [...tags].sort().join(', ')
+          : '';
 
       if (oldTagNames !== newTagNames) {
         changes.tags = {
