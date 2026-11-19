@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SongListCacheItem } from '@openlp/shared';
 import { songsCache } from '../services/songs-cache';
+import { useDebouncedValue } from './useDebouncedValue';
 
 /**
  * Hook to get all songs list from cache with automatic version checking
@@ -107,6 +108,8 @@ export function useCachedSongs() {
   };
 }
 
+export const SONG_SEARCH_DEBOUNCE_MS = 300;
+
 /**
  * Hook to search songs using cached data
  */
@@ -118,6 +121,8 @@ export function useCachedSongSearch(
   }
 ) {
   const { songs, isLoading } = useCachedSongs();
+  const debouncedQuery = useDebouncedValue(query, SONG_SEARCH_DEBOUNCE_MS);
+  const isDebouncing = query.trim() !== debouncedQuery.trim();
 
   // Extract options to stable values for dependency array
   const language = options?.language;
@@ -127,17 +132,18 @@ export function useCachedSongSearch(
   // Use useMemo to prevent unnecessary recalculations and re-renders
   // Only recalculate when query or songs actually change
   const searchResults = useMemo(() => {
-    if (!query.trim()) {
+    if (!debouncedQuery.trim()) {
       return [];
     }
 
     // Use cache for search - this is synchronous and fast
-    return songsCache.searchInCache(query, options);
+    return songsCache.searchInCache(debouncedQuery, options);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, songsCount, language, tagsKey]);
+  }, [debouncedQuery, songsCount, language, tagsKey]);
 
   return {
     results: searchResults,
-    isLoading,
+    isLoading: isLoading || isDebouncing,
+    debouncedQuery,
   };
 }

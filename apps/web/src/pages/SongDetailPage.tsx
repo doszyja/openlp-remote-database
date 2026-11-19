@@ -42,6 +42,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'reac
 import clipboardCopy from 'clipboard-copy';
 import { useDeleteSong } from '../hooks';
 import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -52,6 +53,9 @@ import {
 } from '../utils/verseParser';
 import { songsCache } from '../services/songs-cache';
 import SongList from '../components/SongList';
+import SongbookFilterSelect from '../components/SongbookFilterSelect';
+import { SONGBOOK_OPTIONS } from '../constants/songbookOptions';
+import { filterSongsBySongbooks } from '../utils/songbookFilter';
 import {
   useActiveSong,
   useServicePlans,
@@ -59,14 +63,6 @@ import {
   useSetActiveSong,
 } from '../hooks/useServicePlans';
 import type { SongbookSlug } from '@openlp/shared';
-
-// Songbook filter options
-const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
-  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
-  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
-  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
-  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
-];
 
 const OPENLP_COPY_LABELS: Record<NonNullable<ParsedVerse['type']>, string> = {
   verse: 'Zwrotka',
@@ -132,7 +128,7 @@ export default function SongDetailPage() {
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
+  const [songbookFilters, setSongbookFilters] = useState<SongbookSlug[]>([]);
 
   // Detect if user is on Mac (for keyboard shortcut display)
   const isMac = useMemo(() => {
@@ -171,6 +167,8 @@ export default function SongDetailPage() {
     if (!id) return null;
     return songsCache.getSongById(id);
   }, [id, allCachedSongs]);
+
+  usePageTitle(song?.title);
 
   // Parse verses with verseOrder and lyricsXml (1:1 transparent with SQLite)
   const parsedVerses = useMemo(() => {
@@ -254,34 +252,22 @@ export default function SongDetailPage() {
   }, [id, allCachedSongs, isCacheLoading, navigate, getFirstSongId]);
 
   // Use cached search for instant results when searching, otherwise show all songs
-  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
+  const {
+    results: searchResults,
+    isLoading: isSearchLoading,
+    debouncedQuery: debouncedSearch,
+  } = useCachedSongSearch(search);
 
   // Memoize search results to prevent unnecessary re-renders
   // Show all songs (no limit) - same as SongListPage
   // Also apply songbook filter
   const allSearchSongs = useMemo(() => {
-    let songs = !search.trim() ? allCachedSongs || [] : searchResults || [];
+    let songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
 
-    // Apply songbook filter
-    if (songbookFilter) {
-      if (songbookFilter === 'zborowe') {
-        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
-        songs = songs.filter(
-          song =>
-            !song.songbook ||
-            (song.songbook !== 'pielgrzym' &&
-              song.songbook !== 'zielony' &&
-              song.songbook !== 'wedrowiec')
-        );
-      } else {
-        songs = songs.filter(song => song.songbook === songbookFilter);
-      }
-    }
+    return filterSongsBySongbooks(songs, songbookFilters);
+  }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);
 
-    return songs;
-  }, [search, searchResults, allCachedSongs, songbookFilter]);
-
-  const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
+  const isSearchLoadingState = debouncedSearch.trim() ? isSearchLoading : isCacheLoading;
 
   const handleDelete = async () => {
     if (!id || deleteSong.isPending) return;
@@ -642,13 +628,10 @@ export default function SongDetailPage() {
                   }}
                   size="small"
                   sx={{
-                    opacity: 0.5,
-                    transition: 'opacity 0.2s ease',
-                    '&:hover': {
-                      opacity: 0.9,
-                    },
+                    color: theme => (theme.palette.mode === 'dark' ? '#fff' : '#000'),
                     '& .MuiSvgIcon-root': {
                       fontSize: '1.125rem',
+                      color: 'inherit',
                     },
                   }}
                   aria-label="Kopiuj tekst pieśni do schowka"
@@ -674,13 +657,10 @@ export default function SongDetailPage() {
                   }}
                   size="small"
                   sx={{
-                    opacity: 0.5,
-                    transition: 'opacity 0.2s ease',
-                    '&:hover': {
-                      opacity: 0.9,
-                    },
+                    color: theme => (theme.palette.mode === 'dark' ? '#fff' : '#000'),
                     '& .MuiSvgIcon-root': {
                       fontSize: '1.125rem',
+                      color: 'inherit',
                     },
                   }}
                   aria-label="Kopiuj tekst pieśni w formacie OpenLP"
@@ -798,8 +778,8 @@ export default function SongDetailPage() {
                             : '0 2px 8px rgba(0, 0, 0, 0.05)',
                         border: theme =>
                           theme.palette.mode === 'dark'
-                            ? '1px solid rgba(255, 255, 255, 0.08)'
-                            : '1px solid rgba(0, 0, 0, 0.05)',
+                            ? '1px solid rgba(255, 255, 255, 0.22)'
+                            : '1px solid rgba(0, 0, 0, 0.2)',
                       }}
                     >
                       <Typography
@@ -1030,7 +1010,7 @@ export default function SongDetailPage() {
               setSearch(value);
               // Clear songbook filter when search is cleared
               if (!value) {
-                setSongbookFilter(null);
+                setSongbookFilters([]);
               }
             }}
             isLoading={isSearchLoadingState}
@@ -1038,60 +1018,11 @@ export default function SongDetailPage() {
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
             showSortButton={isMobile}
-            hasActiveFilter={!!songbookFilter}
+            hasActiveFilter={songbookFilters.length > 0}
             showAddSong={hasEditPermission}
             onAddSong={() => navigate('/songs/new')}
             filterContent={
-              <>
-                {SONGBOOK_OPTIONS.map(option => (
-                  <Chip
-                    key={option.slug}
-                    label={option.label}
-                    size="small"
-                    onClick={() =>
-                      setSongbookFilter(songbookFilter === option.slug ? null : option.slug)
-                    }
-                    sx={{
-                      fontWeight: songbookFilter === option.slug ? 600 : 400,
-                      fontSize: { xs: '0.85rem', sm: '0.7rem' },
-                      height: { xs: 32, sm: 24 },
-                      flexShrink: 0,
-                      backgroundColor:
-                        songbookFilter === option.slug
-                          ? option.color
-                          : theme =>
-                              theme.palette.mode === 'dark' ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
-                      color: songbookFilter === option.slug ? '#fff' : 'text.primary',
-                      border: '1px solid',
-                      borderColor:
-                        songbookFilter === option.slug
-                          ? `${option.color} !important`
-                          : theme =>
-                              theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.1)'
-                                : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor:
-                          songbookFilter === option.slug
-                            ? option.color
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'transparent'
-                                  : 'rgba(0, 0, 0, 0.1)',
-                        borderColor:
-                          songbookFilter === option.slug
-                            ? option.color
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'rgba(255, 255, 255, 0.1)'
-                                  : 'transparent',
-                      },
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
-              </>
+              <SongbookFilterSelect value={songbookFilters} onChange={setSongbookFilters} />
             }
           />
         </Box>
@@ -1108,7 +1039,7 @@ export default function SongDetailPage() {
       isMobile,
       isMac,
       setSortOrder,
-      songbookFilter,
+      songbookFilters,
     ]
   );
 
@@ -1369,7 +1300,7 @@ export default function SongDetailPage() {
         px: { xs: 2, sm: 3, md: 4 },
         width: '100%',
         maxWidth: '100%',
-        overflowX: 'hidden',
+        overflowX: 'clip',
       }}
     >
       {isAuthenticated && isServiceView ? (
@@ -1377,12 +1308,12 @@ export default function SongDetailPage() {
         <Box
           display="flex"
           flexDirection={{ xs: 'column', lg: 'row' }}
-          gap={2}
+          gap={{ xs: 2, lg: '2rem' }}
           alignItems={{ xs: 'flex-start', lg: 'stretch' }}
           maxWidth={{ xs: '100%', lg: '1600px' }}
           mx="auto"
           width="100%"
-          sx={{ px: { xs: 0, md: 2 }, overflowX: 'hidden' }}
+          sx={{ px: { xs: 0, md: 2 }, overflowX: 'clip' }}
         >
           {/* Column 1: Song List */}
           <Box
@@ -1398,9 +1329,9 @@ export default function SongDetailPage() {
             <Box
               sx={{
                 position: 'sticky',
-                top: 20,
-                height: { xs: 'auto', lg: 'calc(100vh - 100px)' },
-                maxHeight: { xs: 'none', lg: 'calc(100vh - 100px)' },
+                top: { xs: 72, sm: 80 },
+                height: { xs: 'auto', lg: 'calc(100dvh - 96px)' },
+                maxHeight: { xs: 'none', lg: 'calc(100dvh - 96px)' },
                 minHeight: 0,
               }}
             >
@@ -1418,7 +1349,14 @@ export default function SongDetailPage() {
               flexDirection: 'column',
             }}
           >
-            <Box sx={{ position: 'sticky', top: 20, height: '100%', minHeight: '100%' }}>
+            <Box
+              sx={{
+                position: 'sticky',
+                top: { xs: 72, sm: 80 },
+                height: { lg: 'calc(100dvh - 96px)' },
+                minHeight: 0,
+              }}
+            >
               {planSongsColumn}
             </Box>
           </Box>
@@ -1441,12 +1379,12 @@ export default function SongDetailPage() {
         <Box
           display="flex"
           flexDirection={{ xs: 'column', md: 'row' }}
-          gap={{ xs: 2, md: 2 }}
+          gap={{ xs: 2, md: '2rem' }}
           alignItems={{ xs: 'flex-start', md: 'stretch' }}
           maxWidth={{ xs: '100%', md: '1024px', lg: '1200px' }}
           mx="auto"
           width="100%"
-          sx={{ px: { xs: 0, md: 2 }, overflowX: 'hidden' }}
+          sx={{ px: { xs: 0, md: 2 }, overflowX: 'clip' }}
         >
           <Box
             sx={{
@@ -1461,7 +1399,7 @@ export default function SongDetailPage() {
                 md: isFullscreen ? 0 : '260px',
                 lg: isFullscreen ? 0 : '320px',
               },
-              overflow: 'hidden',
+              overflow: 'visible',
               flexShrink: 0,
               transition:
                 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1471,11 +1409,11 @@ export default function SongDetailPage() {
           >
             <Box
               sx={{
-                width: { md: '240px', lg: '320px' },
+                width: '100%',
                 position: 'sticky',
-                top: 20,
-                height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-                maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
+                top: { xs: 72, sm: 80 },
+                height: { xs: 'auto', md: 'calc(100dvh - 96px)' },
+                maxHeight: { xs: 'none', md: 'calc(100dvh - 96px)' },
                 minHeight: 0,
               }}
             >
@@ -1484,16 +1422,13 @@ export default function SongDetailPage() {
           </Box>
           <Box
             sx={{
-              width: {
-                xs: '100%',
-                md: isFullscreen ? '100%' : 'calc(100% - 260px)',
-                lg: isFullscreen ? '100%' : 'calc(100% - 320px)',
-              },
+              flex: 1,
+              minWidth: 0,
+              width: { xs: '100%', md: isFullscreen ? '100%' : 'auto' },
               maxWidth: { xs: '100%', md: '100%', lg: isFullscreen ? '1200px' : '1000px' },
-              flexShrink: 0,
               transition:
                 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              overflowX: 'hidden',
+              overflowX: 'clip',
             }}
           >
             <Box key={id}>{songContent}</Box>

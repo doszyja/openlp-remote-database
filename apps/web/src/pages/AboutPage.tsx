@@ -13,31 +13,11 @@ export default function AboutPage() {
         minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
-        background: theme =>
-          theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1A2332 0%, #1E2A3A 50%, #1F2D3F 100%)'
-            : 'linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 50%, #d4e1f0 100%)',
-        position: 'relative',
-        overflow: 'hidden',
+        bgcolor: 'background.default',
         py: { xs: 4, sm: 6, md: 8 },
         px: { xs: 3, sm: 4 },
       }}
     >
-      {/* Decorative elements */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.03,
-          backgroundImage:
-            'radial-gradient(circle at 20% 50%, currentColor 0%, transparent 50%), radial-gradient(circle at 80% 80%, currentColor 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }}
-      />
-
       <Box
         sx={{
           flexGrow: 1,

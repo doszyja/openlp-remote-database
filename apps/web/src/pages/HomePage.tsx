@@ -8,23 +8,57 @@ import {
   Paper,
   FormControlLabel,
   Switch,
-  AppBar,
-  Toolbar,
   Avatar,
+  alpha,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import {
   LibraryMusic as LibraryMusicIcon,
   Add as AddIcon,
   Help as HelpIcon,
   DeveloperMode as DeveloperModeIcon,
+  ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
 import SettingsDialog, { SettingsDialogRef } from '../components/SettingsDialog';
 import { useServicePlans } from '../hooks/useServicePlans';
 import { UserAvatar, UserMenu } from '../components/Navbar';
+import ThemeToggle from '../components/ThemeToggle';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
+
+const homeTileBorderColor = (theme: Theme) =>
+  theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.28)';
+
+const homeTileSx = {
+  p: { xs: 3, sm: 3.5 },
+  minHeight: { xs: 96, sm: 108 },
+  borderRadius: 2,
+  border: '1px solid',
+  borderColor: (theme: Theme) => homeTileBorderColor(theme),
+  bgcolor: 'background.paper',
+  display: 'flex',
+  alignItems: 'center',
+  gap: { xs: 2, sm: 2.5 },
+  cursor: 'pointer',
+  transition: 'background-color 0.15s ease',
+  '&:hover': {
+    bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08),
+  },
+};
+
+const homeTileIconSx = {
+  width: { xs: 52, sm: 56 },
+  height: { xs: 52, sm: 56 },
+  borderRadius: 1.5,
+  bgcolor: 'primary.main',
+  color: 'primary.contrastText',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+};
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -41,7 +75,6 @@ export default function HomePage() {
   const planIdMatch = location.pathname.match(/^\/service-plans\/([^/]+)$/);
   const planId = planIdMatch ? planIdMatch[1] : null;
 
-  // Check if there's a token in localStorage synchronously to avoid showing login button during initial load
   const [hasToken] = useState(() => {
     if (typeof window !== 'undefined') {
       return !!localStorage.getItem('auth_token');
@@ -49,7 +82,6 @@ export default function HomePage() {
     return false;
   });
 
-  // Get dev user type preference from localStorage, default to 'admin' (test admin)
   const [devUserType, setDevUserType] = useState<'admin' | 'regular'>(() => {
     const stored = localStorage.getItem('dev-user-type');
     return stored === 'admin' || stored === 'regular' ? stored : 'admin';
@@ -101,596 +133,291 @@ export default function HomePage() {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        background: theme =>
-          theme.palette.mode === 'dark'
-            ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
-            : '#ffffff',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: 0, // Allow flexbox to shrink
+        bgcolor: 'background.default',
+        minHeight: 0,
       }}
     >
-      {/* Header */}
-      <AppBar
-        position="static"
-        elevation={0}
+      <Box
+        component="header"
         sx={{
-          bgcolor: 'background.paper',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 1,
+          px: { xs: 1.5, sm: 2 },
+          py: 1,
           borderBottom: 1,
           borderColor: 'divider',
-          color: 'text.primary',
+          bgcolor: 'background.paper',
+          flexShrink: 0,
         }}
       >
-        <Toolbar
-          sx={{
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            px: { xs: 1.5, sm: 2, md: 3 },
-            py: { xs: 1, sm: 1.5 },
-            gap: { xs: 1, sm: 2 },
-          }}
-        >
-          {/* User Dropdown */}
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
-          >
-            {isAuthenticated && user ? (
-              <>
-                <UserAvatar user={user} onClick={handleMenuOpen} />
-                <UserMenu
-                  user={user}
-                  anchorEl={anchorEl}
-                  onClose={handleMenuClose}
-                  plansMenuAnchorEl={plansMenuAnchorEl}
-                  onPlansMenuOpen={handlePlansMenuOpen}
-                  onPlansMenuClose={handlePlansMenuClose}
-                  allPlans={allPlans}
-                  planId={planId}
-                  isServicePlansPage={isServicePlansPage}
-                  isLivePage={isLivePage}
-                  isAdmin={isAdmin}
-                  onNavigate={navigate}
-                  onOpenSettings={() => settingsDialogRef.current?.open()}
-                  onLogout={handleLogout}
-                />
-                <Box sx={{ display: 'none' }}>
-                  <SettingsDialog ref={settingsDialogRef} />
-                </Box>
-              </>
-            ) : !hasToken && !isLoading ? (
-              <Button
-                variant="contained"
-                onClick={handleDiscordLogin}
-                size="small"
-                sx={{
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  px: { xs: 1, sm: 1.5 },
-                  py: { xs: 0.5, sm: 0.75 },
-                }}
-              >
-                Zaloguj
-              </Button>
-            ) : null}
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      {/* Decorative elements */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: theme => (theme.palette.mode === 'dark' ? 0.02 : 0),
-          backgroundImage: theme =>
-            theme.palette.mode === 'dark'
-              ? 'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)'
-              : 'none',
-          pointerEvents: 'none',
-        }}
-      />
+        <ThemeToggle />
+        {isAuthenticated && user ? (
+          <>
+            <UserAvatar user={user} onClick={handleMenuOpen} />
+            <UserMenu
+              user={user}
+              anchorEl={anchorEl}
+              onClose={handleMenuClose}
+              plansMenuAnchorEl={plansMenuAnchorEl}
+              onPlansMenuOpen={handlePlansMenuOpen}
+              onPlansMenuClose={handlePlansMenuClose}
+              allPlans={allPlans}
+              planId={planId}
+              isServicePlansPage={isServicePlansPage}
+              isLivePage={isLivePage}
+              isAdmin={isAdmin}
+              onNavigate={navigate}
+              onOpenSettings={() => settingsDialogRef.current?.open()}
+              onLogout={handleLogout}
+            />
+            <Box sx={{ display: 'none' }}>
+              <SettingsDialog ref={settingsDialogRef} />
+            </Box>
+          </>
+        ) : !hasToken && !isLoading ? (
+          <Button variant="contained" onClick={handleDiscordLogin} size="small">
+            Zaloguj
+          </Button>
+        ) : null}
+      </Box>
 
       <Box
         sx={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: { xs: 'flex-start', sm: 'center', md: 'center' },
-          justifyContent: { xs: 'flex-start', sm: 'center', md: 'center' },
-          px: { xs: 2, sm: 3, md: 4 },
-          pt: { xs: 3, sm: 5, md: 8 },
-          pb: { xs: 4, sm: 6, md: 10 },
-          position: 'relative',
-          zIndex: 1,
-          minHeight: 0, // Allow flexbox to shrink
-          overflow: 'auto', // Allow scrolling if content is too large
+          justifyContent: 'center',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          px: { xs: 2, sm: 3 },
+          py: { xs: 3, sm: 4 },
+          overflow: 'auto',
         }}
       >
-        {/* Main title */}
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: { xs: 'flex-start', sm: 'center', md: 'center' },
-            mb: { xs: 3, sm: 4, md: 5 },
-            textAlign: { xs: 'left', sm: 'center', md: 'center' },
-          }}
-        >
+        <Box sx={{ width: '100%', maxWidth: { xs: '100%', sm: 600, md: 640 } }}>
           <Typography
-            variant="h3"
+            variant="h4"
             component="h1"
             sx={{
-              fontWeight: 300,
-              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem', lg: '3rem' },
-              letterSpacing: { xs: 0.3, sm: 0.5, md: 0.6 },
+              fontWeight: 600,
+              mb: 1,
+              fontSize: { xs: '1.65rem', sm: '2rem' },
               color: 'text.primary',
-              fontFamily: '"Playfair Display", "Georgia", serif',
-              mb: { xs: 1, sm: 1.5 },
-              lineHeight: 1.2,
             }}
           >
             Pieśni Zborowe
           </Typography>
           <Typography
-            variant="h6"
-            component="p"
+            variant="body1"
             sx={{
+              mb: 3,
+              lineHeight: 1.55,
+              fontSize: { xs: '1rem', sm: '1.0625rem' },
               fontWeight: 400,
               color: 'text.secondary',
-              fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.2rem' },
-              letterSpacing: { xs: 0.2, sm: 0.3, md: 0.25 },
-              maxWidth: { xs: '100%', sm: '600px', md: '700px' },
-              lineHeight: 1.5,
             }}
           >
             Zarządzaj pieśniami zborowymi i synchronizuj z OpenLP
           </Typography>
-        </Box>
 
-        {/* Welcome message */}
-        {isAuthenticated && user?.username && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: { xs: 'flex-start', sm: 'center', md: 'center' },
-              mb: { xs: 2, sm: 2.5 },
-              gap: 1.5,
-            }}
-          >
-            <Typography
-              variant="h5"
-              component="h2"
-              sx={{
-                fontWeight: 400,
-                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.4rem' },
-                color: 'text.primary',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
-              Witaj,{' '}
-              <Box
-                component="span"
+          {isAuthenticated && user?.username && (
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5 }}>
+              <Avatar
+                src={
+                  user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
+                    : undefined
+                }
                 sx={{
-                  fontWeight: 500,
-                  color:
-                    user.username?.toLowerCase().includes('dev') ||
-                    user.username?.toLowerCase().includes('developer')
-                      ? 'text.secondary'
-                      : 'text.primary',
+                  width: 32,
+                  height: 32,
+                  bgcolor: !user.avatar ? 'primary.main' : undefined,
+                  fontSize: '0.95rem',
                 }}
               >
-                {user.username}
-              </Box>
-            </Typography>
-            <Avatar
-              src={
-                user.avatar
-                  ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png`
-                  : undefined
-              }
-              sx={{
-                width: { xs: 24, sm: 32 },
-                height: { xs: 24, sm: 32 },
-                bgcolor: !user.avatar ? 'primary.main' : undefined,
-                color: !user.avatar ? 'primary.contrastText' : undefined,
-                fontSize: { xs: '1rem', sm: '1.1rem' },
-                fontWeight: 500,
-              }}
-            >
-              {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
-            </Avatar>
-          </Box>
-        )}
+                {!user.avatar ? (user.username?.[0]?.toUpperCase() ?? 'U') : null}
+              </Avatar>
+              <Typography variant="body2" color="text.secondary">
+                Witaj,{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                  {user.username}
+                </Box>
+              </Typography>
+            </Stack>
+          )}
 
-        {/* Action cards */}
-        <Stack
-          spacing={2.5}
-          sx={{
-            width: { xs: '100%', sm: '550px', md: '550px' },
-            alignItems: { xs: 'stretch', sm: 'center', md: 'center' },
-          }}
-        >
-          <Paper
-            elevation={0}
-            onClick={() => navigate('/songs')}
-            sx={{
-              width: '100%',
-              p: { xs: 2.5, sm: 3.5, md: 4 },
-              borderRadius: 3,
-              bgcolor: 'background.paper',
-              boxShadow: theme =>
-                theme.palette.mode === 'dark'
-                  ? '0 8px 32px rgba(0, 0, 0, 0.3)'
-                  : '0 8px 32px rgba(0, 0, 0, 0.1)',
-              border: theme =>
-                theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.1)'
-                  : '1px solid rgba(0, 0, 0, 0.05)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              cursor: 'pointer',
-              '&:hover': {
-                transform: { xs: 'none', sm: 'translateY(-4px)' },
-                boxShadow: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '0 12px 40px rgba(0, 0, 0, 0.4)'
-                    : '0 12px 40px rgba(0, 0, 0, 0.15)',
-              },
-            }}
-          >
-            <Box display="flex" alignItems="flex-start" gap={2} mb={2.5}>
-              <Box
-                sx={{
-                  p: { xs: 1.25, sm: 1.5 },
-                  borderRadius: 2,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <LibraryMusicIcon sx={{ fontSize: { xs: 24, sm: 26, md: 28 } }} />
+          <Stack spacing={{ xs: 2.25, sm: 2.5 }}>
+            <Paper elevation={0} onClick={() => navigate('/songs')} sx={homeTileSx}>
+              <Box sx={homeTileIconSx}>
+                <LibraryMusicIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
               </Box>
               <Box flex={1} minWidth={0}>
                 <Typography
-                  variant="h5"
-                  component="h2"
+                  variant="h6"
                   sx={{
-                    fontWeight: 500,
-                    mb: { xs: 0.75, sm: 1 },
-                    fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
+                    fontWeight: 600,
+                    fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                    mb: 0.75,
+                    color: 'text.primary',
                   }}
                 >
-                  Przeglądaj Pieśni
+                  Przeglądaj pieśni
                 </Typography>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
-                  sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
-                >
-                  Przeglądaj i wyszukuj pieśni zborowe w bibliotece
-                </Typography>
-              </Box>
-            </Box>
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              onClick={e => {
-                e.stopPropagation();
-                navigate('/songs');
-              }}
-              sx={{
-                py: { xs: 1.25, sm: 1.5 },
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                fontWeight: 500,
-                textTransform: 'none',
-                borderRadius: 2,
-              }}
-            >
-              Przejdź do Pieśni
-            </Button>
-          </Paper>
-
-          {hasEditPermission && (
-            <Paper
-              elevation={0}
-              onClick={() => navigate('/songs/new')}
-              sx={{
-                width: '100%',
-                p: { xs: 2.5, sm: 3.5, md: 4 },
-                borderRadius: 3,
-                bgcolor: 'background.paper',
-                boxShadow: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '0 8px 32px rgba(0, 0, 0, 0.3)'
-                    : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '1px solid rgba(255, 255, 255, 0.1)'
-                    : '1px solid rgba(0, 0, 0, 0.05)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: theme =>
-                    theme.palette.mode === 'dark'
-                      ? '0 12px 40px rgba(0, 0, 0, 0.4)'
-                      : '0 12px 40px rgba(0, 0, 0, 0.15)',
-                },
-              }}
-            >
-              <Box display="flex" alignItems="flex-start" gap={2} mb={2.5}>
-                <Box
                   sx={{
-                    p: { xs: 1.25, sm: 1.5 },
-                    borderRadius: 2,
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                    fontWeight: 400,
+                    lineHeight: 1.45,
+                    color: 'text.secondary',
                   }}
                 >
-                  <AddIcon sx={{ fontSize: { xs: 24, sm: 26, md: 28 } }} />
+                  Wyszukuj i otwieraj pieśni z biblioteki
+                </Typography>
+              </Box>
+              <ChevronRightIcon
+                sx={{
+                  fontSize: { xs: 32, sm: 36 },
+                  color: (theme: Theme) => homeTileBorderColor(theme),
+                }}
+              />
+            </Paper>
+
+            {hasEditPermission && (
+              <Paper elevation={0} onClick={() => navigate('/songs/new')} sx={homeTileSx}>
+                <Box sx={homeTileIconSx}>
+                  <AddIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
                 </Box>
                 <Box flex={1} minWidth={0}>
                   <Typography
-                    variant="h5"
-                    component="h2"
+                    variant="h6"
                     sx={{
-                      fontWeight: 500,
-                      mb: { xs: 0.75, sm: 1 },
-                      fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
+                      fontWeight: 600,
+                      fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                      mb: 0.75,
+                      color: 'text.primary',
                     }}
                   >
-                    Dodaj Nową Pieśń
+                    Dodaj nową pieśń
                   </Typography>
                   <Typography
                     variant="body2"
-                    color="text.secondary"
-                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
+                    sx={{
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      fontWeight: 400,
+                      lineHeight: 1.45,
+                      color: 'text.secondary',
+                    }}
                   >
-                    Dodaj nową pieśń do biblioteki zborowej
+                    Utwórz wpis w śpiewniku zborowym
                   </Typography>
                 </Box>
+                <ChevronRightIcon
+                  sx={{
+                    fontSize: { xs: 32, sm: 36 },
+                    color: (theme: Theme) => homeTileBorderColor(theme),
+                  }}
+                />
+              </Paper>
+            )}
+
+            <Paper elevation={0} onClick={() => navigate('/help')} sx={homeTileSx}>
+              <Box sx={homeTileIconSx}>
+                <HelpIcon sx={{ fontSize: { xs: 30, sm: 32 } }} />
               </Box>
-              <Button
-                variant="contained"
-                size="large"
-                fullWidth
-                onClick={e => {
-                  e.stopPropagation();
-                  navigate('/songs/new');
-                }}
+              <Box flex={1} minWidth={0}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.2rem', sm: '1.35rem' },
+                    mb: 0.75,
+                    color: 'text.primary',
+                  }}
+                >
+                  Instrukcja użytkownika
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                    fontWeight: 400,
+                    lineHeight: 1.45,
+                    color: 'text.secondary',
+                  }}
+                >
+                  Jak korzystać z aplikacji
+                </Typography>
+              </Box>
+              <ChevronRightIcon
                 sx={{
-                  py: { xs: 1.25, sm: 1.5 },
-                  fontSize: { xs: '0.9rem', sm: '1rem' },
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  borderRadius: 2,
+                  fontSize: { xs: 32, sm: 36 },
+                  color: (theme: Theme) => homeTileBorderColor(theme),
                 }}
-              >
-                Utwórz Pieśń
-              </Button>
+              />
             </Paper>
-          )}
+          </Stack>
 
-          {/* Help compact info */}
-          <Box
-            onClick={() => navigate('/help')}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: { xs: 1.25, sm: 2 },
-              p: { xs: 1.25, sm: 2 },
-              borderRadius: 2,
-              bgcolor: theme =>
-                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              border: theme =>
-                theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.12)'
-                  : '1px solid rgba(0, 0, 0, 0.08)',
-              boxShadow: theme =>
-                theme.palette.mode === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              '&:hover': {
-                transform: { xs: 'none', sm: 'translateY(-2px)' },
-                boxShadow: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '0 6px 20px rgba(0, 0, 0, 0.3)'
-                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
-              },
-            }}
-          >
-            <Box
-              sx={{
-                p: { xs: 0.6, sm: 0.9 },
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <HelpIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
-            </Box>
-            <Box flex={1} minWidth={0}>
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                  mb: 0.25,
-                }}
-              >
-                Instrukcja Użytkownika
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  fontSize: { xs: '0.78rem', sm: '0.85rem' },
-                  lineHeight: 1.4,
-                }}
-              >
-                Dowiedz się, jak korzystać z aplikacji
-              </Typography>
-            </Box>
-            <Button
-              variant="text"
-              onClick={e => {
-                e.stopPropagation();
-                navigate('/help');
-              }}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: { xs: '0.78rem', sm: '0.9rem' },
-                px: { xs: 0.5, sm: 1 },
-              }}
-            >
-              Zobacz
-            </Button>
-          </Box>
-
-          {/* Dev Login card - only shown in development */}
           {isDev && (
             <Paper
               elevation={0}
               sx={{
-                width: '100%',
-                p: { xs: 2.5, sm: 3.5, md: 4 },
-                borderRadius: 3,
-                bgcolor: 'background.paper',
-                boxShadow: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '0 8px 32px rgba(0, 0, 0, 0.3)'
-                    : '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: theme =>
-                  theme.palette.mode === 'dark'
-                    ? '1px solid rgba(250, 166, 26, 0.3)'
-                    : '1px solid rgba(250, 166, 26, 0.2)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: { xs: 'none', sm: 'translateY(-4px)' },
-                  boxShadow: theme =>
-                    theme.palette.mode === 'dark'
-                      ? '0 12px 40px rgba(250, 166, 26, 0.2)'
-                      : '0 12px 40px rgba(250, 166, 26, 0.15)',
-                },
+                mt: 2.5,
+                p: { xs: 3, sm: 3.5 },
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: (theme: Theme) => homeTileBorderColor(theme),
               }}
             >
-              <Box display="flex" alignItems="flex-start" gap={2} mb={2.5}>
-                <Box
-                  sx={{
-                    p: { xs: 1.25, sm: 1.5 },
-                    borderRadius: 2,
-                    bgcolor: '#faa61a',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <DeveloperModeIcon sx={{ fontSize: { xs: 24, sm: 26, md: 28 } }} />
+              <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
+                <Box sx={{ ...homeTileIconSx, bgcolor: '#b45309' }}>
+                  <DeveloperModeIcon sx={{ fontSize: 30 }} />
                 </Box>
-                <Box flex={1} minWidth={0}>
-                  <Typography
-                    variant="h5"
-                    component="h2"
-                    sx={{
-                      fontWeight: 500,
-                      mb: { xs: 0.75, sm: 1 },
-                      fontSize: { xs: '1.1rem', sm: '1.35rem', md: '1.5rem' },
-                    }}
-                  >
-                    Dev Login
+                <Box>
+                  <Typography variant="h6" fontWeight={600} sx={{ fontSize: '1.2rem' }}>
+                    Dev login
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ lineHeight: 1.6, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
-                  >
-                    Szybkie logowanie deweloperskie bez Discord OAuth
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Szybkie logowanie bez Discord OAuth
                   </Typography>
                 </Box>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={devUserType === 'admin'}
-                      onChange={handleUserTypeToggle}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#faa61a',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#faa61a',
-                        },
-                      }}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>
-                        Tryb Administratora
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mt: 0.25 }}
-                      >
-                        {devUserType === 'admin'
-                          ? 'Pełny dostęp (edycja, usuwanie, logi audytu)'
-                          : 'Ograniczony dostęp (tylko przeglądanie)'}
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ width: '100%', alignItems: 'flex-start', m: 0 }}
-                />
-              </Box>
+              </Stack>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={devUserType === 'admin'}
+                    onChange={handleUserTypeToggle}
+                  />
+                }
+                label={
+                  <Typography variant="body1" fontWeight={500}>
+                    {devUserType === 'admin' ? 'Administrator' : 'Użytkownik (tylko odczyt)'}
+                  </Typography>
+                }
+                sx={{ mb: 2, ml: 0 }}
+              />
               <Button
-                variant="outlined"
-                size="large"
+                variant="contained"
                 fullWidth
+                size="large"
                 onClick={handleDevLogin}
                 sx={{
-                  py: { xs: 1.25, sm: 1.5 },
-                  fontSize: { xs: '0.9rem', sm: '1rem' },
-                  fontWeight: 500,
                   textTransform: 'none',
-                  borderRadius: 2,
-                  borderColor: '#faa61a',
-                  color: '#faa61a',
+                  fontWeight: 500,
+                  fontSize: '1rem',
+                  py: 1.25,
+                  bgcolor: '#9a3412',
+                  color: '#FFFFFF',
                   '&:hover': {
-                    borderColor: '#e8951a',
-                    backgroundColor: 'rgba(250, 166, 26, 0.1)',
+                    bgcolor: '#7c2d12',
                   },
                 }}
               >
-                Zaloguj jako {devUserType === 'admin' ? 'Administrator' : 'Developer'}
+                Zaloguj jako {devUserType === 'admin' ? 'administrator' : 'developer'}
               </Button>
             </Paper>
           )}
-        </Stack>
+        </Box>
       </Box>
     </Box>
   );

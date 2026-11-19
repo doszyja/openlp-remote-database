@@ -42,7 +42,7 @@ function getVerseOrderLabelKey(label?: string | null): string {
   return normalized.includes(' ') ? '' : normalized;
 }
 
-function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
+export function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
   const normalized = normalizeVerseOrderString(song.verseOrder);
   if (normalized) return normalized;
 
@@ -58,6 +58,52 @@ function getEffectiveVerseOrder(song: SongForSqliteExport): string | null {
  * OpenLP stores all verses in a single lyrics field with XML formatting
  * Format: <verse label="v1">text</verse>
  */
+/**
+ * Lyrics XML exactly as written to OpenLP SQLite `songs.lyrics` (full document with header).
+ */
+export function formatOpenlpDatabaseLyrics(song: {
+  verses?: string | Array<{ order: number; content: string; label?: string; originalLabel?: string }> | null;
+  versesArray?: SongForSqliteExport['versesArray'];
+  verseOrder?: string | null;
+  lyricsXml?: string | null;
+}): string {
+  let versesString = '';
+  let versesArray = song.versesArray;
+
+  if (Array.isArray(song.verses) && song.verses.length > 0) {
+    const sorted = [...song.verses].sort((a, b) => a.order - b.order);
+    versesArray = sorted.map((v) => ({
+      order: v.order,
+      content: v.content,
+      label: v.label,
+      originalLabel: v.originalLabel,
+    }));
+    versesString = sorted.map((v) => v.content).join('\n\n');
+  } else if (typeof song.verses === 'string') {
+    versesString = song.verses;
+  }
+
+  const exportSong: SongForSqliteExport = {
+    id: 'openlp-cache',
+    title: '',
+    number: null,
+    language: 'en',
+    verses: versesString,
+    versesArray,
+    verseOrder: song.verseOrder ?? null,
+    lyricsXml: song.lyricsXml ?? null,
+    tags: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  };
+  const effectiveVerseOrder = getEffectiveVerseOrder(exportSong);
+  return formatSongLyrics({
+    ...exportSong,
+    verseOrder: effectiveVerseOrder,
+  });
+}
+
 export function formatSongLyrics(song: SongForSqliteExport): string {
   const parts: string[] = [];
   const effectiveVerseOrder = getEffectiveVerseOrder(song);

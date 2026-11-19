@@ -1,9 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Alert, CircularProgress, Button, Stack } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, Add as AddIcon } from '@mui/icons-material';
 import { useSong, useUpdateSong } from '../hooks';
 import SongForm from '../components/SongForm';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { UpdateSongDto } from '@openlp/shared';
 import { useState, useEffect, useRef } from 'react';
 
@@ -14,8 +16,11 @@ export default function SongEditPage() {
   const { data: song, isFetching, error, refetch } = useSong(id!, { forceRefresh: true });
   const updateSong = useUpdateSong();
   const { showSuccess, showError } = useNotification();
+  const { hasEditPermission } = useAuth();
   const [isFormDirty, setIsFormDirty] = useState(false);
   const navigateRef = useRef(navigate);
+
+  usePageTitle(song ? `Edycja: ${song.title}` : 'Edycja pieśni');
 
   // Force refetch on mount to ensure we have the latest data from server
   useEffect(() => {
@@ -95,11 +100,7 @@ export default function SongEditPage() {
       await updateSong.mutateAsync({ id, data });
       setIsFormDirty(false);
       showSuccess('Pieśń została zaktualizowana pomyślnie!');
-
-      // Save the updated song ID to sessionStorage so it will be selected on the list
-      sessionStorage.setItem('songListSelectedSong', id);
-      // Navigate to the list page - the song will be automatically selected
-      navigate('/songs');
+      navigate(`/songs/${id}`, { replace: true });
     } catch (error) {
       const errorMessage =
         error instanceof Error
@@ -215,6 +216,22 @@ export default function SongEditPage() {
           >
             Anuluj
           </Button>
+          {hasEditPermission && (
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleNavigation('/songs/new')}
+              disabled={updateSong.isPending}
+              size="small"
+              sx={{
+                borderColor: theme =>
+                  theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : undefined),
+              }}
+            >
+              Dodaj pieśń
+            </Button>
+          )}
           <Button
             variant="contained"
             form="song-form"
@@ -222,7 +239,7 @@ export default function SongEditPage() {
             disabled={!isFormDirty || updateSong.isPending}
             size="small"
           >
-            {updateSong.isPending ? 'Aktualizowanie...' : 'Aktualizuj'}
+            {updateSong.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}
           </Button>
         </Stack>
       </Box>

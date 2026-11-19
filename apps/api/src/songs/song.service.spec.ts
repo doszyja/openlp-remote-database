@@ -111,6 +111,8 @@ describe('SongService', () => {
           verses: 'Verse 1 content\n\nVerse 2 content',
           searchTitle: 'amazing grace',
           searchLyrics: 'verse 1 content\n\nverse 2 content',
+          searchTitleFolded: '123 amazing grace',
+          searchLyricsFolded: 'verse 1 content verse 2 content',
         }),
       );
       expect(result.verses).toBe('Verse 1 content\n\nVerse 2 content');
@@ -354,8 +356,33 @@ describe('SongService', () => {
       expect(mockSongModel.find).toHaveBeenCalledWith(
         expect.objectContaining({
           $or: expect.arrayContaining([
+            { searchTitleFolded: { $regex: 'grace', $options: 'i' } },
+            { searchLyricsFolded: { $regex: 'grace', $options: 'i' } },
             { title: { $regex: 'grace', $options: 'i' } },
-            { verses: { $regex: 'grace', $options: 'i' } },
+          ]),
+        }),
+      );
+    });
+
+    it('should build folded search filter for ASCII query against Polish title', async () => {
+      const query: any = { search: 'swiety swiety' };
+
+      mockSongModel.find.mockReturnValue({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      });
+      mockSongModel.countDocuments.mockResolvedValue(0);
+
+      await service.findAll(query);
+
+      expect(mockSongModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          $or: expect.arrayContaining([
+            { searchTitleFolded: { $regex: 'swiety swiety', $options: 'i' } },
           ]),
         }),
       );

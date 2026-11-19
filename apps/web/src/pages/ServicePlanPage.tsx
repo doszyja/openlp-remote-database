@@ -26,7 +26,6 @@ import {
   DialogActions,
   TextField,
   InputAdornment,
-  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -57,6 +56,8 @@ import { useNotification } from '../contexts/NotificationContext';
 import { api } from '../services/api';
 import SongSearchModal from '../components/SongSearchModal';
 import SongList from '../components/SongList';
+import SongbookFilterSelect from '../components/SongbookFilterSelect';
+import { filterSongsBySongbooks } from '../utils/songbookFilter';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
 import type { ServicePlanItem, SongListCacheItem, ServicePlan, SongbookSlug } from '@openlp/shared';
@@ -77,14 +78,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-// Songbook filter options
-const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
-  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
-  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
-  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
-  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
-];
 
 // Sortable List Item Component
 interface SortableListItemProps {
@@ -398,7 +391,7 @@ export default function ServicePlanPage() {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [sharedPlan, setSharedPlan] = useState<ServicePlan | null>(null);
-  const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
+  const [songbookFilters, setSongbookFilters] = useState<SongbookSlug[]>([]);
   const hasAutoActivatedRef = useRef(false);
 
   // Load shared plan if token is provided
@@ -428,7 +421,11 @@ export default function ServicePlanPage() {
   const setActiveVerse = useSetActiveVerse();
   const updatePlan = useUpdateServicePlan();
   const { songs: allCachedSongs, isLoading: isCacheLoading } = useCachedSongs();
-  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
+  const {
+    results: searchResults,
+    isLoading: isSearchLoading,
+    debouncedQuery: debouncedSearch,
+  } = useCachedSongSearch(search);
   // Get active song state via WebSocket for real-time updates
   const { data: activeSongData } = useActiveSongWs();
 
@@ -661,28 +658,12 @@ export default function ServicePlanPage() {
 
   // Search results for column 1
   const allSearchSongs = useMemo(() => {
-    let songs = !search.trim() ? allCachedSongs || [] : searchResults || [];
+    let songs = !debouncedSearch.trim() ? allCachedSongs || [] : searchResults || [];
 
-    // Apply songbook filter
-    if (songbookFilter) {
-      if (songbookFilter === 'zborowe') {
-        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
-        songs = songs.filter(
-          song =>
-            !song.songbook ||
-            (song.songbook !== 'pielgrzym' &&
-              song.songbook !== 'zielony' &&
-              song.songbook !== 'wedrowiec')
-        );
-      } else {
-        songs = songs.filter(song => song.songbook === songbookFilter);
-      }
-    }
+    return filterSongsBySongbooks(songs, songbookFilters);
+  }, [debouncedSearch, searchResults, allCachedSongs, songbookFilters]);
 
-    return songs;
-  }, [search, searchResults, allCachedSongs, songbookFilter]);
-
-  const isSearchLoadingState = search.trim() ? isSearchLoading : isCacheLoading;
+  const isSearchLoadingState = debouncedSearch.trim() ? isSearchLoading : isCacheLoading;
 
   // Type for plan songs with verses
   type PlanSongWithVerses = {
@@ -864,65 +845,16 @@ export default function ServicePlanPage() {
               setSearch(value);
               // Clear songbook filter when search is cleared
               if (!value) {
-                setSongbookFilter(null);
+                setSongbookFilters([]);
               }
             }}
             isLoading={isSearchLoadingState}
             emptyMessage="Nie znaleziono pieśni."
-            hasActiveFilter={!!songbookFilter}
+            hasActiveFilter={songbookFilters.length > 0}
             showAddSong={hasEditPermission}
             onAddSong={() => navigate('/songs/new')}
             filterContent={
-              <>
-                {SONGBOOK_OPTIONS.map(option => (
-                  <Chip
-                    key={option.slug}
-                    label={option.label}
-                    size="small"
-                    onClick={() =>
-                      setSongbookFilter(songbookFilter === option.slug ? null : option.slug)
-                    }
-                    sx={{
-                      fontWeight: songbookFilter === option.slug ? 600 : 400,
-                      fontSize: { xs: '0.85rem', sm: '0.7rem' },
-                      height: { xs: 32, sm: 24 },
-                      flexShrink: 0,
-                      backgroundColor:
-                        songbookFilter === option.slug
-                          ? option.color
-                          : theme =>
-                              theme.palette.mode === 'dark' ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
-                      color: songbookFilter === option.slug ? '#fff' : 'text.primary',
-                      border: '1px solid',
-                      borderColor:
-                        songbookFilter === option.slug
-                          ? `${option.color} !important`
-                          : theme =>
-                              theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.1)'
-                                : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor:
-                          songbookFilter === option.slug
-                            ? option.color
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'transparent'
-                                  : 'rgba(0, 0, 0, 0.1)',
-                        borderColor:
-                          songbookFilter === option.slug
-                            ? option.color
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'rgba(255, 255, 255, 0.1)'
-                                  : 'transparent',
-                      },
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
-              </>
+              <SongbookFilterSelect value={songbookFilters} onChange={setSongbookFilters} />
             }
           />
         </Box>
@@ -935,8 +867,7 @@ export default function ServicePlanPage() {
       hasEditPermission,
       navigate,
       handleAddSong,
-      songbookFilter,
-      theme,
+      songbookFilters,
     ]
   );
 

@@ -12,10 +12,18 @@ import { SongsVersionService } from './songs-version.service';
 import { SongVersionService } from './song-version.service';
 import * as archiver from 'archiver';
 import { generateSongXml, sanitizeFilename } from './utils/xml-export.util';
-import { createOpenLPSqliteDatabase } from './utils/sqlite-export.util';
+import {
+  createOpenLPSqliteDatabase,
+  formatOpenlpDatabaseLyrics,
+  getEffectiveVerseOrder,
+} from './utils/sqlite-export.util';
 import {
   normalizeVerseOrderString,
   defaultVerseOrderFromVerses,
+  normalizeSearchText,
+  buildSearchTitleFolded,
+  buildSearchLyricsFolded,
+  escapeRegexForSearch,
 } from '@openlp/shared';
 import * as fs from 'fs';
 
@@ -38,8 +46,28 @@ export class SongService {
     private songVersionService: SongVersionService,
   ) {}
 
+  private buildOpenlpMappingFromDto(
+    dto?: { openlpId?: number; lastSyncedAt?: string; clientId?: string },
+    existing?: { openlpId?: number; lastSyncedAt?: Date; syncMetadata?: Record<string, unknown> } | null,
+  ) {
+    if (!dto || dto.openlpId == null) {
+      return undefined;
+    }
+    const syncMetadata: Record<string, unknown> = {
+      ...(existing?.syncMetadata ?? {}),
+    };
+    if (dto.clientId) {
+      syncMetadata.clientId = dto.clientId;
+    }
+    return {
+      openlpId: dto.openlpId,
+      lastSyncedAt: dto.lastSyncedAt ? new Date(dto.lastSyncedAt) : new Date(),
+      syncMetadata,
+    };
+  }
+
   async create(createSongDto: CreateSongDto) {
-    const { verses, tags, verseOrder, ...songData } = createSongDto;
+    const { verses, tags, verseOrder, openlpMapping, ...songData } = createSongDto;
 
     // Create or get tags
     const tagIds: string[] = [];
@@ -77,6 +105,22 @@ export class SongService {
           : null;
 
     // Create song - verses is now an array of objects with order
+    const mapping = this.buildOpenlpMappingFromDto(
+      openlpMapping
+        ? {
+            ...openlpMapping,
+            clientId: openlpMapping.clientId ?? (songData as { clientId?: string }).clientId,
+          }
+        : undefined,
+    );
+
+    const searchLyricsValue = songData.searchLyrics || searchLyrics;
+    const searchTitleFolded = buildSearchTitleFolded(
+      songData.title || '',
+      songData.number ?? null,
+    );
+    const searchLyricsFolded = buildSearchLyricsFolded(searchLyricsValue);
+
     const song = await this.songModel.create({
       ...songData,
       language: songData.language || 'en',
@@ -85,7 +129,10 @@ export class SongService {
       // lyricsXml (string) is stored directly from SQLite lyrics column (1:1 transparent)
       tags: tagIds,
       searchTitle, // Auto-generate from title
-      searchLyrics: songData.searchLyrics || searchLyrics, // Auto-generate from verses if not provided
+      searchLyrics: searchLyricsValue, // Auto-generate from verses if not provided
+      searchTitleFolded,
+      searchLyricsFolded,
+      openlpMapping: mapping ?? null,
     });
 
     // Increment version when song is created
@@ -135,15 +182,19 @@ export class SongService {
     }
 
     if (search) {
-      // Use indexed search fields (searchTitle, searchLyrics) for better performance
-      // Also search in original fields as fallback
-      const searchLower = search.toLowerCase();
-      filter.$or = [
-        { searchTitle: { $regex: searchLower, $options: 'i' } }, // Indexed field
-        { title: { $regex: search, $options: 'i' } }, // Fallback to original
-        { searchLyrics: { $regex: searchLower, $options: 'i' } }, // Indexed field (lowercase lyrics)
-        { 'verses.content': { $regex: search, $options: 'i' } }, // Search in verse content
-      ];
+      const normalizedQuery = normalizeSearchText(search);
+      if (normalizedQuery) {
+        const regexPattern = escapeRegexForSearch(normalizedQuery);
+        filter.$or = [
+          { searchTitleFolded: { $regex: regexPattern, $options: 'i' } },
+          { searchLyricsFolded: { $regex: regexPattern, $options: 'i' } },
+          // Fallback for documents not yet backfilled
+          { searchTitle: { $regex: regexPattern, $options: 'i' } },
+          { searchLyrics: { $regex: regexPattern, $options: 'i' } },
+          { title: { $regex: regexPattern, $options: 'i' } },
+          { 'verses.content': { $regex: regexPattern, $options: 'i' } },
+        ];
+      }
     }
 
     const sort: any = {};
@@ -290,7 +341,7 @@ export class SongService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const { verses, tags, verseOrder, ...songData } = updateSongDto;
+    const { verses, tags, verseOrder, openlpMapping, ...songData } = updateSongDto;
 
     // Check if song exists
     const existing = await this.songModel.findOne({ _id: id, deletedAt: null });
@@ -373,13 +424,33 @@ export class SongService {
       updateData.tags = tagIds;
     }
 
+    if (openlpMapping !== undefined) {
+      updateData.openlpMapping = this.buildOpenlpMappingFromDto(
+        openlpMapping,
+        existing.openlpMapping,
+      );
+    }
+
+    const finalTitle = (updateData.title ?? existing.title) as string;
+    const finalNumber =
+      updateData.number !== undefined ? updateData.number : existing.number;
+    const finalSearchLyrics =
+      (updateData.searchLyrics ?? existing.searchLyrics ?? '') as string;
+    updateData.searchTitleFolded = buildSearchTitleFolded(finalTitle, finalNumber);
+    updateData.searchLyricsFolded = buildSearchLyricsFolded(finalSearchLyrics);
+
     // Track changes for audit log
     const changes: Record<string, any> = {};
 
     // Check each field in updateData
     Object.keys(updateData).forEach((key) => {
       // Skip internal fields
-      if (key === 'searchTitle' || key === 'searchLyrics') {
+      if (
+        key === 'searchTitle' ||
+        key === 'searchLyrics' ||
+        key === 'searchTitleFolded' ||
+        key === 'searchLyricsFolded'
+      ) {
         return;
       }
 
@@ -515,7 +586,7 @@ export class SongService {
     const songs = await this.songModel
       .find({ deletedAt: null })
       .select(
-        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook',
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook copyright comments ccliNumber openlpMapping updatedAt',
       )
       .populate('tags', 'name color parentId') // Include color and parentId for advanced tags
       .sort({ title: 1 })
@@ -547,9 +618,113 @@ export class SongService {
       searchTitle: song.searchTitle,
       searchLyrics: song.searchLyrics,
       songbook: song.songbook || null, // Songbook category: 'pielgrzym', 'zielony', 'zborowe'
+      copyright: song.copyright || null,
+      comments: song.comments || null,
+      ccliNumber: song.ccliNumber || null,
+      openlpMapping: song.openlpMapping
+        ? {
+            openlpId: song.openlpMapping.openlpId ?? null,
+            lastSyncedAt: song.openlpMapping.lastSyncedAt
+              ? new Date(song.openlpMapping.lastSyncedAt).toISOString()
+              : null,
+            clientId:
+              (song.openlpMapping.syncMetadata as { clientId?: string })
+                ?.clientId ?? null,
+          }
+        : null,
+      updatedAt: song.updatedAt
+        ? new Date(song.updatedAt).toISOString()
+        : null,
     }));
 
     return transformedSongs;
+  }
+
+  /**
+   * Song list for OpenLP desktop sync: same fields as findAllForCache, but lyricsXml is the
+   * full OpenLP SQLite `songs.lyrics` document (via formatSongLyrics), not raw Mongo fragments.
+   */
+  async findAllForOpenlpCache() {
+    const songs = await this.songModel
+      .find({ deletedAt: null })
+      .select(
+        'title number language tags searchTitle searchLyrics verses verseOrder lyricsXml songbook copyright comments ccliNumber openlpMapping updatedAt',
+      )
+      .populate('tags', 'name color parentId')
+      .sort({ title: 1 })
+      .lean()
+      .exec();
+
+    return songs.map((song: any) => {
+      const versesArray =
+        Array.isArray(song.verses) && song.verses.length > 0
+          ? song.verses.map((v: any) => ({
+              order: v.order,
+              content: v.content,
+              label: v.label,
+              originalLabel: v.originalLabel,
+            }))
+          : undefined;
+
+      const lyricsXml =
+        formatOpenlpDatabaseLyrics({
+          verses: song.verses,
+          versesArray,
+          verseOrder: song.verseOrder,
+          lyricsXml: song.lyricsXml,
+        }) || null;
+
+      const verseOrder =
+        getEffectiveVerseOrder({
+          id: song._id.toString(),
+          title: song.title || '',
+          number: song.number || null,
+          language: song.language || 'en',
+          verses: '',
+          versesArray,
+          verseOrder: song.verseOrder || null,
+          lyricsXml: song.lyricsXml || null,
+          tags: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+        }) ?? song.verseOrder ?? null;
+
+      return {
+        id: song._id.toString(),
+        title: song.title,
+        number: song.number,
+        language: song.language,
+        tags: song.tags.map((tag: any) => ({
+          id: tag._id.toString(),
+          name: tag.name,
+        })),
+        verses: song.verses ?? null,
+        versesArray,
+        verseOrder,
+        lyricsXml,
+        searchTitle: song.searchTitle,
+        searchLyrics: song.searchLyrics,
+        songbook: song.songbook || null,
+        copyright: song.copyright || null,
+        comments: song.comments || null,
+        ccliNumber: song.ccliNumber || null,
+        openlpMapping: song.openlpMapping
+          ? {
+              openlpId: song.openlpMapping.openlpId ?? null,
+              lastSyncedAt: song.openlpMapping.lastSyncedAt
+                ? new Date(song.openlpMapping.lastSyncedAt).toISOString()
+                : null,
+              clientId:
+                (song.openlpMapping.syncMetadata as { clientId?: string })
+                  ?.clientId ?? null,
+            }
+          : null,
+        updatedAt: song.updatedAt
+          ? new Date(song.updatedAt).toISOString()
+          : null,
+      };
+    });
   }
 
   /**

@@ -22,6 +22,12 @@ export interface SongListItemDto {
 /**
  * Lightweight song list item for caching (minimal fields for search and display)
  */
+export interface SongListCacheOpenLPMapping {
+  openlpId?: number | null;
+  lastSyncedAt?: string | null;
+  clientId?: string | null;
+}
+
 export interface SongListCacheItem {
   id: string;
   title: string;
@@ -35,4 +41,12 @@ export interface SongListCacheItem {
   searchTitle: string | null; // For search
   searchLyrics: string | null; // For search in lyrics
   songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'zborowe'
+  copyright?: string | null;
+  comments?: string | null;
+  ccliNumber?: string | null;
+  openlpMapping?: SongListCacheOpenLPMapping | null;
+  updatedAt?: string | null;
 }
+
+/** GET /songs/all-openlp — lyricsXml is full OpenLP SQLite `songs.lyrics` document. */
+export type SongListOpenlpCacheItem = SongListCacheItem;

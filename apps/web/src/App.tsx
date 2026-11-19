@@ -16,6 +16,10 @@ const PresentationPage = lazy(() => import('./pages/PresentationPage'));
 const ServicePlanPage = lazy(() => import('./pages/ServicePlanPage'));
 const LivePage = lazy(() => import('./pages/LivePage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const PresentationStatsPage = lazy(
+  () => import('./pages/PresentationStatsPage'),
+);
+const OpenLpAuthPage = lazy(() => import('./pages/OpenLpAuthPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
@@ -89,6 +93,14 @@ function App() {
           }
         />
         <Route
+          path="/auth/openlp"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <OpenLpAuthPage />
+            </Suspense>
+          }
+        />
+        <Route
           path="/songs/:id/presentation"
           element={
             <Suspense fallback={<PageLoader />}>
@@ -143,6 +155,10 @@ function App() {
                         <AuditLogPage />
                       </AdminRoute>
                     }
+                  />
+                  <Route
+                    path="/stats/presentation"
+                    element={<PresentationStatsPage />}
                   />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

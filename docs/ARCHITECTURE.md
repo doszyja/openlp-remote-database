@@ -402,6 +402,7 @@ API_KEY=... (if auth implemented)
 - Lazy load components
 - Debounce search inputs
 - Cache API responses (React Query)
+- Song search uses `normalizeSearchText` from `@openlp/shared` (fold diacritics, ignore punctuation) in the browser cache and in the search modal; API stores `searchTitleFolded` / `searchLyricsFolded` for the same rules on `?search=`
 
 ### Sync Tool
 

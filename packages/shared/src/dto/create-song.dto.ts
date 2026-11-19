@@ -1,6 +1,12 @@
 /**
  * Verse DTO for API requests
  */
+export interface OpenLPMappingDto {
+  openlpId?: number;
+  lastSyncedAt?: string;
+  clientId?: string;
+}
+
 export interface VerseDto {
   order: number; // verse_order from OpenLP - critical for preserving verse sequence
   content: string; // Verse text content
@@ -25,6 +31,7 @@ export interface CreateSongDto {
   ccliNumber?: string; // OpenLP ccli_number field
   searchLyrics?: string; // OpenLP search_lyrics field (auto-generated if not provided)
   songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
+  openlpMapping?: OpenLPMappingDto;
 }
 
 /**

@@ -72,32 +72,20 @@ export default function Layout({ children }: LayoutProps) {
           xs: isSongListPage ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : 'none',
           sm: 'none',
         },
-        background: !isHomePage
-          ? theme =>
-              theme.palette.mode === 'dark'
-                ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
-                : '#ffffff'
-          : 'transparent',
+        bgcolor: isHomePage ? 'transparent' : 'background.default',
         position: 'relative',
         overflow: { xs: isSongListPage ? 'hidden' : 'visible', sm: 'visible' },
+        ...(isSongListPage
+          ? {
+              '@media (max-width: 600px)': {
+                height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+                maxHeight: viewportHeight ? `${viewportHeight}px` : '100dvh',
+                overflow: 'hidden',
+              },
+            }
+          : {}),
       }}
     >
-      {!isHomePage && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.03,
-            backgroundImage:
-              'radial-gradient(circle at 20% 50%, currentColor 0%, transparent 50%), radial-gradient(circle at 80% 80%, currentColor 0%, transparent 50%)',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-      )}
       {!isHomePage && !isErrorState && !location.pathname.match(/^\/service-plans\/[^/]+$/) && (
         <Navbar />
       )}

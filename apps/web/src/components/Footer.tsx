@@ -6,7 +6,6 @@ import {
   Tooltip,
   Link,
   useMediaQuery,
-  useTheme as useMuiTheme,
 } from '@mui/material';
 import {
   Brightness4 as DarkModeIcon,
@@ -19,13 +18,12 @@ import { useLocation } from 'react-router-dom';
 
 export default function Footer() {
   const { mode, toggleMode } = useTheme();
-  const muiTheme = useMuiTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
+  const isNarrow = useMediaQuery('(max-width: 600px)');
   const location = useLocation();
   const [appVersion, setAppVersion] = useState<string>('');
 
   // Hide extra content on mobile on /songs page
-  const isSongsPageMobile = isMobile && location.pathname === '/songs';
+  const isSongsPageMobile = isNarrow && location.pathname === '/songs';
 
   useEffect(() => {
     const versionMeta = document.querySelector('meta[name="app-version"]');
@@ -67,14 +65,17 @@ export default function Footer() {
           <Tooltip title={`Przełącz na tryb ${mode === 'light' ? 'ciemny' : 'jasny'}`}>
             <IconButton
               onClick={toggleMode}
-              color="inherit"
               aria-label="toggle theme"
               size="small"
               sx={{
-                color: 'text.secondary',
+                color: mode === 'light' ? '#000000' : '#FFFFFF',
+                backgroundImage: 'none',
+                '& .MuiSvgIcon-root': {
+                  color: mode === 'light' ? '#000000' : '#FFFFFF',
+                },
                 '&:hover': {
-                  color: 'text.primary',
                   bgcolor: 'action.hover',
+                  backgroundImage: 'none',
                 },
               }}
             >

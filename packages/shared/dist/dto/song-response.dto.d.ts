@@ -20,6 +20,11 @@ export interface SongListItemDto {
 /**
  * Lightweight song list item for caching (minimal fields for search and display)
  */
+export interface SongListCacheOpenLPMapping {
+    openlpId?: number | null;
+    lastSyncedAt?: string | null;
+    clientId?: string | null;
+}
 export interface SongListCacheItem {
     id: string;
     title: string;
@@ -38,5 +43,10 @@ export interface SongListCacheItem {
     searchTitle: string | null;
     searchLyrics: string | null;
     songbook?: string | null;
+    copyright?: string | null;
+    comments?: string | null;
+    ccliNumber?: string | null;
+    openlpMapping?: SongListCacheOpenLPMapping | null;
+    updatedAt?: string | null;
 }
 //# sourceMappingURL=song-response.dto.d.ts.map

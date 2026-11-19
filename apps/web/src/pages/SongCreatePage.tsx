@@ -3,9 +3,11 @@ import { Container, Typography, Alert } from '@mui/material';
 import { useCreateSong } from '../hooks/useCreateSong';
 import SongForm from '../components/SongForm';
 import { useNotification } from '../contexts/NotificationContext';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { CreateSongDto, UpdateSongDto } from '@openlp/shared';
 
 export default function SongCreatePage() {
+  usePageTitle('Nowa pieśń');
   const navigate = useNavigate();
   const createSong = useCreateSong();
   const { showSuccess, showError } = useNotification();

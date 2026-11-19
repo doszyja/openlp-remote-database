@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo, useRef, forwardRef } from 'react';
 import { FixedSizeList } from 'react-window';
 import {
   Box,
@@ -43,6 +43,17 @@ export interface SongListProps {
   onAddSong?: () => void; // Callback for "Add Song" action
   showAddSong?: boolean; // Show "Add Song" element at the bottom
 }
+
+const ListOuterElement = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  (props, ref) => (
+    <div
+      ref={ref}
+      {...props}
+      className={`song-list-outer-scroll ${props.className ?? ''}`.trim()}
+    />
+  )
+);
+ListOuterElement.displayName = 'SongListOuter';
 
 // Virtualized list row component
 const VirtualizedRow = memo(
@@ -118,6 +129,9 @@ const VirtualizedRow = memo(
         <ListItem
           disablePadding
           sx={{
+            height: '100%',
+            borderBottom: 1,
+            borderColor: 'divider',
             '&:hover': {
               backgroundColor: 'action.hover',
             },
@@ -131,6 +145,8 @@ const VirtualizedRow = memo(
             selected={isSelected}
             tabIndex={isFocused ? 0 : -1}
             sx={{
+              height: '100%',
+              py: 0,
               '&.Mui-selected': {
                 fontWeight: 600,
                 '& .MuiListItemText-primary': {
@@ -357,7 +373,7 @@ export default function SongList({
       }}
     >
       {showSearch && (
-        <Box sx={{ mb: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+        <Box sx={{ mb: { xs: 1, sm: 2 }, flexShrink: 0 }} data-song-search>
           <TextField
             inputRef={searchInputRef}
             fullWidth
@@ -408,17 +424,7 @@ export default function SongList({
           />
           {/* Filter content (e.g., songbook filter chips) */}
           {filterContent && (
-            <Box
-              sx={{
-                mt: 1.5,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: { xs: 1, sm: 0.75 },
-                overflow: 'visible',
-              }}
-            >
-              {filterContent}
-            </Box>
+            <Box sx={{ mt: 1.5, width: '100%', overflow: 'visible' }}>{filterContent}</Box>
           )}
           {/* Results count */}
           <Typography
@@ -488,44 +494,31 @@ export default function SongList({
             flex: 1,
             minHeight: 0,
             overflow: 'hidden',
-            // Custom scrollbar styles
-            '& .react-window-scrollbar': {
-              width: '8px !important',
-              '& > div': {
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            '& .song-list-outer-scroll': {
+              scrollbarWidth: 'auto',
+              scrollbarGutter: 'auto',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
                 backgroundColor: theme =>
-                  theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.2)'
+                    : 'rgba(0, 0, 0, 0.2)',
                 borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: theme =>
-                    theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.3)'
-                      : 'rgba(0, 0, 0, 0.3)',
-                },
               },
-            },
-            // Webkit scrollbar (Chrome, Safari, Edge)
-            '& *::-webkit-scrollbar': {
-              width: '8px',
-            },
-            '& *::-webkit-scrollbar-track': {
-              background: 'transparent',
-            },
-            '& *::-webkit-scrollbar-thumb': {
-              backgroundColor: theme =>
-                theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '4px',
-              '&:hover': {
+              '&::-webkit-scrollbar-thumb:hover': {
                 backgroundColor: theme =>
-                  theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.35)'
+                    : 'rgba(0, 0, 0, 0.35)',
               },
-            },
-            // Firefox scrollbar
-            '& *': {
-              scrollbarWidth: 'thin',
-              scrollbarColor: theme =>
-                theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.2) transparent'
-                  : 'rgba(0, 0, 0, 0.2) transparent',
             },
           }}
         >
@@ -536,6 +529,7 @@ export default function SongList({
             itemSize={itemSize}
             width="100%"
             itemData={listData}
+            outerElementType={ListOuterElement}
           >
             {VirtualizedRow}
           </FixedSizeList>

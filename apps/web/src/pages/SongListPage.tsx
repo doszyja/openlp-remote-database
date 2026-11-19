@@ -7,15 +7,10 @@ import {
   CircularProgress,
   Paper,
   Skeleton,
-  List as MuiList,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   useMediaQuery,
   useTheme,
   IconButton,
   Tooltip,
-  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,21 +26,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { useExportZip } from '../hooks/useExportZip';
 import { useNotification } from '../contexts/NotificationContext';
 import SongList from '../components/SongList';
+import SongbookFilterSelect from '../components/SongbookFilterSelect';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { filterSongsBySongbooks, parseStoredSongbookFilters } from '../utils/songbookFilter';
 
 // Session storage keys for remembering state
 const SEARCH_STORAGE_KEY = 'songListSearch';
 const SELECTED_SONG_STORAGE_KEY = 'songListSelectedSong';
 const SONGBOOK_FILTER_STORAGE_KEY = 'songListSongbookFilter';
 
-// Songbook filter options
-const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
-  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
-  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
-  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
-  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
-];
-
 export default function SongListPage() {
+  usePageTitle('Pieśni');
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -58,7 +49,7 @@ export default function SongListPage() {
   const [search, setSearch] = useState('');
 
   // Songbook filter state
-  const [songbookFilter, setSongbookFilter] = useState<SongbookSlug | null>(null);
+  const [songbookFilters, setSongbookFilters] = useState<SongbookSlug[]>([]);
 
   // Track the last selected song ID for highlighting
   const [lastSelectedSongId, setLastSelectedSongId] = useState<string | null>(null);
@@ -67,9 +58,7 @@ export default function SongListPage() {
   useEffect(() => {
     const savedSearch = sessionStorage.getItem(SEARCH_STORAGE_KEY);
     const savedSongId = sessionStorage.getItem(SELECTED_SONG_STORAGE_KEY);
-    const savedSongbook = sessionStorage.getItem(
-      SONGBOOK_FILTER_STORAGE_KEY
-    ) as SongbookSlug | null;
+    const savedSongbook = sessionStorage.getItem(SONGBOOK_FILTER_STORAGE_KEY);
 
     if (savedSearch && isMobile) {
       setSearch(savedSearch);
@@ -81,7 +70,7 @@ export default function SongListPage() {
       sessionStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
     }
     if (savedSongbook && isMobile) {
-      setSongbookFilter(savedSongbook);
+      setSongbookFilters(parseStoredSongbookFilters(savedSongbook));
     }
   }, [isMobile]);
 
@@ -110,10 +99,14 @@ export default function SongListPage() {
     error,
     refetch: refetchCache,
   } = useCachedSongs();
-  const { results: searchResults, isLoading: isSearchLoading } = useCachedSongSearch(search);
+  const {
+    results: searchResults,
+    isLoading: isSearchLoading,
+    debouncedQuery: debouncedSearch,
+  } = useCachedSongSearch(search);
 
   // Use cached search results if we have a search query, otherwise use cached songs list
-  const useCacheForSearch = !!search.trim();
+  const useCacheForSearch = !!debouncedSearch.trim();
 
   // Determine loading state
   const isLoading = useCacheForSearch ? isSearchLoading : isCacheLoading;
@@ -123,24 +116,8 @@ export default function SongListPage() {
   const displaySongs = useMemo(() => {
     let songs = useCacheForSearch ? searchResults || [] : cachedSongs || [];
 
-    // Apply songbook filter
-    if (songbookFilter) {
-      if (songbookFilter === 'zborowe') {
-        // "zborowe" means songs that are NOT in any songbook ('pielgrzym', 'zielony', or 'wedrowiec')
-        songs = songs.filter(
-          song =>
-            !song.songbook ||
-            (song.songbook !== 'pielgrzym' &&
-              song.songbook !== 'zielony' &&
-              song.songbook !== 'wedrowiec')
-        );
-      } else {
-        songs = songs.filter(song => song.songbook === songbookFilter);
-      }
-    }
-
-    return songs;
-  }, [useCacheForSearch, searchResults, cachedSongs, songbookFilter]);
+    return filterSongsBySongbooks(songs, songbookFilters);
+  }, [useCacheForSearch, searchResults, cachedSongs, songbookFilters]);
 
   // Get first song ID for auto-selection (only when not searching and songs are loaded)
   const firstSongId = useMemo(() => {
@@ -352,8 +329,15 @@ export default function SongListPage() {
   return (
     <Box
       sx={{
-        py: { xs: 1, sm: 2.5, md: 4 },
-        px: { xs: 1, sm: 2.5, md: 4, lg: 6 },
+        py: { xs: 0, sm: 2.5, md: 4 },
+        px: { xs: 0, sm: 2.5, md: 4, lg: 6 },
+        '@media (max-width: 600px)': {
+          py: 0,
+          px: 0,
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        },
         position: 'relative',
         maxWidth: { xs: '100%', sm: '100%', md: '100%' },
         width: '100%',
@@ -366,86 +350,128 @@ export default function SongListPage() {
         flexDirection: 'column',
       }}
     >
-      {/* Skeleton loading for list items - only show after debounce delay */}
+      {/* Skeleton matches the loaded list: search, songbook chips, single-line rows */}
       {showLoadingAnimation && isLoading && (
-        <Paper
-          elevation={0}
-          sx={{
-            bgcolor: 'background.paper',
-            boxShadow: theme =>
-              theme.palette.mode === 'dark'
-                ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-                : '0 4px 16px rgba(0, 0, 0, 0.08)',
-            border: theme =>
-              theme.palette.mode === 'dark'
-                ? '1px solid rgba(255, 255, 255, 0.1)'
-                : '1px solid rgba(0, 0, 0, 0.05)',
-            borderRadius: 2,
-            overflow: 'hidden',
-            animation: 'fadeIn 0.3s ease-in',
-            '@keyframes fadeIn': {
-              from: {
-                opacity: 0,
+        <>
+          {isAuthenticated && (
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={{ xs: 1, sm: 2 }}
+              flexShrink={0}
+            >
+              <Skeleton variant="text" width={88} height={32} animation="wave" />
+              {hasEditPermission && (
+                <Box display="flex" gap={0.75}>
+                  <Skeleton variant="rounded" width={108} height={32} animation="wave" />
+                  <Skeleton variant="rounded" width={124} height={32} animation="wave" />
+                </Box>
+              )}
+            </Box>
+          )}
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 0, sm: 2 },
+              bgcolor: 'background.paper',
+              boxShadow: theme =>
+                theme.palette.mode === 'dark'
+                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              maxHeight: { xs: 'none', sm: 'min(70vh, calc(100vh - 220px))' },
+              '@media (max-width: 600px)': {
+                p: 0,
+                borderRadius: 0,
+                boxShadow: 'none',
+                border: 'none',
+                maxHeight: 'none',
+                height: '100%',
               },
-              to: {
-                opacity: 1,
-              },
-            },
-          }}
-        >
-          <MuiList dense sx={{ py: 1 }}>
-            {[...Array(10)].map((_, index) => (
-              <ListItem
-                key={index}
-                disablePadding
+            }}
+          >
+            <Box
+              sx={{
+                mb: { xs: 1, sm: 2 },
+                flexShrink: 0,
+                '@media (max-width: 600px)': {
+                  px: 1,
+                  pt: 1,
+                },
+              }}
+            >
+              <Skeleton
+                variant="rounded"
+                height={40}
+                animation="wave"
+                sx={{ borderRadius: 1 }}
+              />
+              <Box
                 sx={{
-                  borderBottom: theme =>
-                    index < 9
-                      ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`
-                      : 'none',
+                  mt: 1.5,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: { xs: 1, sm: 0.75 },
                 }}
               >
-                <ListItemButton disabled sx={{ py: 1.5, px: 2 }}>
-                  <ListItemText
-                    primary={
-                      <Skeleton
-                        variant="text"
-                        width={index % 3 === 0 ? '70%' : index % 3 === 1 ? '55%' : '65%'}
-                        height={22}
-                        animation="wave"
-                        sx={{
-                          bgcolor: theme =>
-                            theme.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(0, 0, 0, 0.06)',
-                          borderRadius: 0.5,
-                        }}
-                      />
-                    }
-                    secondary={
-                      index % 3 === 0 ? (
-                        <Skeleton
-                          variant="text"
-                          width="45%"
-                          height={18}
-                          animation="wave"
-                          sx={{
-                            mt: 0.5,
-                            bgcolor: theme =>
-                              theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.05)'
-                                : 'rgba(0, 0, 0, 0.04)',
-                            borderRadius: 0.5,
-                          }}
-                        />
-                      ) : null
-                    }
+                {[82, 66, 91, 76].map(width => (
+                  <Skeleton
+                    key={width}
+                    variant="rounded"
+                    width={width}
+                    animation="wave"
+                    sx={{ height: { xs: 32, sm: 24 }, borderRadius: '16px' }}
                   />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </MuiList>
-        </Paper>
+                ))}
+              </Box>
+              <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'flex-end' }}>
+                <Skeleton variant="text" width={72} height={14} animation="wave" />
+              </Box>
+            </Box>
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden',
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+              }}
+            >
+              {[70, 48, 62, 78, 55, 66, 44, 72, 58, 50].map((width, index) => (
+                <Box
+                  key={width}
+                  sx={{
+                    height: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    px: 2,
+                    borderBottom: index < 9 ? 1 : 0,
+                    borderColor: 'divider',
+                    bgcolor: index === 0 ? 'action.selected' : 'transparent',
+                  }}
+                >
+                  <Skeleton
+                    variant="text"
+                    width={`${width}%`}
+                    height={22}
+                    animation="wave"
+                    sx={{ borderRadius: 0.5 }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </>
       )}
 
       {/* Normal content when not loading */}
@@ -455,10 +481,15 @@ export default function SongListPage() {
             display="flex"
             justifyContent="space-between"
             alignItems="center"
-            mb={{ xs: 1, sm: 2 }}
+            mb={{ xs: isAuthenticated || hasEditPermission ? 1 : 0, sm: 2 }}
             flexWrap="wrap"
             gap={{ xs: 0.5, sm: 1 }}
             flexShrink={0}
+            sx={{
+              '@media (max-width: 600px)': {
+                mb: isAuthenticated || hasEditPermission ? 1 : 0,
+              },
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {isAuthenticated && (
@@ -551,7 +582,7 @@ export default function SongListPage() {
           <Paper
             elevation={0}
             sx={{
-              p: { xs: 1, sm: 2 },
+              p: { xs: 0, sm: 2 },
               bgcolor: 'background.paper',
               boxShadow: theme =>
                 theme.palette.mode === 'dark'
@@ -561,12 +592,30 @@ export default function SongListPage() {
                 theme.palette.mode === 'dark'
                   ? '1px solid rgba(255, 255, 255, 0.1)'
                   : '1px solid rgba(0, 0, 0, 0.05)',
-              // On mobile: flex to fill remaining space
-              flex: { xs: 1, sm: 'none' },
-              minHeight: { xs: 0, sm: 'auto' },
-              display: { xs: 'flex', sm: 'block' },
-              flexDirection: { xs: 'column', sm: 'row' },
-              overflow: { xs: 'hidden', sm: 'visible' },
+              flex: { xs: 1, sm: 1 },
+              minHeight: { xs: 0, sm: 0 },
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              maxHeight: { xs: 'none', sm: 'min(70vh, calc(100vh - 220px))' },
+              '@media (max-width: 600px)': {
+                p: 0,
+                borderRadius: 0,
+                boxShadow: 'none',
+                border: 'none',
+                maxHeight: 'none',
+                height: '100%',
+                '& [data-song-search]': {
+                  px: 1,
+                  pt: 1,
+                },
+                '& [data-list-container]': {
+                  borderLeft: 0,
+                  borderRight: 0,
+                  borderBottom: 0,
+                  borderRadius: 0,
+                },
+              },
             }}
           >
             <SongList
@@ -587,7 +636,7 @@ export default function SongListPage() {
                 setSearch(value);
                 // Clear songbook filter when search is cleared
                 if (!value) {
-                  setSongbookFilter(null);
+                  setSongbookFilters([]);
                 }
                 // Save search to sessionStorage on mobile
                 if (isMobile) {
@@ -607,70 +656,24 @@ export default function SongListPage() {
               }
               sortOrder={sortOrder}
               onSortOrderChange={setSortOrder}
-              hasActiveFilter={!!songbookFilter}
+              hasActiveFilter={songbookFilters.length > 0}
               filterContent={
-                <>
-                  {SONGBOOK_OPTIONS.map(option => (
-                    <Chip
-                      key={option.slug}
-                      label={option.label}
-                      size="small"
-                      onClick={() => {
-                        // Toggle off if clicking the same filter
-                        const newFilter = songbookFilter === option.slug ? null : option.slug;
-                        setSongbookFilter(newFilter);
-                        // Save to sessionStorage on mobile
-                        if (isMobile) {
-                          if (newFilter) {
-                            sessionStorage.setItem(SONGBOOK_FILTER_STORAGE_KEY, newFilter);
-                          } else {
-                            sessionStorage.removeItem(SONGBOOK_FILTER_STORAGE_KEY);
-                          }
-                        }
-                      }}
-                      sx={{
-                        fontWeight: songbookFilter === option.slug ? 600 : 400,
-                        fontSize: { xs: '0.85rem', sm: '0.7rem' },
-                        height: { xs: 32, sm: 24 },
-                        flexShrink: 0,
-                        backgroundColor:
-                          songbookFilter === option.slug
-                            ? option.color
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'transparent'
-                                  : 'rgba(0, 0, 0, 0.06)',
-                        color: songbookFilter === option.slug ? '#fff' : 'text.primary',
-                        border: '1px solid',
-                        borderColor:
-                          songbookFilter === option.slug
-                            ? `${option.color} !important`
-                            : theme =>
-                                theme.palette.mode === 'dark'
-                                  ? 'rgba(255, 255, 255, 0.1)'
-                                  : 'transparent',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor:
-                            songbookFilter === option.slug
-                              ? option.color
-                              : theme =>
-                                  theme.palette.mode === 'dark'
-                                    ? 'transparent'
-                                    : 'rgba(0, 0, 0, 0.1)',
-                          borderColor:
-                            songbookFilter === option.slug
-                              ? option.color
-                              : theme =>
-                                  theme.palette.mode === 'dark'
-                                    ? 'rgba(255, 255, 255, 0.1)'
-                                    : 'transparent',
-                        },
-                        cursor: 'pointer',
-                      }}
-                    />
-                  ))}
-                </>
+                <SongbookFilterSelect
+                  value={songbookFilters}
+                  onChange={filters => {
+                    setSongbookFilters(filters);
+                    if (isMobile) {
+                      if (filters.length > 0) {
+                        sessionStorage.setItem(
+                          SONGBOOK_FILTER_STORAGE_KEY,
+                          JSON.stringify(filters)
+                        );
+                      } else {
+                        sessionStorage.removeItem(SONGBOOK_FILTER_STORAGE_KEY);
+                      }
+                    }
+                  }}
+                />
               }
             />
           </Paper>

@@ -89,6 +89,23 @@ export class SongController {
     };
   }
 
+  @Get('all-openlp')
+  @UseGuards(EditPermissionGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'All songs for OpenLP desktop sync (OpenLP SQLite lyrics XML; edit/admin JWT)',
+  })
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  async getAllSongsForOpenlp() {
+    const songs = await this.songService.findAllForOpenlpCache();
+    const version = await this.songService.getVersion();
+    return {
+      version,
+      songs,
+    };
+  }
+
   @Get(':id')
   @Public() // Public: Anonymous users can view individual songs
   findOne(@Param('id') id: string) {

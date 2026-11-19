@@ -17,15 +17,12 @@ import {
   Chip,
 } from '@mui/material';
 import { Close as CloseIcon, Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
-import type { SongListCacheItem, SongbookSlug } from '@openlp/shared';
+import type { SongListCacheItem } from '@openlp/shared';
+import { songMatchesSearchQuery } from '@openlp/shared';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { SONG_SEARCH_DEBOUNCE_MS } from '../hooks/useCachedSongs';
 
-// Songbook filter options
-const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
-  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
-  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
-  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
-  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
-];
+import { SONGBOOK_OPTIONS } from '../constants/songbookOptions';
 
 export interface SongSearchModalProps {
   open: boolean;
@@ -111,7 +108,14 @@ const SearchModalRow = memo(
 
     return (
       <div style={style} data-song-index={index}>
-        <ListItem disablePadding>
+        <ListItem
+          disablePadding
+          sx={{
+            height: '100%',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <ListItemButton
             ref={buttonRef}
             onClick={() => {
@@ -126,6 +130,8 @@ const SearchModalRow = memo(
             selected={isSelected}
             tabIndex={isFocused ? 0 : -1}
             sx={{
+              height: '100%',
+              py: 0,
               '&.Mui-selected': {
                 fontWeight: 600,
                 '& .MuiListItemText-primary': {
@@ -215,6 +221,7 @@ export default function SongSearchModal({
   currentSongId,
 }: SongSearchModalProps) {
   const [searchValue, setSearchValue] = useState('');
+  const debouncedSearch = useDebouncedValue(searchValue, SONG_SEARCH_DEBOUNCE_MS);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1); // -1 means input is focused
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<FixedSizeList>(null);
@@ -243,27 +250,11 @@ export default function SongSearchModal({
   // Filter songs based on search (memoized to prevent unnecessary recalculations)
   // Search in title, number, and lyrics (searchLyrics field)
   const filteredSongs = useMemo(() => {
-    if (!searchValue.trim()) {
+    if (!debouncedSearch.trim()) {
       return [];
     }
-    const searchLower = searchValue.toLowerCase();
-    return songs.filter(song => {
-      // Search in title (use searchTitle if available for faster matching)
-      const title = song.searchTitle || song.title?.toLowerCase() || '';
-      const matchesTitle =
-        title.includes(searchLower) || song.title?.toLowerCase().includes(searchLower);
-
-      // Search in number
-      const number = song.number?.toLowerCase() || '';
-      const matchesNumber = number.includes(searchLower);
-
-      // Search in lyrics (use searchLyrics if available for faster matching)
-      const lyrics = song.searchLyrics || '';
-      const matchesLyrics = lyrics && lyrics.includes(searchLower);
-
-      return matchesTitle || matchesNumber || matchesLyrics;
-    });
-  }, [songs, searchValue]);
+    return songs.filter(song => songMatchesSearchQuery(song, debouncedSearch));
+  }, [songs, debouncedSearch]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value);
@@ -464,7 +455,7 @@ export default function SongSearchModal({
               Naciśnij Enter, aby otworzyć pierwszą pieśń.
             </Typography>
           </Box>
-        ) : searchValue.trim() ? (
+        ) : debouncedSearch.trim() ? (
           <Alert severity="info">Nie znaleziono pieśni.</Alert>
         ) : (
           <Alert severity="info">Wpisz tekst, aby wyszukać pieśni.</Alert>

@@ -1,5 +1,8 @@
 import * as fs from 'fs';
-import { createOpenLPSqliteDatabase } from './sqlite-export.util';
+import {
+  createOpenLPSqliteDatabase,
+  formatOpenlpDatabaseLyrics,
+} from './sqlite-export.util';
 
 const Database = require('better-sqlite3');
 
@@ -126,5 +129,36 @@ describe('SQLite export verse_order', () => {
     expect(row.verse_order).toBe('v1 c1 b1');
     expect(row.lyrics).toContain('<verse type="c" label="1"><![CDATA[Chorus]]></verse>');
     expect(row.lyrics).toContain('<verse type="b" label="1"><![CDATA[Bridge]]></verse>');
+  });
+});
+
+describe('formatOpenlpDatabaseLyrics', () => {
+  it('matches SQLite export lyrics for the same song payload', async () => {
+    const payload = baseSong({
+      verseOrder: 'v1 c1',
+      versesArray: [
+        {
+          order: 1,
+          content: 'First verse',
+          label: 'Verse 1',
+          originalLabel: 'v1',
+        },
+        {
+          order: 2,
+          content: 'Chorus text',
+          label: 'Chorus',
+          originalLabel: 'c1',
+        },
+      ],
+    });
+
+    const row = await readExportedSong(payload);
+    const fromHelper = formatOpenlpDatabaseLyrics({
+      versesArray: payload.versesArray,
+      verseOrder: payload.verseOrder,
+      lyricsXml: payload.lyricsXml,
+    });
+
+    expect(fromHelper).toBe(row.lyrics);
   });
 });

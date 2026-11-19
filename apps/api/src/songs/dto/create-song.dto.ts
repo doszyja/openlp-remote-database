@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { VerseDto } from './verse.dto';
+import { OpenLPMappingDto } from './openlp-mapping.dto';
 
 export class CreateSongDto {
   @IsNotEmpty()
@@ -62,4 +63,9 @@ export class CreateSongDto {
   @IsOptional()
   @IsString()
   songbook?: string | null; // Songbook category: 'pielgrzym', 'zielony', 'wedrowiec', 'zborowe'
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OpenLPMappingDto)
+  openlpMapping?: OpenLPMappingDto;
 }

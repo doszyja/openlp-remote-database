@@ -19,7 +19,6 @@ import type {
   UpdateSongDto,
   SongResponseDto,
   VerseDto,
-  SongbookSlug,
 } from '@openlp/shared';
 import {
   getVerseDisplayLabel,
@@ -32,13 +31,7 @@ import {
 import { useSongFormData, type VerseFormData, type SongFormData } from '../hooks/useSongFormData';
 import { useVerseManagement } from '../hooks/useVerseManagement';
 
-// Songbook options with colors matching filter chips
-const SONGBOOK_OPTIONS: { slug: SongbookSlug; label: string; color: string }[] = [
-  { slug: 'pielgrzym', label: 'Pielgrzym', color: '#1976d2' },
-  { slug: 'zielony', label: 'Zielony', color: '#388e3c' },
-  { slug: 'wedrowiec', label: 'Wędrowiec', color: '#f57c00' },
-  { slug: 'zborowe', label: 'Zborowe', color: '#7b1fa2' },
-];
+import { SONGBOOK_OPTIONS } from '../constants/songbookOptions';
 
 interface SongFormProps {
   song?: SongResponseDto;
@@ -306,52 +299,49 @@ export default function SongForm({
           )}
         />
 
-        {/* Songbook selection - only shown when creating new song */}
-        {!song && (
-          <Controller
-            name="songbook"
-            control={control}
-            rules={{
-              required: 'Śpiewnik jest wymagany',
-            }}
-            render={({ field, fieldState }) => (
-              <FormControl fullWidth required error={!!fieldState.error}>
-                <InputLabel>Śpiewnik</InputLabel>
-                <Select
-                  {...field}
-                  value={field.value || ''}
-                  label="Śpiewnik"
-                  onChange={e => field.onChange(e.target.value || null)}
-                >
-                  <MenuItem value="">
-                    <em>Brak</em>
+        <Controller
+          name="songbook"
+          control={control}
+          rules={{
+            required: 'Śpiewnik jest wymagany',
+          }}
+          render={({ field, fieldState }) => (
+            <FormControl fullWidth required error={!!fieldState.error}>
+              <InputLabel>Śpiewnik</InputLabel>
+              <Select
+                {...field}
+                value={field.value || ''}
+                label="Śpiewnik"
+                onChange={e => field.onChange(e.target.value || null)}
+              >
+                <MenuItem value="">
+                  <em>Brak</em>
+                </MenuItem>
+                {SONGBOOK_OPTIONS.map(option => (
+                  <MenuItem key={option.slug} value={option.slug}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Box
+                        sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          bgcolor: option.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </Box>
                   </MenuItem>
-                  {SONGBOOK_OPTIONS.map(option => (
-                    <MenuItem key={option.slug} value={option.slug}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Box
-                          sx={{
-                            width: 12,
-                            height: 12,
-                            borderRadius: '50%',
-                            bgcolor: option.color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <span>{option.label}</span>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-                {fieldState.error && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                    {fieldState.error.message}
-                  </Typography>
-                )}
-              </FormControl>
-            )}
-          />
-        )}
+                ))}
+              </Select>
+              {fieldState.error && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                  {fieldState.error.message}
+                </Typography>
+              )}
+            </FormControl>
+          )}
+        />
 
         <Controller
           name="verseOrder"

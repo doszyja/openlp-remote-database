@@ -1,6 +1,11 @@
 /**
  * Verse DTO for API requests
  */
+export interface OpenLPMappingDto {
+    openlpId?: number;
+    lastSyncedAt?: string;
+    clientId?: string;
+}
 export interface VerseDto {
     order: number;
     content: string;
@@ -23,6 +28,7 @@ export interface CreateSongDto {
     ccliNumber?: string;
     searchLyrics?: string;
     songbook?: string | null;
+    openlpMapping?: OpenLPMappingDto;
 }
 /**
  * @deprecated Use string format for verses instead

@@ -27,6 +27,7 @@
     "list:wrong-verse-order": "ts-node -r tsconfig-paths/register src/scripts/list-wrong-verse-order.ts",
     "fill-empty-verse-order": "ts-node -r tsconfig-paths/register src/scripts/fill-empty-verse-order.ts",
     "assign:songbooks": "ts-node -r tsconfig-paths/register src/scripts/assign-songbooks.ts",
+    "backfill:search-folded": "ts-node -r tsconfig-paths/register src/scripts/backfill-search-folded.ts",
     "verify:songbooks": "ts-node -r tsconfig-paths/register src/scripts/verify-songbooks.ts"
   },
   "dependencies": {

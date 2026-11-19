@@ -217,6 +217,59 @@ export const api = {
       return request(`/audit-logs${queryString ? `?${queryString}` : ''}`);
     },
   },
+  presentationEvents: {
+    getAll: (
+      page?: number,
+      limit?: number,
+      clientId?: string,
+    ): Promise<{
+      data: Array<{
+        id: string;
+        clientId?: string;
+        openlpSongId?: number;
+        mongoSongId?: string;
+        title: string;
+        serviceItemTitle?: string;
+        presentedAt: string;
+        metadata?: Record<string, unknown>;
+      }>;
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }> => {
+      const params = new URLSearchParams();
+      if (page) params.append('page', String(page));
+      if (limit) params.append('limit', String(limit));
+      if (clientId) params.append('clientId', clientId);
+      const qs = params.toString();
+      return request(`/presentation-events${qs ? `?${qs}` : ''}`);
+    },
+    getSummary: (
+      clientId?: string,
+      days?: number,
+    ): Promise<{
+      from: string;
+      to: string;
+      clientId: string | null;
+      totalEvents: number;
+      bySong: Array<{
+        title: string;
+        mongoSongId?: string;
+        count: number;
+        lastPresentedAt?: string;
+      }>;
+      byDay: Array<{ date: string; count: number }>;
+    }> => {
+      const params = new URLSearchParams();
+      if (clientId) params.append('clientId', clientId);
+      if (days) params.append('days', String(days));
+      const qs = params.toString();
+      return request(`/presentation-events/summary${qs ? `?${qs}` : ''}`);
+    },
+  },
   servicePlans: {
     getAll: (): Promise<ServicePlan[]> => {
       return request('/service-plans');

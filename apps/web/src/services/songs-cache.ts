@@ -1,4 +1,11 @@
 import type { SongListCacheItem } from '@openlp/shared';
+import {
+  normalizeSearchText,
+  songMatchesSearchQuery,
+  getNormalizedTitleHaystack,
+  getNormalizedLyricsHaystack,
+  escapeRegexForSearch,
+} from '@openlp/shared';
 import { api } from './api';
 
 const CACHE_KEY = 'songs_cache';
@@ -337,33 +344,13 @@ class SongsCacheService {
     }
 
     const startTime = performance.now();
-    const lowerQuery = query.toLowerCase();
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) {
+      return [];
+    }
+
     const results = songs.filter(song => {
-      // Search in both title and lyrics content
-      // Use searchTitle/searchLyrics (indexed, lowercase) for faster matching
-      const matchesTitle =
-        (song.searchTitle && song.searchTitle.includes(lowerQuery)) ||
-        song.title.toLowerCase().includes(lowerQuery);
-
-      // Search in lyrics - use searchLyrics if available, otherwise fallback to verses/versesArray
-      let matchesLyrics = false;
-      if (song.searchLyrics) {
-        matchesLyrics = song.searchLyrics.includes(lowerQuery);
-      } else {
-        // Fallback: search in verses string or versesArray
-        if (song.verses && typeof song.verses === 'string') {
-          matchesLyrics = song.verses.toLowerCase().includes(lowerQuery);
-        } else if (song.versesArray && Array.isArray(song.versesArray)) {
-          // Search in versesArray content
-          const allVersesText = song.versesArray
-            .map(v => v.content || '')
-            .join(' ')
-            .toLowerCase();
-          matchesLyrics = allVersesText.includes(lowerQuery);
-        }
-      }
-
-      const matchesSearch = matchesTitle || matchesLyrics;
+      const matchesSearch = songMatchesSearchQuery(song, query);
 
       // Filter by language
       const matchesLanguage = !options?.language || song.language === options.language;
@@ -379,50 +366,42 @@ class SongsCacheService {
 
     // Sort: prioritize exact matches, then word-boundary matches, then contains matches
     results.sort((a, b) => {
-      const aTitle = a.searchTitle || a.title.toLowerCase();
-      const bTitle = b.searchTitle || b.title.toLowerCase();
+      const aTitle = getNormalizedTitleHaystack(a);
+      const bTitle = getNormalizedTitleHaystack(b);
 
-      // Check for exact match (title equals query)
-      const aExactMatch = aTitle === lowerQuery;
-      const bExactMatch = bTitle === lowerQuery;
+      const aExactMatch = aTitle === normalizedQuery;
+      const bExactMatch = bTitle === normalizedQuery;
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
 
-      // Check for starts with query
-      const aStartsWith = aTitle.startsWith(lowerQuery);
-      const bStartsWith = bTitle.startsWith(lowerQuery);
+      const aStartsWith = aTitle.startsWith(normalizedQuery);
+      const bStartsWith = bTitle.startsWith(normalizedQuery);
       if (aStartsWith && !bStartsWith) return -1;
       if (!aStartsWith && bStartsWith) return 1;
 
-      // Check for word-boundary match (query starts at word/number boundary)
-      // This prevents "80." from matching in "180."
       const wordBoundaryRegex = new RegExp(
-        `(^|\\s|[^0-9])${lowerQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-        'i'
+        `(^|\\s|[^0-9])${escapeRegexForSearch(normalizedQuery)}`
       );
       const aWordBoundary = wordBoundaryRegex.test(aTitle);
       const bWordBoundary = wordBoundaryRegex.test(bTitle);
       if (aWordBoundary && !bWordBoundary) return -1;
       if (!aWordBoundary && bWordBoundary) return 1;
 
-      // Check for contains (but not at word boundary)
-      const aTitleContains = aTitle.includes(lowerQuery);
-      const bTitleContains = bTitle.includes(lowerQuery);
+      const aTitleContains = aTitle.includes(normalizedQuery);
+      const bTitleContains = bTitle.includes(normalizedQuery);
       if (aTitleContains && !bTitleContains) return -1;
       if (!aTitleContains && bTitleContains) return 1;
 
-      // Same priority level: sort alphabetically
       return a.title.localeCompare(b.title, 'pl');
     });
 
     const duration = performance.now() - startTime;
-    const titleMatches = results.filter(
-      s =>
-        (s.searchTitle && s.searchTitle.includes(lowerQuery)) ||
-        s.title.toLowerCase().includes(lowerQuery)
-    ).length;
+    const titleMatches = results.filter(s => getNormalizedTitleHaystack(s).includes(normalizedQuery))
+      .length;
     const lyricsMatches = results.filter(
-      s => s.searchLyrics && s.searchLyrics.includes(lowerQuery)
+      s =>
+        getNormalizedLyricsHaystack(s).includes(normalizedQuery) &&
+        !getNormalizedTitleHaystack(s).includes(normalizedQuery)
     ).length;
 
     console.log(

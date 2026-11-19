@@ -28,31 +28,11 @@ export default function HelpPage() {
         minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
-        background: theme =>
-          theme.palette.mode === 'dark'
-            ? 'linear-gradient(180deg, #1A2332 0%, #1B2535 30%, #1E2A3A 60%, #1F2D3F 100%)'
-            : 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 30%, #f0f2f5 60%, #e8ecf1 100%)',
-        position: 'relative',
-        overflow: 'hidden',
+        bgcolor: 'background.default',
         py: { xs: 4, sm: 6, md: 8 },
         px: { xs: 3, sm: 4 },
       }}
     >
-      {/* Decorative elements */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: theme => (theme.palette.mode === 'dark' ? 0.02 : 0.015),
-          backgroundImage:
-            'radial-gradient(circle at 20% 30%, currentColor 0%, transparent 40%), radial-gradient(circle at 80% 70%, currentColor 0%, transparent 40%)',
-          pointerEvents: 'none',
-        }}
-      />
-
       <Box
         sx={{
           flexGrow: 1,

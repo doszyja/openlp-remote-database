@@ -1,8 +1,21 @@
-import { Controller, Get, Req, Res, UseGuards, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { OpenLpAuthService } from './openlp-auth.service';
+import { OpenLpTokenDto } from './dto/openlp-token.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { DiscordAuthGuard } from './guards/discord-auth.guard';
@@ -10,7 +23,10 @@ import type { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private openLpAuthService: OpenLpAuthService,
+  ) {}
 
   @Public()
   @Get('dev')
@@ -157,5 +173,28 @@ export class AuthController {
     // JWT is stateless, so logout is handled client-side
     // In the future, could implement token blacklisting
     return { message: 'Logged out successfully' };
+  }
+
+  @Get('openlp/authorize')
+  @Throttle({ strict: { limit: 30, ttl: 60000 } })
+  openLpAuthorize(
+    @CurrentUser() user: UserResponseDto,
+    @Query('state') state: string,
+    @Query('port') port: string,
+  ) {
+    const redirectPort = parseInt(port, 10);
+    return this.openLpAuthService.createAuthorizationCode(
+      user,
+      state,
+      redirectPort,
+    );
+  }
+
+  @Public()
+  @Post('openlp/token')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ strict: { limit: 30, ttl: 60000 } })
+  async openLpToken(@Body() body: OpenLpTokenDto) {
+    return this.openLpAuthService.exchangeCode(body.code, body.state);
   }
 }

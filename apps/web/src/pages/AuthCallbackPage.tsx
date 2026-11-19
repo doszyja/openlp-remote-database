@@ -50,7 +50,10 @@ export default function AuthCallbackPage() {
     if (token) {
       login(token)
         .then(() => {
-          navigate('/songs');
+          const redirect =
+            sessionStorage.getItem('post_auth_redirect') || '/songs';
+          sessionStorage.removeItem('post_auth_redirect');
+          navigate(redirect);
         })
         .catch(err => {
           console.error('Login error:', err);

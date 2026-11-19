@@ -22,6 +22,7 @@ import {
   History as HistoryIcon,
   EventNote as EventNoteIcon,
   LiveTv as LiveTvIcon,
+  BarChart as BarChartIcon,
   ArrowDropDown as ArrowDropDownIcon,
   ArrowBack as ArrowBackIcon,
   Download as DownloadIcon,
@@ -136,6 +137,7 @@ export function UserMenu({
   isServicePlansPage,
   isLivePage,
   isAdmin,
+  hasEditPermission,
   isExporting,
   exportZipIsFetching,
   onNavigate,
@@ -154,6 +156,7 @@ export function UserMenu({
   isServicePlansPage: boolean;
   isLivePage: boolean;
   isAdmin: boolean | undefined;
+  hasEditPermission?: boolean;
   isExporting?: boolean;
   exportZipIsFetching?: boolean;
   onNavigate: (path: string) => void;
@@ -343,6 +346,21 @@ export function UserMenu({
           </>
         )}
         {!onExportZip && <Divider />}
+        {hasEditPermission && (
+          <MenuItem
+            onClick={() => {
+              onClose();
+              onNavigate('/stats/presentation');
+            }}
+            sx={{
+              minHeight: 48,
+              py: 1.25,
+            }}
+          >
+            <BarChartIcon sx={{ mr: 1.5, fontSize: 20 }} />
+            Statystyki OpenLP
+          </MenuItem>
+        )}
         {isAdmin && (
           <MenuItem
             onClick={() => {
@@ -464,6 +482,7 @@ export function RightSideContent({
   isSongListPage,
   isSongDetailPage,
   isAdmin,
+  hasEditPermission,
   isExporting,
   exportZipIsFetching,
   onMenuOpen,
@@ -496,6 +515,7 @@ export function RightSideContent({
   isServicePlansPage: boolean;
   isLivePage: boolean;
   isAdmin: boolean | undefined;
+  hasEditPermission?: boolean;
   isExporting?: boolean;
   exportZipIsFetching?: boolean;
   onMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
@@ -526,6 +546,7 @@ export function RightSideContent({
             isServicePlansPage={isServicePlansPage}
             isLivePage={isLivePage}
             isAdmin={isAdmin}
+            hasEditPermission={hasEditPermission}
             isExporting={isExporting}
             exportZipIsFetching={exportZipIsFetching}
             onNavigate={onNavigate}
@@ -562,7 +583,7 @@ export function RightSideContent({
 }
 
 export default function Navbar() {
-  const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const { isAuthenticated, user, logout, isLoading, hasEditPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -742,6 +763,7 @@ export default function Navbar() {
             isSongListPage={isSongListPage}
             isSongDetailPage={isSongDetailPage}
             isAdmin={isAdmin}
+            hasEditPermission={hasEditPermission}
             isExporting={isExporting}
             exportZipIsFetching={exportZip.isFetching}
             onMenuOpen={handleMenuOpen}
@@ -870,6 +892,7 @@ export default function Navbar() {
           isSongListPage={isSongListPage}
           isSongDetailPage={isSongDetailPage}
           isAdmin={isAdmin}
+          hasEditPermission={hasEditPermission}
           isExporting={isExporting}
           exportZipIsFetching={exportZip.isFetching}
           onMenuOpen={handleMenuOpen}
