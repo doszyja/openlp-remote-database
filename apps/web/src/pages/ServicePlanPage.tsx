@@ -59,6 +59,7 @@ import SongList from '../components/SongList';
 import SongbookFilterSelect from '../components/SongbookFilterSelect';
 import { filterSongsBySongbooks } from '../utils/songbookFilter';
 import { parseVerses, getVerseDisplayLabel } from '../utils/verseParser';
+import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
 import type { ServicePlanItem, SongListCacheItem, ServicePlan, SongbookSlug } from '@openlp/shared';
 import {
@@ -1464,57 +1465,25 @@ export default function ServicePlanPage() {
           Podgląd prezentacji
         </Typography>
         {currentContent && (
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              textAlign: 'center',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              MozUserSelect: 'none',
-              msUserSelect: 'none',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                position: 'absolute',
-                bottom: { xs: 8, sm: 12 },
-                left: { xs: 8, sm: 12 },
-                opacity: 0.5,
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                fontWeight: 600,
-              }}
-            >
-              {displayTitle}
-            </Typography>
-            <Typography
-              variant="body1"
-              component="div"
-              sx={{
-                fontSize: { xs: '1rem', sm: '1.2rem', md: '1.4rem' },
-                lineHeight: 1.4,
-                whiteSpace: 'pre-line',
-                px: { xs: 1, sm: 2 },
-                wordBreak: 'break-word',
-                maxWidth: '100%',
-                fontWeight: 500,
-              }}
-            >
-              {currentContent.content}
-            </Typography>
+          <Box sx={{ flex: 1, minHeight: 200, position: 'relative' }}>
+            <OpenLpSlideDisplay
+              fillParent
+              aspectRatio={null}
+              slideText={currentContent.content}
+              footerText={displayTitle}
+            />
             {allContent.length > 0 && (
               <Typography
                 variant="caption"
                 sx={{
                   position: 'absolute',
-                  bottom: { xs: 8, sm: 12 },
-                  right: { xs: 8, sm: 12 },
-                  opacity: 0.5,
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  bottom: { xs: 4, sm: 8 },
+                  right: { xs: 4, sm: 8 },
+                  opacity: 0.55,
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                  color: '#fff',
+                  zIndex: 2,
+                  pointerEvents: 'none',
                 }}
               >
                 {currentContent.stepLabel} ({currentVerseIndex + 1}/{allContent.length})

@@ -26,6 +26,7 @@ import {
   escapeRegexForSearch,
 } from '@openlp/shared';
 import * as fs from 'fs';
+import { detectSongEditSource } from './utils/edit-source.util';
 
 interface SqliteCacheEntry {
   filePath: string;
@@ -66,7 +67,17 @@ export class SongService {
     };
   }
 
-  async create(createSongDto: CreateSongDto) {
+  async create(
+    createSongDto: CreateSongDto,
+    context?: {
+      userId?: string;
+      username?: string;
+      discordId?: string;
+      avatar?: string | null;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ) {
     const { verses, tags, verseOrder, openlpMapping, ...songData } = createSongDto;
 
     // Create or get tags
@@ -136,9 +147,62 @@ export class SongService {
     });
 
     const newId = song._id.toString();
-    await this.songsVersionService
+    const catalogVersion = await this.songsVersionService
       .incrementVersion(newId, 'create')
-      .catch((err) => console.error('Failed to increment songs version:', err));
+      .catch((err) => {
+        console.error('Failed to increment songs version:', err);
+        return undefined;
+      });
+
+    const editSource = detectSongEditSource(context?.userAgent, {
+      clientId:
+        (mapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ??
+        (songData as { clientId?: string }).clientId,
+      openlpId: mapping?.openlpId,
+    });
+
+    const songObject = song.toObject();
+    await this.songVersionService
+      .createVersion(
+        newId,
+        songObject,
+        context?.userId,
+        context?.username,
+        context?.discordId,
+        editSource === 'openlp' ? 'Utworzenie z OpenLP' : 'Utworzenie pieśni',
+        undefined,
+        {
+          changeSource: editSource,
+          catalogVersion,
+          clientId: (mapping?.syncMetadata as { clientId?: string })?.clientId,
+          openlpId: mapping?.openlpId,
+        },
+      )
+      .catch((err) => console.error('Failed to create initial song version:', err));
+
+    if (context?.userId && context?.username) {
+      const action =
+        editSource === 'openlp'
+          ? AuditLogAction.SONG_CREATE_OPENLP
+          : AuditLogAction.SONG_CREATE;
+      await this.auditLogService
+        .log(action, context.userId, context.username, {
+          discordId: context.discordId,
+          avatar: context.avatar,
+          songId: newId,
+          songTitle: song.title,
+          metadata: {
+            source: editSource,
+            catalogVersion,
+            openlpId: mapping?.openlpId ?? null,
+            clientId:
+              (mapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ?? null,
+          },
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+        })
+        .catch((err) => console.error('Failed to log song create audit:', err));
+    }
 
     return this.findOne(newId);
   }
@@ -504,36 +568,68 @@ export class SongService {
       }
     }
 
+    const mergedMapping = updateData.openlpMapping ?? existing.openlpMapping;
+    const editSource = detectSongEditSource(userAgent, {
+      clientId: (mergedMapping?.syncMetadata as { clientId?: string } | undefined)?.clientId,
+      openlpId: mergedMapping?.openlpId,
+    });
+
     // Create version snapshot before update (save current state)
     const currentSongData = existing.toObject();
-    await this.songVersionService
+    const storedRevision = await this.songVersionService
       .createVersion(
         id,
         currentSongData,
         userId,
         username,
         discordId,
-        undefined,
+        editSource === 'openlp' ? 'Zapis z OpenLP' : undefined,
         Object.keys(changes).length > 0 ? changes : undefined,
+        {
+          changeSource: editSource,
+          clientId: (mergedMapping?.syncMetadata as { clientId?: string })?.clientId,
+          openlpId: mergedMapping?.openlpId,
+        },
       )
-      .catch((err) => console.error('Failed to create song version:', err));
+      .catch((err) => {
+        console.error('Failed to create song version:', err);
+        return null;
+      });
 
     // Update song
     await this.songModel.updateOne({ _id: id }, updateData);
 
-    await this.songsVersionService
+    const catalogVersion = await this.songsVersionService
       .incrementVersion(id, 'update')
-      .catch((err) => console.error('Failed to increment songs version:', err));
+      .catch((err) => {
+        console.error('Failed to increment songs version:', err);
+        return undefined;
+      });
+
+    if (storedRevision && catalogVersion != null && storedRevision.catalogVersion == null) {
+      storedRevision.catalogVersion = catalogVersion;
+      await storedRevision.save().catch(() => undefined);
+    }
 
     // Log audit trail if user is authenticated
     if (userId && username) {
+      const auditAction =
+        editSource === 'openlp' ? AuditLogAction.SONG_EDIT_OPENLP : AuditLogAction.SONG_EDIT;
       await this.auditLogService
-        .log(AuditLogAction.SONG_EDIT, userId, username, {
+        .log(auditAction, userId, username, {
           discordId,
           avatar,
           songId: id,
-          songTitle: updateData.title || existing.title,
-          metadata: Object.keys(changes).length > 0 ? changes : undefined,
+          songTitle: (updateData.title || existing.title) as string,
+          metadata: {
+            source: editSource,
+            catalogVersion,
+            storedRevision: storedRevision?.version ?? null,
+            openlpId: mergedMapping?.openlpId ?? null,
+            clientId:
+              (mergedMapping?.syncMetadata as { clientId?: string } | undefined)?.clientId ?? null,
+            changes: Object.keys(changes).length > 0 ? changes : undefined,
+          },
           ipAddress,
           userAgent,
         })
@@ -541,6 +637,56 @@ export class SongService {
     }
 
     return this.findOne(id);
+  }
+
+  async restoreToRevision(
+    id: string,
+    revision: number,
+    user?: {
+      id?: string;
+      username?: string;
+      discordId?: string;
+      avatar?: string | null;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ) {
+    await this.songVersionService.restoreVersion(
+      id,
+      revision,
+      user?.id,
+      user?.username,
+      user?.discordId,
+    );
+
+    const catalogVersion = await this.songsVersionService
+      .incrementVersion(id, 'update')
+      .catch((err) => {
+        console.error('Failed to increment songs version after restore:', err);
+        return undefined;
+      });
+
+    const restored = await this.findOne(id);
+
+    if (user?.id && user?.username) {
+      await this.auditLogService
+        .log(AuditLogAction.SONG_RESTORE_VERSION, user.id, user.username, {
+          discordId: user.discordId,
+          avatar: user.avatar,
+          songId: id,
+          songTitle: restored.title,
+          metadata: {
+            restoredFromRevision: revision,
+            catalogVersion,
+            source: 'web',
+          },
+          ipAddress: user.ipAddress,
+          userAgent: user.userAgent,
+        })
+        .catch((err) => console.error('Failed to log restore audit:', err));
+    }
+
+    return restored;
   }
 
   async remove(

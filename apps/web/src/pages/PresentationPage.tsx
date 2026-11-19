@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, IconButton, Stack, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, IconButton, Stack, CircularProgress, Alert } from '@mui/material';
 import {
   FullscreenExit as FullscreenExitIcon,
   NavigateBefore as NavigateBeforeIcon,
@@ -10,6 +10,7 @@ import { useSong } from '../hooks';
 import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
 import { parseVerses } from '../utils/verseParser';
 import { useTheme } from '@mui/material/styles';
+import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
 
 // Fullscreen API vendor prefixes
 interface DocumentWithFullscreen extends Document {
@@ -34,10 +35,7 @@ export default function PresentationPage() {
   const { data: song, isLoading, error } = useSong(id!);
   useSongViewTelemetry(id, song?.title, 'presentation');
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
-  const [fontSizes, setFontSizes] = useState({ titleSize: 48, contentSize: 75 });
-  const [dynamicContentSize, setDynamicContentSize] = useState(32);
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   // Parse verses
   const parsedVerses = song
@@ -139,261 +137,6 @@ export default function PresentationPage() {
   useEffect(() => {
     setCurrentVerseIndex(0);
   }, [id]);
-
-  // Calculate and update responsive font sizes
-  useEffect(() => {
-    const calculateFontSizes = () => {
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const isLandscape = vw > vh;
-      const minDimension = Math.min(vh, vw);
-
-      // Base font size scales with viewport
-      // In landscape, use height as primary constraint since it's more limited
-      const primaryDimension = isLandscape ? vh : minDimension;
-
-      // Check for mobile landscape (very constrained height, typically 300-450px)
-      const isMobile = vw < 600;
-      const isMobileLandscape = isMobile && isLandscape;
-
-      // Check if height is particularly constrained in landscape
-      const isShortLandscape = isLandscape && vh < 600;
-
-      // For title: adjust for orientation (most conservative for mobile landscape)
-      let titleMultiplier, titleMin, titleMax;
-      if (isMobileLandscape) {
-        titleMultiplier = 0.025;
-        titleMin = 20;
-        titleMax = 32;
-      } else if (isShortLandscape) {
-        titleMultiplier = 0.03;
-        titleMin = 28;
-        titleMax = 45;
-      } else if (isLandscape) {
-        titleMultiplier = 0.035;
-        titleMin = 32;
-        titleMax = 50;
-      } else {
-        titleMultiplier = 0.05;
-        titleMin = 60;
-        titleMax = 80;
-      }
-      const titleBase = primaryDimension * titleMultiplier;
-      const titleSize = Math.min(Math.max(titleBase, titleMin), titleMax);
-
-      // For content: adjust for orientation (most conservative for mobile landscape)
-      let contentMultiplier, contentMin, contentMax;
-      if (isMobileLandscape) {
-        contentMultiplier = 0.03;
-        contentMin = 20;
-        contentMax = 35;
-      } else if (isShortLandscape) {
-        contentMultiplier = 0.035;
-        contentMin = 28;
-        contentMax = 50;
-      } else if (isLandscape) {
-        contentMultiplier = 0.04;
-        contentMin = 32;
-        contentMax = 60;
-      } else {
-        contentMultiplier = 0.06;
-        contentMin = 60;
-        contentMax = 96;
-      }
-      const contentBase = primaryDimension * contentMultiplier;
-      const contentSize = Math.min(Math.max(contentBase, contentMin), contentMax);
-
-      setFontSizes({ titleSize, contentSize });
-    };
-
-    calculateFontSizes();
-
-    // Handle resize and orientation change
-    window.addEventListener('resize', calculateFontSizes);
-    window.addEventListener('orientationchange', () => {
-      // Delay to allow orientation change to complete
-      setTimeout(calculateFontSizes, 100);
-    });
-
-    return () => {
-      window.removeEventListener('resize', calculateFontSizes);
-      window.removeEventListener('orientationchange', calculateFontSizes);
-    };
-  }, []);
-
-  // Calculate dynamic font size based on the largest verse
-  // Calculate once for all slides in the session
-  useEffect(() => {
-    const calculateDynamicSize = () => {
-      if (allContent.length === 0) return;
-
-      // Find the largest verse (most lines and longest line)
-      let maxLineCount = 0;
-      let maxLongestLineLength = 0;
-
-      allContent.forEach(item => {
-        const lines = item.content.split('\n').filter(line => line.trim().length > 0);
-        const lineCount = lines.length || 1;
-        const longestLine = lines.reduce(
-          (longest, line) => (line.length > longest.length ? line : longest),
-          lines[0] || ''
-        );
-
-        if (lineCount > maxLineCount) {
-          maxLineCount = lineCount;
-        }
-        if (longestLine.length > maxLongestLineLength) {
-          maxLongestLineLength = longestLine.length;
-        }
-      });
-
-      // Get container dimensions
-      const container = containerRef.current;
-      if (!container) return;
-
-      const containerHeight = container.clientHeight;
-      const containerWidth = container.clientWidth;
-
-      // Detect orientation
-      const isLandscape = containerWidth > containerHeight;
-      const isMobile = window.innerWidth < 600;
-
-      // For mobile landscape, height is very constrained (typically 300-450px)
-      const isMobileLandscape = isMobile && isLandscape;
-
-      // For landscape, check if height is particularly constrained
-      // If height is less than 600px in landscape, be extra conservative
-      const isShortLandscape = isLandscape && containerHeight < 600;
-
-      // Adjust padding based on orientation and screen size
-      // Mobile landscape needs even less padding due to very limited height
-      const padding = isMobileLandscape
-        ? 40
-        : isMobile
-          ? isLandscape
-            ? 50
-            : 80
-          : isLandscape
-            ? isShortLandscape
-              ? 80
-              : 100
-            : 120;
-
-      // In landscape, we have less height, so be more conservative
-      // Mobile landscape needs the most conservative settings
-      const heightMultiplier = isMobileLandscape
-        ? 0.7
-        : isLandscape
-          ? isShortLandscape
-            ? 0.75
-            : 0.8
-          : 0.95;
-      const widthMultiplier = isMobileLandscape
-        ? 0.85
-        : isLandscape
-          ? isShortLandscape
-            ? 0.88
-            : 0.9
-          : 0.95;
-
-      const availableHeight = Math.max(
-        containerHeight - padding,
-        containerHeight * heightMultiplier
-      );
-      const availableWidth = Math.max(containerWidth - padding, containerWidth * widthMultiplier);
-
-      // Calculate font size based on height (line count)
-      // Use more conservative multiplier in landscape, especially mobile landscape
-      const lineHeight = 1.4;
-      const heightMultiplierForCalc = isMobileLandscape
-        ? 0.7
-        : isLandscape
-          ? isShortLandscape
-            ? 0.75
-            : 0.8
-          : 0.9;
-      const heightBasedSize =
-        (availableHeight * heightMultiplierForCalc) / maxLineCount / lineHeight;
-
-      // Calculate font size based on width (longest line)
-      // Use more conservative multiplier in landscape, especially mobile landscape
-      const avgCharWidth = 0.6;
-      const widthMultiplierForCalc = isMobileLandscape
-        ? 0.75
-        : isLandscape
-          ? isShortLandscape
-            ? 0.8
-            : 0.85
-          : 0.9;
-      const widthBasedSize =
-        (availableWidth * widthMultiplierForCalc) / maxLongestLineLength / avgCharWidth;
-
-      // Use the smaller of the two to ensure text fits
-      const optimalSize = Math.min(heightBasedSize, widthBasedSize);
-
-      // Clamp between reasonable min and max (adjust for landscape and mobile)
-      // Mobile landscape needs the smallest max size
-      const minSize = isMobileLandscape
-        ? 20
-        : isMobile
-          ? 24
-          : isShortLandscape
-            ? 28
-            : isLandscape
-              ? 32
-              : 50;
-      const maxSize = isMobileLandscape
-        ? 32
-        : isMobile
-          ? isShortLandscape
-            ? 35
-            : isLandscape
-              ? 45
-              : 60
-          : isShortLandscape
-            ? 50
-            : isLandscape
-              ? 60
-              : 90;
-      const clampedSize = Math.max(minSize, Math.min(optimalSize, maxSize));
-
-      // Only update if size actually changed to prevent infinite loops
-      setDynamicContentSize(prevSize => {
-        // Only update if difference is significant (more than 1px)
-        if (Math.abs(prevSize - clampedSize) > 1) {
-          return clampedSize;
-        }
-        return prevSize;
-      });
-    };
-
-    // Calculate after a delay to ensure DOM is updated
-    const timer1 = setTimeout(calculateDynamicSize, 50);
-    const timer2 = setTimeout(calculateDynamicSize, 200);
-
-    // Recalculate on resize (with debounce)
-    let resizeTimer: ReturnType<typeof setTimeout>;
-    const handleResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(calculateDynamicSize, 100);
-    };
-
-    // Handle orientation change with delay to allow orientation to complete
-    const handleOrientationChange = () => {
-      setTimeout(calculateDynamicSize, 200);
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleOrientationChange);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(resizeTimer);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleOrientationChange);
-    };
-  }, [allContent]);
 
   // Handle fullscreen
   useEffect(() => {
@@ -579,7 +322,7 @@ export default function PresentationPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          bgcolor: theme.palette.mode === 'dark' ? '#1a232e' : '#ffffff',
+          bgcolor: '#000000',
         }}
       >
         <CircularProgress size={60} />
@@ -603,7 +346,7 @@ export default function PresentationPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          bgcolor: theme.palette.mode === 'dark' ? '#1a232e' : '#ffffff',
+          bgcolor: '#000000',
           p: 4,
         }}
       >
@@ -631,7 +374,7 @@ export default function PresentationPage() {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        bgcolor: theme.palette.mode === 'dark' ? '#1a232e' : '#ffffff',
+        bgcolor: '#000000',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -728,53 +471,29 @@ export default function PresentationPage() {
         </Stack>
       </Box>
 
-      {/* Main content */}
+      {/* Main content — OpenLP theme layout */}
       <Box
         onClick={handleClick}
         sx={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
           width: '100%',
-          maxWidth: '100%',
-          px: { xs: 2, sm: 4, md: 6, lg: 8 },
-          py: { xs: 4, sm: 6, md: 8, lg: 10 },
-          overflow: 'auto',
+          minHeight: 0,
           cursor: 'pointer',
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            width: '100%',
-            maxWidth: '100%',
-            p: { xs: 2, sm: 3, md: 4, lg: 6 },
-            bgcolor: 'transparent',
-            textAlign: 'center',
-          }}
-        >
-          {/* Verse/Chorus content - dynamically sized and lighter weight */}
-          <Typography
-            ref={contentRef}
-            variant="body1"
-            sx={{
-              fontSize: `${dynamicContentSize}px`,
-              fontWeight: 400,
-              lineHeight: 1.4,
-              whiteSpace: 'pre-line',
-              color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-              wordBreak: 'break-word',
-              maxWidth: '100%',
-            }}
-          >
-            {currentContent.content}
-          </Typography>
-        </Paper>
+        <OpenLpSlideDisplay
+          fillParent
+          aspectRatio={null}
+          slideText={currentContent.content}
+          footerText={
+            song.number ? `${song.title} (${song.number})` : song.title
+          }
+        />
       </Box>
 
-      {/* Footer with song title (bottom left) and navigation info (center) */}
+      {/* Presentation chrome (not part of OpenLP output) */}
       <Box
         sx={{
           position: 'absolute',
@@ -786,27 +505,10 @@ export default function PresentationPage() {
           alignItems: 'flex-end',
           p: { xs: 1, sm: 1.5, md: 2 },
           zIndex: 10001,
+          pointerEvents: 'none',
         }}
       >
-        {/* Song title - bottom left, smaller */}
-        <Typography
-          variant="h6"
-          component="h1"
-          sx={{
-            fontSize: {
-              xs: `${dynamicContentSize * 0.15}px`,
-              sm: `${dynamicContentSize * 0.2}px`,
-              md: `${fontSizes.titleSize * 0.4}px`,
-            },
-            fontWeight: 500,
-            color:
-              theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-            wordBreak: 'break-word',
-            maxWidth: { xs: '50%', sm: '45%', md: '40%' },
-          }}
-        >
-          {song.title}
-        </Typography>
+        <Box sx={{ width: '33%' }} />
 
         {/* Navigation info - center */}
         <Typography

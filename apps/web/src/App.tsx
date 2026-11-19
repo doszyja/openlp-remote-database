@@ -12,6 +12,8 @@ const SongListPage = lazy(() => import('./pages/SongListPage'));
 const SongCreatePage = lazy(() => import('./pages/SongCreatePage'));
 const SongEditPage = lazy(() => import('./pages/SongEditPage'));
 const SongDetailPage = lazy(() => import('./pages/SongDetailPage'));
+const SongHistoryPage = lazy(() => import('./pages/SongHistoryPage'));
+const SongPreviewPage = lazy(() => import('./pages/SongPreviewPage'));
 const PresentationPage = lazy(() => import('./pages/PresentationPage'));
 const ServicePlanPage = lazy(() => import('./pages/ServicePlanPage'));
 const LivePage = lazy(() => import('./pages/LivePage'));
@@ -146,6 +148,8 @@ function App() {
                     }
                   />
                   <Route path="/songs/:id" element={<SongDetailPage />} />
+                  <Route path="/songs/:id/history" element={<SongHistoryPage />} />
+                  <Route path="/songs/:id/preview" element={<SongPreviewPage />} />
                   <Route
                     path="/songs/:id/edit"
                     element={

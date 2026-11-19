@@ -6,7 +6,11 @@ export type AuditLogDocument = HydratedDocument<AuditLog>;
 export enum AuditLogAction {
   LOGIN = 'LOGIN',
   SONG_EDIT = 'SONG_EDIT',
+  SONG_EDIT_OPENLP = 'SONG_EDIT_OPENLP',
+  SONG_CREATE = 'SONG_CREATE',
+  SONG_CREATE_OPENLP = 'SONG_CREATE_OPENLP',
   SONG_DELETE = 'SONG_DELETE',
+  SONG_RESTORE_VERSION = 'SONG_RESTORE_VERSION',
   ZIP_EXPORT = 'ZIP_EXPORT',
 }
 

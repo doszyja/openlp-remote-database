@@ -29,7 +29,6 @@ import {
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Slideshow as SlideshowIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
   ArrowBack as ArrowBackIcon,
@@ -45,6 +44,8 @@ import { useCachedSongs, useCachedSongSearch } from '../hooks/useCachedSongs';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
 import { isSkipAutoSongViewState, SKIP_AUTO_SONG_VIEW_STATE } from '../utils/songViewNavigation';
+import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
+import SongMoreActionsMenu from '../components/SongMoreActionsMenu';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -191,30 +192,17 @@ export default function SongDetailPage() {
   const isFetching = false; // No fetching needed, we use cache
   const error = null; // No error from cache (if song not found, song will be null)
 
-  // Debounce loading state to prevent blinking
-  // Only show loading if we don't have data (initial load) and it's actually fetching
+  // Full-screen loader only when cache is still hydrating and we have no song yet
   useEffect(() => {
-    // Show loading only if:
-    // 1. We don't have data (initial load or error recovery)
-    // 2. It's actually fetching
-    // 3. After debounce delay (to prevent blinking on fast responses)
-    const shouldShowLoading = !song && isFetching;
-
-    if (shouldShowLoading) {
-      const timer = setTimeout(() => {
-        // Double-check that we still don't have data and are still fetching
-        if (!song && isFetching) {
-          setShowLoading(true);
-        }
-      }, 200); // Show loading only after 200ms
+    if (!song && isCacheLoading) {
+      const timer = setTimeout(() => setShowLoading(true), 150);
       return () => {
         clearTimeout(timer);
         setShowLoading(false);
       };
-    } else {
-      setShowLoading(false);
     }
-  }, [song, isFetching]);
+    setShowLoading(false);
+  }, [song, isCacheLoading]);
 
   // Scroll to top when id changes
   useLayoutEffect(() => {
@@ -376,10 +364,23 @@ export default function SongDetailPage() {
       return <Alert severity="info">Nie znaleziono pieśni.</Alert>;
     }
 
-    // If we don't have song but are still loading/fetching, show nothing (or keep previous content)
-    // The loading spinner will be shown by showLoading state
     if (!song) {
-      return null;
+      if (isCacheLoading || isLoading) {
+        return (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: { xs: 240, md: 400 },
+              width: '100%',
+            }}
+          >
+            <CircularProgress size={48} />
+          </Box>
+        );
+      }
+      return <Alert severity="info">Nie znaleziono pieśni.</Alert>;
     }
 
     return (
@@ -394,9 +395,9 @@ export default function SongDetailPage() {
           gap={{ xs: 1, sm: 1 }}
           width="100%"
         >
-          {/* Left side: Back button (mobile) or Presentation button (desktop) */}
-          <Box>
-            {showBackButton ? (
+          {/* Left: Wstecz (mobile) + Więcej → Prezentacja / Podgląd / Historia */}
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            {showBackButton && (
               <Button
                 startIcon={<ArrowBackIcon />}
                 onClick={() => navigate('/songs')}
@@ -422,38 +423,9 @@ export default function SongDetailPage() {
               >
                 Wstecz
               </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                startIcon={<SlideshowIcon />}
-                onClick={() => navigate(`/songs/${id}/presentation`)}
-                size="small"
-                sx={{
-                  borderColor: theme =>
-                    theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.3)'
-                      : 'rgba(0, 0, 0, 0.23)',
-                  color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  px: { xs: 1, sm: 1.5 },
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  whiteSpace: 'nowrap',
-                  '&:hover': {
-                    borderColor: theme =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.5)'
-                        : 'rgba(0, 0, 0, 0.4)',
-                    backgroundColor: theme =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'rgba(0, 0, 0, 0.04)',
-                  },
-                }}
-              >
-                Prezentacja
-              </Button>
             )}
-          </Box>
+            {id && <SongMoreActionsMenu songId={id} />}
+          </Stack>
           {/* Right side: Action buttons group */}
           <Stack
             direction="row"
@@ -467,37 +439,6 @@ export default function SongDetailPage() {
               gap: { xs: 0.5, sm: 1 },
             }}
           >
-            {showBackButton && (
-              <Button
-                variant="outlined"
-                startIcon={<SlideshowIcon />}
-                onClick={() => navigate(`/songs/${id}/presentation`)}
-                size="small"
-                sx={{
-                  borderColor: theme =>
-                    theme.palette.mode === 'dark'
-                      ? 'rgba(255, 255, 255, 0.3)'
-                      : 'rgba(0, 0, 0, 0.23)',
-                  color: theme => (theme.palette.mode === 'dark' ? '#E8EAF6' : 'inherit'),
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  px: { xs: 1, sm: 1.5 },
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  whiteSpace: 'nowrap',
-                  '&:hover': {
-                    borderColor: theme =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.5)'
-                        : 'rgba(0, 0, 0, 0.4)',
-                    backgroundColor: theme =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'rgba(0, 0, 0, 0.04)',
-                  },
-                }}
-              >
-                Prezentacja
-              </Button>
-            )}
             {hasEditPermission && (
               <Box display="flex" gap={{ xs: 1, sm: 1 }}>
                 <Button
@@ -812,6 +753,7 @@ export default function SongDetailPage() {
     parsedVerses,
     isFetching,
     isLoading,
+    isCacheLoading,
     id,
     hasEditPermission,
     navigate,
@@ -1196,46 +1138,13 @@ export default function SongDetailPage() {
           )}
         </Box>
 
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: 0,
-          }}
-        >
-          <Box
-            sx={{
-              width: '100%',
-              textAlign: 'center',
-              mb: 2,
-            }}
-          >
-            {currentVerse?.label && (
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  mb: 1,
-                  color: 'text.secondary',
-                  fontWeight: 600,
-                }}
-              >
-                {currentVerse.label}
-              </Typography>
-            )}
-            <Typography
-              variant="body1"
-              sx={{
-                whiteSpace: 'pre-line',
-                lineHeight: 1.8,
-                fontSize: { xs: '1.1rem', sm: '1.2rem', md: '1.35rem' },
-              }}
-            >
-              {currentVerse?.content}
-            </Typography>
-          </Box>
+        <Box sx={{ flex: 1, minHeight: 280, display: 'flex', flexDirection: 'column' }}>
+          <OpenLpSlideDisplay
+            fillParent
+            aspectRatio={null}
+            slideText={currentVerse?.content ?? ''}
+            footerText={displayTitle}
+          />
         </Box>
 
         <Box

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<theme version="2.1" name="OpenLP Default (preview)">
+  <background type="solid">
+    <color>#000000</color>
+  </background>
+  <display>
+    <horizontalAlign>center</horizontalAlign>
+    <verticalAlign>middle</verticalAlign>
+    <slideTransition>False</slideTransition>
+  </display>
+  <font type="main">
+    <name>Verdana</name>
+    <color>#ffffff</color>
+    <size>72</size>
+    <bold>False</bold>
+    <italics>False</italics>
+    <line_adjustment>0</line_adjustment>
+    <location override="False" x="0" y="0" width="1024" height="668" />
+    <shadow shadowColor="#000000" shadowSize="5">False</shadow>
+    <outline outlineColor="#000000" outlineSize="2">False</outline>
+  </font>
+  <font type="footer">
+    <name>Verdana</name>
+    <color>#cccccc</color>
+    <size>18</size>
+    <bold>False</bold>
+    <italics>False</italics>
+    <line_adjustment>0</line_adjustment>
+    <location override="False" x="10" y="700" width="800" height="50" />
+    <shadow shadowColor="#000000" shadowSize="3">False</shadow>
+    <outline outlineColor="#000000" outlineSize="1">False</outline>
+  </font>
+</theme>

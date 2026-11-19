@@ -12,6 +12,10 @@ export interface SongVersion {
   changedByDiscordId?: string;
   changeReason?: string;
   changes?: Record<string, { old: unknown; new: unknown }>;
+  changeSource?: 'web' | 'openlp';
+  catalogVersion?: number;
+  clientId?: string;
+  openlpId?: number;
   createdAt: string;
 }
 
@@ -48,6 +52,7 @@ export function useRestoreVersion() {
       queryClient.invalidateQueries({ queryKey: ['song', variables.songId] });
       queryClient.invalidateQueries({ queryKey: ['song-versions', variables.songId] });
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+      queryClient.invalidateQueries({ queryKey: ['cached-songs'] });
     },
   });
 }

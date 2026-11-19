@@ -87,7 +87,6 @@ export default function SongListPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [lastExportTime, setLastExportTime] = useState<number>(0);
-  const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const exportZip = useExportZip();
 
@@ -150,18 +149,6 @@ export default function SongListPage() {
     // Use replace: true to avoid adding to history and prevent visual jump
     navigate(`/songs/${firstSongId}`, { replace: true, state: SKIP_AUTO_SONG_VIEW_STATE });
   }, [shouldAutoNavigate, firstSongId, navigate]);
-
-  // Debounce loading animation - only show if request takes longer than 300ms
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        setShowLoadingAnimation(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      setShowLoadingAnimation(false);
-    }
-  }, [isLoading]);
 
   // Hide navbar when error state
   useEffect(() => {
@@ -322,10 +309,8 @@ export default function SongListPage() {
     );
   }
 
-  // Don't render content if we're about to auto-navigate (prevents visual jump)
-  if (shouldAutoNavigate) {
-    return null;
-  }
+  const showListSkeleton = shouldAutoNavigate || isLoading;
+  const showListContent = !shouldAutoNavigate && !isLoading;
 
   return (
     <Box
@@ -351,8 +336,8 @@ export default function SongListPage() {
         flexDirection: 'column',
       }}
     >
-      {/* Skeleton matches the loaded list: search, songbook chips, single-line rows */}
-      {showLoadingAnimation && isLoading && (
+      {/* Skeleton: initial load, cache refresh, or desktop redirect to first song */}
+      {showListSkeleton && (
         <>
           {isAuthenticated && (
             <Box
@@ -475,8 +460,7 @@ export default function SongListPage() {
         </>
       )}
 
-      {/* Normal content when not loading */}
-      {!showLoadingAnimation && (
+      {showListContent && (
         <>
           <Box
             display="flex"

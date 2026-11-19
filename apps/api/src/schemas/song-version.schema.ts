@@ -39,6 +39,7 @@ export class SongVersion {
       lastSyncedAt?: Date;
       syncMetadata?: Record<string, any>;
     };
+    songbook?: string | null;
   }; // Full song data at this version
 
   @Prop()
@@ -55,6 +56,19 @@ export class SongVersion {
 
   @Prop({ type: Object })
   changes?: Record<string, { old: any; new: any }>; // What fields changed
+
+  @Prop({ enum: ['web', 'openlp'] })
+  changeSource?: 'web' | 'openlp';
+
+  /** Global songs catalog version after this revision was stored */
+  @Prop()
+  catalogVersion?: number;
+
+  @Prop()
+  clientId?: string;
+
+  @Prop()
+  openlpId?: number;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;

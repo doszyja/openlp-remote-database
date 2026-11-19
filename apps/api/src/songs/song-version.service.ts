@@ -26,6 +26,12 @@ export class SongVersionService {
     changedByDiscordId?: string,
     changeReason?: string,
     changes?: Record<string, { old: any; new: any }>,
+    extras?: {
+      changeSource?: 'web' | 'openlp';
+      catalogVersion?: number;
+      clientId?: string;
+      openlpId?: number;
+    },
   ): Promise<SongVersionDocument> {
     // Get current max version for this song
     const maxVersion = await this.versionModel
@@ -53,12 +59,17 @@ export class SongVersionService {
         searchTitle: songData.searchTitle,
         searchLyrics: songData.searchLyrics,
         openlpMapping: songData.openlpMapping,
+        songbook: songData.songbook ?? null,
       },
       changedBy,
       changedByUsername,
       changedByDiscordId,
       changeReason,
       changes,
+      changeSource: extras?.changeSource,
+      catalogVersion: extras?.catalogVersion,
+      clientId: extras?.clientId,
+      openlpId: extras?.openlpId,
     });
 
     return version;
@@ -120,6 +131,9 @@ export class SongVersionService {
     currentSong.searchTitle = versionData.searchTitle;
     currentSong.searchLyrics = versionData.searchLyrics;
     currentSong.openlpMapping = versionData.openlpMapping;
+    if (versionData.songbook !== undefined) {
+      (currentSong as any).songbook = versionData.songbook;
+    }
 
     await currentSong.save();
 
@@ -169,6 +183,7 @@ export class SongVersionService {
       'copyright',
       'comments',
       'ccliNumber',
+      'songbook',
     ];
 
     for (const field of fieldsToCompare) {

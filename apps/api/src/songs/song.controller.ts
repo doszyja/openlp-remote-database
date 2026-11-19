@@ -51,8 +51,21 @@ export class SongController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(EditPermissionGuard)
   // Protected: Only authenticated users with edit permission can create songs
-  create(@Body() createSongDto: CreateSongDto) {
-    return this.songService.create(createSongDto);
+  create(
+    @Body() createSongDto: CreateSongDto,
+    @CurrentUser() user: UserResponseDto,
+    @Req() req: Request,
+  ) {
+    const ipAddress = req.ip || req.socket.remoteAddress || undefined;
+    const userAgent = req.get('user-agent') || undefined;
+    return this.songService.create(createSongDto, {
+      userId: user?.id,
+      username: user?.username,
+      discordId: user?.discordId,
+      avatar: user?.avatar,
+      ipAddress,
+      userAgent,
+    });
   }
 
   @Get()
@@ -390,32 +403,13 @@ export class SongController {
     const ipAddress = req.ip || req.socket.remoteAddress || undefined;
     const userAgent = req.get('user-agent') || undefined;
 
-    const restoredSong = await this.songVersionService.restoreVersion(
-      id,
-      versionNum,
-      user?.id,
-      user?.username,
-      user?.discordId,
-    );
-
-    // Log audit trail
-    if (user?.id && user?.username) {
-      await this.auditLogService
-        .log(AuditLogAction.SONG_EDIT, user.id, user.username, {
-          discordId: user.discordId,
-          avatar: user.avatar,
-          songId: id,
-          songTitle: restoredSong.title,
-          metadata: {
-            action: 'restore_version',
-            restoredFromVersion: versionNum,
-          },
-          ipAddress,
-          userAgent,
-        })
-        .catch((err) => console.error('Failed to log audit trail:', err));
-    }
-
-    return restoredSong;
+    return this.songService.restoreToRevision(id, versionNum, {
+      id: user?.id,
+      username: user?.username,
+      discordId: user?.discordId,
+      avatar: user?.avatar,
+      ipAddress,
+      userAgent,
+    });
   }
 }

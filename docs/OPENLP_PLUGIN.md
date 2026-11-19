@@ -30,6 +30,14 @@ Push (JWT + Discord edit role):
 
 - `POST /api/songs`, `PATCH /api/songs/:id` with `openlpMapping.openlpId`, `tags`, optional `songbook`
 
+Each push/create:
+
+- Bumps the global catalog version (`GET /songs/version`) for incremental sync.
+- Appends a **song revision** snapshot (full title, verses, `lyricsXml`, `verseOrder`, tags, songbook, OpenLP mapping) before each update.
+- Writes an **audit log** entry (`SONG_CREATE_OPENLP` / `SONG_EDIT_OPENLP`) with `catalogVersion`, `storedRevision`, `clientId`, and field-level `changes`.
+
+In the web app, open **Historia** on a song or `/songs/:id/history` to compare revisions and **Przywróć** (edit permission).
+
 ## Install on Windows
 
 From the OpenLP `contrib` folder:

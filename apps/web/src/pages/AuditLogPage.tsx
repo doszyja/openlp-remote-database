@@ -58,6 +58,14 @@ function getActionLabel(action: AuditLogAction): string {
       return 'Logowanie';
     case AuditLogAction.SONG_EDIT:
       return 'Edycja pieśni';
+    case AuditLogAction.SONG_EDIT_OPENLP:
+      return 'Edycja (OpenLP)';
+    case AuditLogAction.SONG_CREATE:
+      return 'Nowa pieśń';
+    case AuditLogAction.SONG_CREATE_OPENLP:
+      return 'Nowa pieśń (OpenLP)';
+    case AuditLogAction.SONG_RESTORE_VERSION:
+      return 'Przywrócenie wersji';
     case AuditLogAction.SONG_DELETE:
       return 'Usunięcie pieśni';
     case AuditLogAction.ZIP_EXPORT:
@@ -74,6 +82,10 @@ function getActionColor(
     case AuditLogAction.LOGIN:
       return 'success';
     case AuditLogAction.SONG_EDIT:
+    case AuditLogAction.SONG_EDIT_OPENLP:
+    case AuditLogAction.SONG_CREATE:
+    case AuditLogAction.SONG_CREATE_OPENLP:
+    case AuditLogAction.SONG_RESTORE_VERSION:
       return 'primary';
     case AuditLogAction.SONG_DELETE:
       return 'error';
@@ -523,6 +535,12 @@ export default function AuditLogPage() {
                   <MenuItem value="">Wszystkie</MenuItem>
                   <MenuItem value={AuditLogAction.LOGIN}>Logowanie</MenuItem>
                   <MenuItem value={AuditLogAction.SONG_EDIT}>Edycja pieśni</MenuItem>
+                  <MenuItem value={AuditLogAction.SONG_EDIT_OPENLP}>Edycja (OpenLP)</MenuItem>
+                  <MenuItem value={AuditLogAction.SONG_CREATE}>Nowa pieśń</MenuItem>
+                  <MenuItem value={AuditLogAction.SONG_CREATE_OPENLP}>Nowa pieśń (OpenLP)</MenuItem>
+                  <MenuItem value={AuditLogAction.SONG_RESTORE_VERSION}>
+                    Przywrócenie wersji
+                  </MenuItem>
                   <MenuItem value={AuditLogAction.SONG_DELETE}>Usunięcie pieśni</MenuItem>
                   <MenuItem value={AuditLogAction.ZIP_EXPORT}>Eksport ZIP</MenuItem>
                 </Select>

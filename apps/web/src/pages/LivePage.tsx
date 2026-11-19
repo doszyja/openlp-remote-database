@@ -25,8 +25,8 @@ import { parseVerses } from '../utils/verseParser';
 import { generateStepLabel } from '../utils/liveUtils';
 import { useActiveSong } from '../hooks/useServicePlans';
 import { useActiveSongWs } from '../hooks/useActiveSongWs';
-import { useResponsiveFontSizes } from '../hooks/useResponsiveFontSizes';
 import { useSongViewTelemetry } from '../hooks/useSongViewTelemetry';
+import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
 
 // Fullscreen API vendor prefixes
 interface DocumentWithFullscreen extends Document {
@@ -51,12 +51,9 @@ export default function LivePage() {
   // HTTP fallback - wywołuj tylko gdy WebSocket nie jest połączony
   const { data: httpData, isLoading: httpLoading, error: httpError } = useActiveSong(!wsConnected);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(0);
-  const fontSizes = useResponsiveFontSizes();
-  const [dynamicContentSize, setDynamicContentSize] = useState(32);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const activeSongData = wsConnected && wsData ? wsData : httpData;
   const isLoading = !wsConnected && httpLoading;
@@ -216,41 +213,6 @@ export default function LivePage() {
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
   }, []);
-
-  // Dynamic content size calculation
-  useEffect(() => {
-    if (!contentRef.current || allContent.length === 0) return;
-
-    const updateContentSize = () => {
-      const container = contentRef.current;
-      if (!container) return;
-
-      const containerHeight = container.clientHeight;
-      const containerWidth = container.clientWidth;
-      const content = allContent[currentVerseIndex]?.content || '';
-      const lines = content.split('\n').filter(line => line.trim());
-      const lineCount = lines.length;
-      const maxLineLength = Math.max(...lines.map(line => line.length));
-
-      if (lineCount === 0) return;
-
-      const availableHeight = containerHeight * 0.9;
-      const availableWidth = containerWidth * 0.95;
-      const fontSizeByHeight = availableHeight / lineCount / 1.5;
-      const fontSizeByWidth = (availableWidth / maxLineLength) * 1.8;
-      const optimalSize = Math.min(fontSizeByHeight, fontSizeByWidth, fontSizes.contentSize * 1.5);
-      const clampedSize = Math.max(24, Math.min(optimalSize, 120));
-
-      setDynamicContentSize(clampedSize);
-    };
-
-    updateContentSize();
-    const resizeObserver = new ResizeObserver(updateContentSize);
-    if (contentRef.current) {
-      resizeObserver.observe(contentRef.current);
-    }
-    return () => resizeObserver.disconnect();
-  }, [currentVerseIndex, allContent, fontSizes.contentSize]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -671,9 +633,9 @@ export default function LivePage() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        bgcolor: 'background.default',
-        color: 'text.primary',
-        p: { xs: 2, sm: 4, md: 6 },
+        bgcolor: '#000000',
+        color: '#ffffff',
+        p: 0,
         overflow: 'hidden',
       }}
     >
@@ -796,98 +758,15 @@ export default function LivePage() {
         </Typography>
       )}
 
-      {/* Song Title - Bottom Left */}
-      <Typography
-        variant="h6"
-        component="h1"
-        sx={{
-          position: 'absolute',
-          bottom: { xs: 8, sm: 16 },
-          left: { xs: 8, sm: 16 },
-          zIndex: 1000,
-          opacity: 0.7,
-          fontSize: { xs: '0.875rem', sm: '1rem', md: '1.1rem' },
-          fontWeight: 600,
-          wordBreak: 'break-word',
-          maxWidth: { xs: '60%', sm: '50%' },
-        }}
-      >
-        {displayTitle}
-      </Typography>
-
-      {/* Content */}
-      <Box
-        ref={contentRef}
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: '1200px',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
+      <Box sx={{ flex: 1, width: '100%', minHeight: 0, position: 'relative' }}>
         {currentContent && (
-          <Box
+          <OpenLpSlideDisplay
             key={`verse-${currentVerseIndex}`}
-            sx={{
-              animation: 'fadeInSlide 0.5s ease-in-out',
-              '@keyframes fadeInSlide': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translateY(20px)',
-                },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translateY(0)',
-                },
-              },
-              width: '100%',
-            }}
-          >
-            <Typography
-              variant="body1"
-              component="div"
-              sx={{
-                fontSize: `${dynamicContentSize}px`,
-                lineHeight: 1.4,
-                whiteSpace: 'pre-line',
-                px: { xs: 2, sm: 4 },
-                wordBreak: 'break-word',
-                maxWidth: '100%',
-                transition: 'opacity 0.3s ease-in-out',
-              }}
-            >
-              {currentContent.content}
-            </Typography>
-          </Box>
-        )}
-
-        {currentContent?.label && (
-          <Typography
-            key={`label-${currentVerseIndex}`}
-            variant="h6"
-            sx={{
-              mt: 2,
-              opacity: 0.7,
-              fontSize: { xs: '0.875rem', sm: '1rem' },
-              animation: 'fadeIn 0.5s ease-in-out 0.2s both',
-              '@keyframes fadeIn': {
-                '0%': {
-                  opacity: 0,
-                },
-                '100%': {
-                  opacity: 0.7,
-                },
-              },
-            }}
-          >
-            {currentContent.label}
-          </Typography>
+            fillParent
+            aspectRatio={null}
+            slideText={currentContent.content}
+            footerText={displayTitle}
+          />
         )}
       </Box>
     </Box>
