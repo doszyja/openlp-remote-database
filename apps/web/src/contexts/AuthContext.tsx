@@ -46,7 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, queryClient]);
 
   // Use React Query to fetch and cache user data
-  const { data: user, isLoading, isError } = useAuthUser(token);
+  const { data: user, isLoading, isError, isFetching } = useAuthUser(token);
+  const authBootstrapping = Boolean(token) && !user && !isError && (isLoading || isFetching);
 
   // Update user state when query data changes
   useEffect(() => {
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         isAuthenticated: !!user && !!token,
         hasEditPermission: user?.hasEditPermission ?? false, // Use hasEditPermission from user data
-        isLoading,
+        isLoading: isLoading || authBootstrapping,
         login,
         logout,
       }}

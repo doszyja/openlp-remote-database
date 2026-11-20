@@ -28,6 +28,7 @@ import { UserAvatar, UserMenu } from '../components/Navbar';
 import ThemeModeSelect from '../components/ThemeModeSelect';
 import { useExportZip } from '../hooks/useExportZip';
 import { useNotification } from '../contexts/NotificationContext';
+import PwaInstallBanner from '../components/PwaInstallBanner';
 
 const ADMIN_ROLE_ID = '1161734352447746110';
 
@@ -298,6 +299,8 @@ export default function HomePage() {
               </Typography>
             </Stack>
           )}
+
+          <PwaInstallBanner />
 
           <Stack spacing={{ xs: 2.25, sm: 2.5 }}>
             <Paper elevation={0} onClick={() => navigate('/songs')} sx={homeTileSx}>

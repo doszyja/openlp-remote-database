@@ -90,8 +90,8 @@ export class ErrorBoundary extends Component<Props, State> {
               bgcolor: 'background.paper',
               border: theme =>
                 theme.palette.mode === 'dark'
-                  ? '1px solid rgba(255, 255, 255, 0.1)'
-                  : '1px solid rgba(0, 0, 0, 0.05)',
+                  ? '2px solid rgba(255, 255, 255, 0.38)'
+                  : '2px solid rgba(0, 0, 0, 0.55)',
               userSelect: 'none',
               WebkitUserSelect: 'none',
               MozUserSelect: 'none',

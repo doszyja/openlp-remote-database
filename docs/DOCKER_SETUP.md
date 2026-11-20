@@ -199,6 +199,13 @@ docker-compose -f docker-compose.prod.yml logs -f
 - **Serves**: Static files via nginx
 - **Health Check**: HTTP check on root
 
+### LanguageTool (spellcheck)
+
+- **Image**: `meyay/languagetool:latest`
+- **Port**: `8081` tylko na `127.0.0.1` (debug); API w sieci Docker: `http://languagetool:8081/v2/check`
+- **RAM**: ~2 GiB (`mem_limit`)
+- **Użycie**: raport literówek — patrz `docs/SPELLCHECK_REPORT.md`
+
 ## Dockerfile Details
 
 ### Backend Dockerfile (Multi-stage)

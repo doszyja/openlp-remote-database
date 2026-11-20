@@ -18,4 +18,5 @@ __exportStar(require("./song"), exports);
 __exportStar(require("./audit-log"), exports);
 __exportStar(require("./service-plan"), exports);
 __exportStar(require("./song-view-stats"), exports);
+__exportStar(require("./spellcheck-report"), exports);
 //# sourceMappingURL=index.js.map

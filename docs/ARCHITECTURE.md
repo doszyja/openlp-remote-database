@@ -55,6 +55,7 @@ openlp-database/
 - **State Management**: React Query or SWR
 - **Styling**: Material UI (MUI)
 - **Form Handling**: React Hook Form with Material UI components
+- **PWA**: `vite-plugin-pwa` (manifest, service worker, auto-update). Instalacja przez przycisk w Ustawieniach / baner na stronie głównej (`usePwaInstall`); na iOS instrukcja „Dodaj do ekranu początkowego”. Wymaga HTTPS w produkcji.
 
 ### Sync Tool (`apps/sync`)
 
@@ -445,7 +446,6 @@ API_KEY=... (if auth implemented)
 ### Phase 3
 
 - Real-time sync (WebSocket)
-- Offline support (PWA)
 - Mobile apps (React Native)
 - Song analytics and usage tracking
 

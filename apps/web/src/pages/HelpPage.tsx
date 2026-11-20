@@ -19,6 +19,7 @@ import {
   Visibility as VisibilityIcon,
   Lock as LockIcon,
   History as HistoryIcon,
+  InstallMobile as InstallMobileIcon,
 } from '@mui/icons-material';
 
 export default function HelpPage() {
@@ -385,6 +386,52 @@ export default function HelpPage() {
                 <ListItemText
                   primary="Tryb ciemny"
                   secondary="Możesz przełączyć się między trybem jasnym a ciemnym w ustawieniach (ikona koła zębatego w prawym górnym rogu)."
+                />
+              </ListItem>
+            </List>
+          </Paper>
+
+          {/* Instalacja PWA */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 3, sm: 4 },
+              bgcolor: 'background.paper',
+              boxShadow: theme =>
+                theme.palette.mode === 'dark'
+                  ? '0 4px 16px rgba(0, 0, 0, 0.2)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              border: theme =>
+                theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                  : '1px solid rgba(0, 0, 0, 0.05)',
+              borderRadius: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <InstallMobileIcon color="primary" />
+              <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
+                Aplikacja na telefonie (PWA)
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            <List>
+              <ListItem>
+                <ListItemText
+                  primary="Android / komputer (Chrome, Edge)"
+                  secondary="Na stronie głównej lub w Ustawieniach (ikona koła zębatego) użyj przycisku „Zainstaluj aplikację”, gdy przeglądarka go pokaże. Wymagane jest połączenie HTTPS."
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="iPhone / iPad (Safari)"
+                  secondary="Wybierz Udostępnij → Dodaj do ekranu początkowego. Instrukcja jest też w Ustawieniach, gdy otworzysz śpiewnik na urządzeniu Apple."
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="Offline"
+                  secondary="Po pierwszym wczytaniu listy pieśni aplikacja korzysta z cache — instalacja ułatwia szybki dostęp bez wpisywania adresu w przeglądarce."
                 />
               </ListItem>
             </List>

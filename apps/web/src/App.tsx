@@ -21,6 +21,7 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const PresentationStatsPage = lazy(
   () => import('./pages/PresentationStatsPage'),
 );
+const SpellcheckReportPage = lazy(() => import('./pages/SpellcheckReportPage'));
 const OpenLpAuthPage = lazy(() => import('./pages/OpenLpAuthPage'));
 const OpenLpLogoutPage = lazy(() => import('./pages/OpenLpLogoutPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
@@ -171,6 +172,7 @@ function App() {
                   />
                   <Route path="/stats/presentation" element={<PresentationStatsPage />} />
                   <Route path="/stats" element={<PresentationStatsPage />} />
+                  <Route path="/reports/spellcheck" element={<SpellcheckReportPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>

@@ -6,33 +6,34 @@ import { readFileSync } from 'fs';
 
 const manifestIcons = [
   {
-    src: '/android/android-launchericon-192-192.png',
+    src: '/web-app-manifest-192x192.png',
     sizes: '192x192',
     type: 'image/png',
     purpose: 'any',
   },
   {
-    src: '/android/android-launchericon-512-512.png',
+    src: '/web-app-manifest-512x512.png',
     sizes: '512x512',
     type: 'image/png',
     purpose: 'any',
   },
   {
-    src: '/ios/180.png',
-    sizes: '180x180',
-    type: 'image/png',
-    purpose: 'any apple-touch-icon',
-  },
-  {
-    src: '/ios/512.png',
+    src: '/web-app-manifest-512x512.png',
     sizes: '512x512',
     type: 'image/png',
     purpose: 'maskable',
   },
   {
-    src: '/windows11/SplashScreen.scale-200.png',
-    sizes: '1240x600',
+    src: '/apple-touch-icon.png',
+    sizes: '180x180',
     type: 'image/png',
+    purpose: 'any',
+  },
+  {
+    src: '/favicon.svg',
+    sizes: 'any',
+    type: 'image/svg+xml',
+    purpose: 'any',
   },
 ];
 
@@ -56,24 +57,27 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
-        'android/android-launchericon-192-192.png',
-        'android/android-launchericon-512-512.png',
-        'ios/32.png',
-        'ios/180.png',
-        'ios/512.png',
-        'windows11/SplashScreen.scale-200.png',
+        'favicon.svg',
+        'favicon.ico',
+        'apple-touch-icon.png',
+        'web-app-manifest-192x192.png',
+        'web-app-manifest-512x512.png',
         'Obraz1.png',
       ],
       manifest: {
-        name: 'OpenLP Remote Database',
-        short_name: 'OpenLP DB',
-        description: 'Zarządzaj pieśniami zborowymi i synchronizuj je z OpenLP nawet offline.',
+        id: '/',
+        name: 'Świętochłowice Kościół Wolnych Chrześcijan - Śpiewnik',
+        short_name: 'Śpiewnik',
+        description:
+          'Śpiewnik pieśni zborowych — przeglądaj, edytuj i synchronizuj z OpenLP. Działa offline po wczytaniu cache.',
         theme_color: '#1E3A5F',
         background_color: '#ffffff',
         start_url: '/',
         scope: '/',
         display: 'standalone',
+        orientation: 'portrait',
         lang: 'pl',
+        categories: ['music', 'utilities'],
         icons: manifestIcons,
       },
       workbox: {

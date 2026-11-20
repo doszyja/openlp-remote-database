@@ -23,7 +23,27 @@ services:
     networks:
       - openlp-network-prod
 
-  # NestJS Backend API
+  languagetool:
+    image: meyay/languagetool:latest
+    container_name: openlp-languagetool
+    restart: always
+    mem_limit: 2g
+    networks:
+      - openlp-network-prod
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "--spider",
+          "http://127.0.0.1:8081/v2/languages",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
   api:
     build:
       context: .
@@ -43,8 +63,12 @@ services:
       DISCORD_CALLBACK_URL: ${DISCORD_CALLBACK_URL}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
       DISCORD_REQUIRED_ROLE_ID: ${DISCORD_REQUIRED_ROLE_ID}
+      LANGUAGETOOL_API_URL: ${LANGUAGETOOL_API_URL:-http://languagetool:8081/v2/check}
+      SPELLCHECK_LT_DELAY_MS: ${SPELLCHECK_LT_DELAY_MS:-0}
     depends_on:
       mongodb:
+        condition: service_healthy
+      languagetool:
         condition: service_healthy
     networks:
       - openlp-network-prod

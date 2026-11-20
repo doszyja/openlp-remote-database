@@ -17,6 +17,7 @@ import type {
   SongViewGroupBy,
   SongViewSource,
   SongViewSummary,
+  SpellcheckReportResponse,
 } from '@openlp/shared';
 import type { SongVersion, VersionComparison } from '../hooks/useSongVersions';
 
@@ -294,6 +295,26 @@ export const api = {
       if (query.limit) params.append('limit', String(query.limit));
       const qs = params.toString();
       return request(`/presentation-events/summary${qs ? `?${qs}` : ''}`);
+    },
+  },
+  spellcheck: {
+    getReport: (query: {
+      cursor?: string;
+      batchSize?: number;
+      songbook?: string;
+      language?: string;
+      totalScanned?: number;
+    }): Promise<SpellcheckReportResponse> => {
+      const params = new URLSearchParams();
+      if (query.cursor) params.append('cursor', query.cursor);
+      if (query.batchSize) params.append('batchSize', String(query.batchSize));
+      if (query.songbook) params.append('songbook', query.songbook);
+      if (query.language) params.append('language', query.language);
+      if (query.totalScanned !== undefined) {
+        params.append('totalScanned', String(query.totalScanned));
+      }
+      const qs = params.toString();
+      return request(`/spellcheck/report${qs ? `?${qs}` : ''}`);
     },
   },
   servicePlans: {

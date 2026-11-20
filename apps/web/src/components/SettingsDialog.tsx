@@ -25,6 +25,8 @@ import { songsCache } from '../services/songs-cache';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotification } from '../contexts/NotificationContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
+import PwaInstallSection from './PwaInstallSection';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export interface SettingsDialogRef {
   open: () => void;
@@ -36,6 +38,7 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useNotification();
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const pwa = usePwaInstall();
 
   // Check if API is working using cached songs (no unnecessary requests)
   const { error: apiError } = useCachedSongs();
@@ -164,6 +167,13 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
             }
             sx={{ width: '100%', alignItems: 'flex-start', m: 0 }}
           />
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+            Aplikacja (PWA)
+          </Typography>
+          <PwaInstallSection pwa={pwa} />
 
           <Divider sx={{ my: 2 }} />
 

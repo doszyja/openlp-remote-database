@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { TagModule } from './tags/tag.module';
 import { PresentationEventsModule } from './presentation-events/presentation-events.module';
+import { SpellcheckModule } from './spellcheck/spellcheck.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
@@ -50,6 +51,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     AuditLogModule,
     TagModule,
     PresentationEventsModule,
+    SpellcheckModule,
   ],
   controllers: [AppController],
   providers: [

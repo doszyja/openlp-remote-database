@@ -23,6 +23,7 @@ import {
   EventNote as EventNoteIcon,
   LiveTv as LiveTvIcon,
   BarChart as BarChartIcon,
+  Spellcheck as SpellcheckIcon,
   ArrowDropDown as ArrowDropDownIcon,
   ArrowBack as ArrowBackIcon,
   Download as DownloadIcon,
@@ -366,6 +367,19 @@ export function UserMenu({
             Statystyki odsłon
           </MenuItem>
         )}
+        <MenuItem
+          onClick={() => {
+            onClose();
+            onNavigate('/reports/spellcheck');
+          }}
+          sx={{
+            minHeight: 48,
+            py: 1.25,
+          }}
+        >
+          <SpellcheckIcon sx={{ mr: 1.5, fontSize: 20 }} />
+          Raport literówek
+        </MenuItem>
         {isAdmin && (
           <MenuItem
             onClick={() => {
