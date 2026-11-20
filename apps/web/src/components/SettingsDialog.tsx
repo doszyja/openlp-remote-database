@@ -25,7 +25,7 @@ import { songsCache } from '../services/songs-cache';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotification } from '../contexts/NotificationContext';
 import { getApiUrlForOAuth } from '../utils/apiUrl';
-import PwaInstallSection from './PwaInstallSection';
+import PwaInstallSection, { pwaInstallSectionHasContent } from './PwaInstallSection';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export interface SettingsDialogRef {
@@ -168,12 +168,15 @@ function SettingsDialogContent({ onClose }: { onClose: () => void }) {
             sx={{ width: '100%', alignItems: 'flex-start', m: 0 }}
           />
 
-          <Divider sx={{ my: 2 }} />
-
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-            Aplikacja (PWA)
-          </Typography>
-          <PwaInstallSection pwa={pwa} />
+          {pwaInstallSectionHasContent(pwa, 'settings') ? (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+                Aplikacja (PWA)
+              </Typography>
+              <PwaInstallSection pwa={pwa} onBeforeOpenIosGuide={onClose} />
+            </>
+          ) : null}
 
           <Divider sx={{ my: 2 }} />
 

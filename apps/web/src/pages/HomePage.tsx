@@ -76,6 +76,7 @@ export default function HomePage() {
   const isDev = import.meta.env.DEV;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [adminAuditMenuAnchorEl, setAdminAuditMenuAnchorEl] = useState<null | HTMLElement>(null);
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
   const exportZip = useExportZip();
@@ -84,6 +85,8 @@ export default function HomePage() {
   const [lastExportTime, setLastExportTime] = useState(0);
   const { data: allPlans } = useServicePlans();
   const isLivePage = location.pathname === '/live';
+  const isAuditLogsPage = location.pathname === '/audit-logs';
+  const isSpellcheckPage = location.pathname === '/reports/spellcheck';
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
   const planIdMatch = location.pathname.match(/^\/service-plans\/([^/]+)$/);
   const planId = planIdMatch ? planIdMatch[1] : null;
@@ -112,6 +115,7 @@ export default function HomePage() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setPlansMenuAnchorEl(null);
+    setAdminAuditMenuAnchorEl(null);
   };
 
   const handlePlansMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -121,6 +125,15 @@ export default function HomePage() {
 
   const handlePlansMenuClose = () => {
     setPlansMenuAnchorEl(null);
+  };
+
+  const handleAdminAuditMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setAdminAuditMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleAdminAuditMenuClose = () => {
+    setAdminAuditMenuAnchorEl(null);
   };
 
   const handleLogout = () => {
@@ -204,10 +217,15 @@ export default function HomePage() {
               plansMenuAnchorEl={plansMenuAnchorEl}
               onPlansMenuOpen={handlePlansMenuOpen}
               onPlansMenuClose={handlePlansMenuClose}
+              adminAuditMenuAnchorEl={adminAuditMenuAnchorEl}
+              onAdminAuditMenuOpen={handleAdminAuditMenuOpen}
+              onAdminAuditMenuClose={handleAdminAuditMenuClose}
               allPlans={allPlans}
               planId={planId}
               isServicePlansPage={isServicePlansPage}
               isLivePage={isLivePage}
+              isAuditLogsPage={isAuditLogsPage}
+              isSpellcheckPage={isSpellcheckPage}
               isAdmin={isAdmin}
               hasEditPermission={hasEditPermission}
               isExporting={isExporting}

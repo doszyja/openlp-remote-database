@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import PwaInstallIosDialog from './components/PwaInstallIosDialog';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -86,6 +87,7 @@ function App() {
   }, []);
 
   return (
+    <>
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route
@@ -149,7 +151,14 @@ function App() {
                     }
                   />
                   <Route path="/songs/:id" element={<SongDetailPage />} />
-                  <Route path="/songs/:id/history" element={<SongHistoryPage />} />
+                  <Route
+                    path="/songs/:id/history"
+                    element={
+                      <AdminRoute deniedMessage="Brak uprawnień. Tylko administratorzy mogą przeglądać historię wersji pieśni.">
+                        <SongHistoryPage />
+                      </AdminRoute>
+                    }
+                  />
                   <Route path="/songs/:id/preview" element={<SongPreviewPage />} />
                   <Route
                     path="/songs/:id/edit"
@@ -181,6 +190,8 @@ function App() {
         />
       </Routes>
     </Suspense>
+    <PwaInstallIosDialog />
+    </>
   );
 }
 

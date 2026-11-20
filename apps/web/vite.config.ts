@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import { readFileSync } from 'fs';
 
+/** PNG only in the web manifest — Android launchers often show a blank icon for SVG or non-maskable assets. */
 const manifestIcons = [
   {
     src: '/web-app-manifest-192x192.png',
@@ -18,22 +19,16 @@ const manifestIcons = [
     purpose: 'any',
   },
   {
-    src: '/web-app-manifest-512x512.png',
-    sizes: '512x512',
+    src: '/web-app-manifest-192x192-maskable.png',
+    sizes: '192x192',
     type: 'image/png',
     purpose: 'maskable',
   },
   {
-    src: '/apple-touch-icon.png',
-    sizes: '180x180',
+    src: '/web-app-manifest-512x512-maskable.png',
+    sizes: '512x512',
     type: 'image/png',
-    purpose: 'any',
-  },
-  {
-    src: '/favicon.svg',
-    sizes: 'any',
-    type: 'image/svg+xml',
-    purpose: 'any',
+    purpose: 'maskable',
   },
 ];
 
@@ -59,9 +54,14 @@ export default defineConfig({
       includeAssets: [
         'favicon.svg',
         'favicon.ico',
+        'favicon-16x16.png',
+        'favicon-32x32.png',
+        'favicon-96x96.png',
         'apple-touch-icon.png',
         'web-app-manifest-192x192.png',
         'web-app-manifest-512x512.png',
+        'web-app-manifest-192x192-maskable.png',
+        'web-app-manifest-512x512-maskable.png',
         'Obraz1.png',
       ],
       manifest: {

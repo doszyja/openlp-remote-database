@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import SlideshowIcon from '@mui/icons-material/Slideshow';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import HistoryIcon from '@mui/icons-material/History';
 
@@ -25,9 +24,10 @@ const outlinedButtonSx = {
 
 interface SongMoreActionsMenuProps {
   songId: string;
+  isAdmin?: boolean;
 }
 
-export default function SongMoreActionsMenu({ songId }: SongMoreActionsMenuProps) {
+export default function SongMoreActionsMenu({ songId, isAdmin = false }: SongMoreActionsMenuProps) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -57,24 +57,20 @@ export default function SongMoreActionsMenu({ songId }: SongMoreActionsMenuProps
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={() => go(`/songs/${songId}/presentation`)}>
-          <ListItemIcon>
-            <SlideshowIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Prezentacja</ListItemText>
-        </MenuItem>
         <MenuItem onClick={() => go(`/songs/${songId}/preview`)}>
           <ListItemIcon>
             <VisibilityIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Podgląd</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => go(`/songs/${songId}/history`)}>
-          <ListItemIcon>
-            <HistoryIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Historia</ListItemText>
-        </MenuItem>
+        {isAdmin ? (
+          <MenuItem onClick={() => go(`/songs/${songId}/history`)}>
+            <ListItemIcon>
+              <HistoryIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Historia</ListItemText>
+          </MenuItem>
+        ) : null}
       </Menu>
     </>
   );

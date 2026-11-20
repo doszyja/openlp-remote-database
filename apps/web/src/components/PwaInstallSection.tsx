@@ -9,6 +9,8 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import type { usePwaInstall } from '../hooks/usePwaInstall';
+import { openPwaIosInstallModal } from './PwaInstallIosDialog';
+import PwaIosInstallInstructions from './PwaIosInstallInstructions';
 
 export type PwaInstallState = ReturnType<typeof usePwaInstall>;
 
@@ -16,6 +18,8 @@ export interface PwaInstallSectionProps {
   /** Compact layout for banners; default is settings panel */
   variant?: 'settings' | 'banner';
   onInstalled?: () => void;
+  /** Zamknij nadrzędny dialog (np. ustawienia) przed modalem iOS — unika zasłonięcia przez MUI Dialog */
+  onBeforeOpenIosGuide?: () => void;
   pwa: PwaInstallState;
 }
 
@@ -24,16 +28,17 @@ export function pwaInstallSectionHasContent(
   variant: 'settings' | 'banner',
 ): boolean {
   if (pwa.isInstalled) return variant === 'settings';
-  return pwa.canPromptInstall || pwa.showIosInstallHint || variant === 'settings';
+  if (variant === 'banner') return pwa.canPromptInstall || pwa.showIosInstallGuide;
+  return pwa.canPromptInstall || pwa.showIosInstallGuide || !pwa.isInstalled;
 }
 
 export default function PwaInstallSection({
   variant = 'settings',
   onInstalled,
+  onBeforeOpenIosGuide,
   pwa,
 }: PwaInstallSectionProps) {
-  const { canPromptInstall, showIosInstallHint, isInstalled, isInstalling, install } =
-    pwa;
+  const { canPromptInstall, showIosInstallGuide, isInstalled, isInstalling, install } = pwa;
 
   const handleInstall = async () => {
     const ok = await install();
@@ -51,6 +56,36 @@ export default function PwaInstallSection({
             Śpiewnik działa w trybie samodzielnej aplikacji na tym urządzeniu.
           </Typography>
         </Box>
+      </Box>
+    );
+  }
+
+  if (showIosInstallGuide) {
+    const openIosGuide = () => {
+      onBeforeOpenIosGuide?.();
+      window.setTimeout(() => openPwaIosInstallModal(), 0);
+    };
+    return (
+      <Box>
+        {variant === 'settings' ? (
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            Zainstaluj na urządzeniu
+          </Typography>
+        ) : null}
+        <PwaIosInstallInstructions compact={variant === 'banner'} />
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, mb: 1.5, display: 'block' }}>
+          Po dodaniu uruchamiaj śpiewnik z ikony na ekranie głównym — szybszy dostęp i cache offline.
+        </Typography>
+        {variant === 'settings' ? (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<InstallMobileIcon />}
+            onClick={openIosGuide}
+          >
+            Pokaż w oknie dialogowym
+          </Button>
+        ) : null}
       </Box>
     );
   }
@@ -87,20 +122,6 @@ export default function PwaInstallSection({
         >
           {isInstalling ? 'Instalowanie…' : 'Zainstaluj aplikację'}
         </Button>
-      </Box>
-    );
-  }
-
-  if (showIosInstallHint) {
-    return (
-      <Box sx={{ textAlign: 'left' }}>
-        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-          iPhone / iPad
-        </Typography>
-        <Typography variant="body2" component="div">
-          W Safari wybierz <strong>Udostępnij</strong> → <strong>Dodaj do ekranu początkowego</strong>,
-          a następnie potwierdź. Instalacja PWA wymaga połączenia HTTPS.
-        </Typography>
       </Box>
     );
   }

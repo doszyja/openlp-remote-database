@@ -52,6 +52,8 @@ import OpenLpSlideDisplay from '../components/OpenLpSlideDisplay';
 import SongMoreActionsMenu from '../components/SongMoreActionsMenu';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
+
+const ADMIN_ROLE_ID = '1161734352447746110';
 import {
   parseVerses,
   getVerseDisplayLabel,
@@ -124,7 +126,8 @@ export default function SongDetailPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const showBackButton = useMediaQuery(theme.breakpoints.down(900)); // Show back button when search is hidden (below 900px)
-  const { hasEditPermission, isAuthenticated } = useAuth();
+  const { hasEditPermission, isAuthenticated, user } = useAuth();
+  const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
   const deleteSong = useDeleteSong();
   const { showSuccess, showError } = useNotification();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -401,7 +404,7 @@ export default function SongDetailPage() {
           gap={{ xs: 1, sm: 1 }}
           width="100%"
         >
-          {/* Left: Wstecz (mobile) + Więcej → Prezentacja / Podgląd / Historia */}
+          {/* Left: Wstecz (mobile) + Więcej → Podgląd / Historia (admin) */}
           <Stack direction="row" spacing={0.75} alignItems="center">
             {showBackButton && (
               <Button
@@ -430,7 +433,7 @@ export default function SongDetailPage() {
                 Wstecz
               </Button>
             )}
-            {id && <SongMoreActionsMenu songId={id} />}
+            {id && <SongMoreActionsMenu songId={id} isAdmin={isAdmin} />}
           </Stack>
           {/* Right side: Action buttons group */}
           <Stack

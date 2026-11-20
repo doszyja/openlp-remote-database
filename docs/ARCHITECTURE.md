@@ -55,7 +55,7 @@ openlp-database/
 - **State Management**: React Query or SWR
 - **Styling**: Material UI (MUI)
 - **Form Handling**: React Hook Form with Material UI components
-- **PWA**: `vite-plugin-pwa` (manifest, service worker, auto-update). Instalacja przez przycisk w Ustawieniach / baner na stronie głównej (`usePwaInstall`); na iOS instrukcja „Dodaj do ekranu początkowego”. Wymaga HTTPS w produkcji.
+- **PWA**: `vite-plugin-pwa` (manifest, service worker, auto-update). Instalacja przez przycisk w Ustawieniach / baner na stronie głównej (`usePwaInstall`), gdy przeglądarka wyśle `beforeinstallprompt` (Chrome/Edge, Android itd.). Na iOS/iPadzie przycisk „Dodaj do ekranu głównego” otwiera krótki modal z krokami (bez automatycznego monitu przeglądarki). Wymaga HTTPS w produkcji. Ikony launchera: osobne pliki PNG `*-maskable.png` (safe zone na tle `theme_color`) — Android często pokazuje pustą ikonę, gdy `purpose: maskable` wskazuje ten sam asset co `any` lub SVG w manifeście. Wykrywanie „już zainstalowane”: `display-mode`, `appinstalled` → `localStorage`, `navigator.getInstalledRelatedApps()` (żeby w zwykłej karcie Chrome na Androidzie nie prosić ponownie o instalację).
 
 ### Sync Tool (`apps/sync`)
 

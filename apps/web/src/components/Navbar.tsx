@@ -126,6 +126,66 @@ export function PlansMenu({
   );
 }
 
+// Admin: audit logs + spellcheck (nested menu like service plans)
+export function AdminAuditMenu({
+  anchorEl,
+  onClose,
+  isAuditLogsPage,
+  isSpellcheckPage,
+  onNavigate,
+}: {
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+  isAuditLogsPage: boolean;
+  isSpellcheckPage: boolean;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <Menu
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={onClose}
+      anchorOrigin={{
+        vertical: 'top',
+        horizontal: 'left',
+      }}
+      transformOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      PaperProps={{
+        sx: {
+          mt: 0.5,
+          minWidth: 240,
+        },
+      }}
+    >
+      <MenuItem
+        onClick={() => {
+          onClose();
+          onNavigate('/audit-logs');
+        }}
+        selected={isAuditLogsPage}
+        sx={{ minHeight: 44, py: 1 }}
+      >
+        <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
+        <ListItemText primary="Logi audytu" />
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          onClose();
+          onNavigate('/reports/spellcheck');
+        }}
+        selected={isSpellcheckPage}
+        sx={{ minHeight: 44, py: 1 }}
+      >
+        <SpellcheckIcon sx={{ mr: 1.5, fontSize: 20 }} />
+        <ListItemText primary="Sprawdzanie ortografii" />
+      </MenuItem>
+    </Menu>
+  );
+}
+
 // Helper component for User Menu
 export function UserMenu({
   user,
@@ -134,10 +194,15 @@ export function UserMenu({
   plansMenuAnchorEl,
   onPlansMenuOpen,
   onPlansMenuClose,
+  adminAuditMenuAnchorEl,
+  onAdminAuditMenuOpen,
+  onAdminAuditMenuClose,
   allPlans,
   planId,
   isServicePlansPage,
   isLivePage,
+  isAuditLogsPage,
+  isSpellcheckPage,
   isAdmin,
   hasEditPermission,
   isExporting,
@@ -153,10 +218,15 @@ export function UserMenu({
   plansMenuAnchorEl: HTMLElement | null;
   onPlansMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
   onPlansMenuClose: () => void;
+  adminAuditMenuAnchorEl: HTMLElement | null;
+  onAdminAuditMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
+  onAdminAuditMenuClose: () => void;
   allPlans?: Array<{ id: string; name: string; date?: string; items: Array<unknown> }>;
   planId: string | null;
   isServicePlansPage: boolean;
   isLivePage: boolean;
+  isAuditLogsPage: boolean;
+  isSpellcheckPage: boolean;
   isAdmin: boolean | undefined;
   hasEditPermission?: boolean;
   isExporting?: boolean;
@@ -367,33 +437,32 @@ export function UserMenu({
             Statystyki odsłon
           </MenuItem>
         )}
-        <MenuItem
-          onClick={() => {
-            onClose();
-            onNavigate('/reports/spellcheck');
-          }}
-          sx={{
-            minHeight: 48,
-            py: 1.25,
-          }}
-        >
-          <SpellcheckIcon sx={{ mr: 1.5, fontSize: 20 }} />
-          Raport literówek
-        </MenuItem>
         {isAdmin && (
-          <MenuItem
-            onClick={() => {
-              onClose();
-              onNavigate('/audit-logs');
-            }}
-            sx={{
-              minHeight: 48,
-              py: 1.25,
-            }}
-          >
-            <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
-            Logi Audytu
-          </MenuItem>
+          <>
+            <MenuItem
+              onClick={onAdminAuditMenuOpen}
+              selected={isAuditLogsPage || isSpellcheckPage}
+              sx={{
+                minHeight: 48,
+                py: 1.25,
+              }}
+            >
+              <HistoryIcon sx={{ mr: 1.5, fontSize: 20 }} />
+              <ListItemText primary="Logi audytu" />
+              <ArrowDropDownIcon sx={{ ml: 'auto', fontSize: 20 }} />
+            </MenuItem>
+            <AdminAuditMenu
+              anchorEl={adminAuditMenuAnchorEl}
+              onClose={onAdminAuditMenuClose}
+              isAuditLogsPage={isAuditLogsPage}
+              isSpellcheckPage={isSpellcheckPage}
+              onNavigate={path => {
+                onAdminAuditMenuClose();
+                onClose();
+                onNavigate(path);
+              }}
+            />
+          </>
         )}
         <MenuItem
           onClick={() => {
@@ -490,10 +559,13 @@ export function RightSideContent({
   isApiError,
   anchorEl,
   plansMenuAnchorEl,
+  adminAuditMenuAnchorEl,
   allPlans,
   planId,
   isServicePlansPage,
   isLivePage,
+  isAuditLogsPage,
+  isSpellcheckPage,
   isSongListPage,
   isSongDetailPage,
   isAdmin,
@@ -504,6 +576,8 @@ export function RightSideContent({
   onMenuClose,
   onPlansMenuOpen,
   onPlansMenuClose,
+  onAdminAuditMenuOpen,
+  onAdminAuditMenuClose,
   onNavigate,
   onExportZip,
   onOpenSettings,
@@ -525,10 +599,13 @@ export function RightSideContent({
   isApiError: boolean;
   anchorEl: HTMLElement | null;
   plansMenuAnchorEl: HTMLElement | null;
+  adminAuditMenuAnchorEl: HTMLElement | null;
   allPlans?: Array<{ id: string; name: string; date?: string; items: Array<unknown> }>;
   planId: string | null;
   isServicePlansPage: boolean;
   isLivePage: boolean;
+  isAuditLogsPage: boolean;
+  isSpellcheckPage: boolean;
   isAdmin: boolean | undefined;
   hasEditPermission?: boolean;
   isExporting?: boolean;
@@ -537,6 +614,8 @@ export function RightSideContent({
   onMenuClose: () => void;
   onPlansMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
   onPlansMenuClose: () => void;
+  onAdminAuditMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
+  onAdminAuditMenuClose: () => void;
   onNavigate: (path: string) => void;
   onExportZip?: () => void;
   onOpenSettings: () => void;
@@ -556,10 +635,15 @@ export function RightSideContent({
             plansMenuAnchorEl={plansMenuAnchorEl}
             onPlansMenuOpen={onPlansMenuOpen}
             onPlansMenuClose={onPlansMenuClose}
+            adminAuditMenuAnchorEl={adminAuditMenuAnchorEl}
+            onAdminAuditMenuOpen={onAdminAuditMenuOpen}
+            onAdminAuditMenuClose={onAdminAuditMenuClose}
             allPlans={allPlans}
             planId={planId}
             isServicePlansPage={isServicePlansPage}
             isLivePage={isLivePage}
+            isAuditLogsPage={isAuditLogsPage}
+            isSpellcheckPage={isSpellcheckPage}
             isAdmin={isAdmin}
             hasEditPermission={hasEditPermission}
             isExporting={isExporting}
@@ -604,6 +688,7 @@ export default function Navbar() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [plansMenuAnchorEl, setPlansMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [adminAuditMenuAnchorEl, setAdminAuditMenuAnchorEl] = useState<null | HTMLElement>(null);
   const settingsDialogRef = useRef<SettingsDialogRef>(null);
   const isAdmin = user?.discordRoles?.includes(ADMIN_ROLE_ID);
   const { data: allPlans } = useServicePlans();
@@ -637,6 +722,7 @@ export default function Navbar() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setPlansMenuAnchorEl(null);
+    setAdminAuditMenuAnchorEl(null);
   };
 
   const handlePlansMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -646,6 +732,15 @@ export default function Navbar() {
 
   const handlePlansMenuClose = () => {
     setPlansMenuAnchorEl(null);
+  };
+
+  const handleAdminAuditMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setAdminAuditMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleAdminAuditMenuClose = () => {
+    setAdminAuditMenuAnchorEl(null);
   };
 
   const handleExportZip = useCallback(async () => {
@@ -697,6 +792,8 @@ export default function Navbar() {
   const isServicePlansPage = location.pathname.startsWith('/service-plans');
   const isServicePlanDetailPage = /^\/service-plans\/[^/]+$/.test(location.pathname);
   const isLivePage = location.pathname === '/live';
+  const isAuditLogsPage = location.pathname === '/audit-logs';
+  const isSpellcheckPage = location.pathname === '/reports/spellcheck';
   const isSongListPage = location.pathname === '/songs';
   const isSongDetailPage = /^\/songs\/[^/]+$/.test(location.pathname);
 
@@ -770,10 +867,13 @@ export default function Navbar() {
             isApiError={isApiError}
             anchorEl={anchorEl}
             plansMenuAnchorEl={plansMenuAnchorEl}
+            adminAuditMenuAnchorEl={adminAuditMenuAnchorEl}
             allPlans={allPlans}
             planId={planId}
             isServicePlansPage={isServicePlansPage}
             isLivePage={isLivePage}
+            isAuditLogsPage={isAuditLogsPage}
+            isSpellcheckPage={isSpellcheckPage}
             isSongListPage={isSongListPage}
             isSongDetailPage={isSongDetailPage}
             isAdmin={isAdmin}
@@ -784,6 +884,8 @@ export default function Navbar() {
             onMenuClose={handleMenuClose}
             onPlansMenuOpen={handlePlansMenuOpen}
             onPlansMenuClose={handlePlansMenuClose}
+            onAdminAuditMenuOpen={handleAdminAuditMenuOpen}
+            onAdminAuditMenuClose={handleAdminAuditMenuClose}
             onNavigate={navigate}
             onExportZip={handleExportZip}
             onOpenSettings={() => settingsDialogRef.current?.open()}
@@ -899,10 +1001,13 @@ export default function Navbar() {
           isApiError={isApiError}
           anchorEl={anchorEl}
           plansMenuAnchorEl={plansMenuAnchorEl}
+          adminAuditMenuAnchorEl={adminAuditMenuAnchorEl}
           allPlans={allPlans}
           planId={planId}
           isServicePlansPage={isServicePlansPage}
           isLivePage={isLivePage}
+          isAuditLogsPage={isAuditLogsPage}
+          isSpellcheckPage={isSpellcheckPage}
           isSongListPage={isSongListPage}
           isSongDetailPage={isSongDetailPage}
           isAdmin={isAdmin}
@@ -913,6 +1018,8 @@ export default function Navbar() {
           onMenuClose={handleMenuClose}
           onPlansMenuOpen={handlePlansMenuOpen}
           onPlansMenuClose={handlePlansMenuClose}
+          onAdminAuditMenuOpen={handleAdminAuditMenuOpen}
+          onAdminAuditMenuClose={handleAdminAuditMenuClose}
           onNavigate={navigate}
           onExportZip={handleExportZip}
           onOpenSettings={() => settingsDialogRef.current?.open()}

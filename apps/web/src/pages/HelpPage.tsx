@@ -425,7 +425,13 @@ export default function HelpPage() {
               <ListItem>
                 <ListItemText
                   primary="iPhone / iPad (Safari)"
-                  secondary="Wybierz Udostępnij → Dodaj do ekranu początkowego. Instrukcja jest też w Ustawieniach, gdy otworzysz śpiewnik na urządzeniu Apple."
+                  secondary="Udostępnij (ikona ze strzałką) → Dodaj do ekranu początkowego → Dodaj. Kroki są też na stronie głównej oraz w Ustawieniach."
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="iPhone / iPad (Chrome)"
+                  secondary="Menu ⋯ → Udostępnij → Dodaj do ekranu początkowego → Dodaj. Ta sama instrukcja pojawia się automatycznie w przeglądarce Chrome na Apple."
                 />
               </ListItem>
               <ListItem>

@@ -9,3 +9,13 @@ interface BeforeInstallPromptEvent extends Event {
 interface WindowEventMap {
   beforeinstallprompt: BeforeInstallPromptEvent;
 }
+
+interface RelatedWebApp {
+  id?: string;
+  platform: string;
+  url?: string;
+}
+
+interface Navigator {
+  getInstalledRelatedApps?: () => Promise<RelatedWebApp[]>;
+}

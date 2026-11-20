@@ -35,6 +35,7 @@ import { QuerySongDto } from './dto/query-song.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { EditPermissionGuard } from '../auth/guards/edit-permission.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 import { ZipExportThrottlerGuard } from './guards/zip-export-throttler.guard';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditLogAction } from '../schemas/audit-log.schema';
@@ -344,8 +345,9 @@ export class SongController {
 
   // Version history endpoints
   @Get(':id/versions')
-  @Public() // Public: Anyone can view version history
-  @ApiOperation({ summary: 'Get version history for a song' })
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get version history for a song (admin only)' })
   @ApiParam({ name: 'id', description: 'Song ID' })
   @ApiResponse({ status: 200, description: 'List of song versions' })
   async getVersions(@Param('id') id: string) {
@@ -354,8 +356,9 @@ export class SongController {
 
   // IMPORTANT: This endpoint must be BEFORE ':id/versions/:version' to avoid routing conflicts
   @Get(':id/versions/compare')
-  @Public() // Public: Anyone can compare versions
-  @ApiOperation({ summary: 'Compare two versions of a song' })
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Compare two versions of a song (admin only)' })
   @ApiParam({ name: 'id', description: 'Song ID' })
   @ApiQuery({ name: 'v1', description: 'First version number' })
   @ApiQuery({ name: 'v2', description: 'Second version number' })
@@ -381,8 +384,9 @@ export class SongController {
   }
 
   @Get(':id/versions/:version')
-  @Public() // Public: Anyone can view a specific version
-  @ApiOperation({ summary: 'Get a specific version of a song' })
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get a specific version of a song (admin only)' })
   @ApiParam({ name: 'id', description: 'Song ID' })
   @ApiParam({ name: 'version', description: 'Version number' })
   @ApiResponse({ status: 200, description: 'Song version data' })
